@@ -14,19 +14,47 @@
       </view>
     </view>
 
+    <!-- 数据源切换 -->
+    <view class="data-source-switch">
+      <view class="switch-tabs">
+        <view
+          class="switch-tab"
+          :class="{ active: showServerData }"
+          @click="switchToServerData"
+        >
+          服务器数据
+        </view>
+        <view
+          class="switch-tab"
+          :class="{ active: !showServerData }"
+          @click="switchToLocalData"
+        >
+          本地数据
+        </view>
+      </view>
+    </view>
+
     <!-- 统计信息 -->
     <view class="stats-bar">
       <view class="stat-item">
         <text class="stat-number">{{ filteredGoods.length }}</text>
-        <text class="stat-label">总商品</text>
+        <text class="stat-label">{{ showServerData ? '服务器商品' : '本地商品' }}</text>
       </view>
-      <view class="stat-item">
+      <view v-if="!showServerData" class="stat-item">
         <text class="stat-number success">{{ syncedCount }}</text>
         <text class="stat-label">已同步</text>
       </view>
-      <view class="stat-item">
+      <view v-if="!showServerData" class="stat-item">
         <text class="stat-number warning">{{ unsyncedCount }}</text>
         <text class="stat-label">待同步</text>
+      </view>
+      <view v-if="showServerData" class="stat-item">
+        <text class="stat-number info">{{ currentPage }}</text>
+        <text class="stat-label">当前页</text>
+      </view>
+      <view v-if="showServerData" class="stat-item">
+        <text class="stat-number info">{{ totalPages }}</text>
+        <text class="stat-label">总页数</text>
       </view>
     </view>
 
@@ -39,9 +67,9 @@
         @click="goToDetail(item)"
       >
         <view class="goods-image">
-          <image 
-            v-if="item.images && item.images.length > 0"
-            :src="item.images[0]" 
+          <image
+            v-if="getGoodsImage(item)"
+            :src="getGoodsImage(item)"
             mode="aspectFill"
             class="image"
           />
@@ -49,19 +77,25 @@
             <text>📦</text>
           </view>
         </view>
-        
+
         <view class="goods-info">
           <view class="goods-name">{{ item.name }}</view>
           <view class="goods-barcode">条码: {{ item.goodsNo }}</view>
-          <view class="goods-category">分类: {{ item.cateName || '未分类' }}</view>
+          <view class="goods-category">分类: {{ getGoodsCategory(item) }}</view>
+          <view class="goods-stock-info">
+            <text class="stock">剩余库存: {{ item.stock }}</text>
+            <text class="safety-stock">安全库存: {{ item.safetyStock || 0 }}</text>
+          </view>
           <view class="goods-meta">
             <text class="price">¥{{ item.price }}</text>
-            <text class="stock">库存: {{ item.stock }}</text>
+            <text class="status" :class="getStockStatusClass(item)">
+              {{ getStockStatusText(item) }}
+            </text>
           </view>
         </view>
-        
+
         <view class="goods-actions">
-          <view class="sync-status" :class="getSyncStatusClass(item.syncStatus)">
+          <view v-if="!showServerData" class="sync-status" :class="getSyncStatusClass(item.syncStatus)">
             {{ getSyncStatusText(item.syncStatus) }}
           </view>
           <text class="arrow">→</text>
@@ -69,11 +103,18 @@
       </view>
     </view>
 
+    <!-- 加载状态 -->
+    <view v-if="loading" class="loading-state">
+      <text class="loading-text">加载中...</text>
+    </view>
+
     <!-- 空状态 -->
-    <view v-if="filteredGoods.length === 0" class="empty-state">
+    <view v-else-if="filteredGoods.length === 0" class="empty-state">
       <text class="empty-icon">📦</text>
-      <text class="empty-text">{{ searchKeyword ? '没有找到相关商品' : '还没有添加商品' }}</text>
-      <button v-if="!searchKeyword" class="add-btn" @click="goToAdd">
+      <text class="empty-text">
+        {{ searchKeyword ? '没有找到相关商品' : (showServerData ? '服务器暂无商品数据' : '还没有添加商品') }}
+      </text>
+      <button v-if="!searchKeyword && !showServerData" class="add-btn" @click="goToAdd">
         ➕ 添加第一个商品
       </button>
     </view>
@@ -88,22 +129,30 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import goodsStore from '@/stores/goods'
+import { getGoodsList } from '@/api/goods'
 
 // 响应式数据
 const searchKeyword = ref('')
 const goodsList = ref([])
+const serverGoodsList = ref([])
+const loading = ref(false)
+const currentPage = ref(1)
+const totalPages = ref(1)
+const showServerData = ref(true) // 默认显示服务器数据
 
 // 计算属性
 const filteredGoods = computed(() => {
+  const dataSource = showServerData.value ? serverGoodsList.value : goodsList.value
+
   if (!searchKeyword.value) {
-    return goodsList.value
+    return dataSource
   }
-  
+
   const keyword = searchKeyword.value.toLowerCase()
-  return goodsList.value.filter(item => 
+  return dataSource.filter(item =>
     item.name.toLowerCase().includes(keyword) ||
     item.goodsNo.toLowerCase().includes(keyword) ||
-    (item.cateName && item.cateName.toLowerCase().includes(keyword))
+    (item.cateInfo?.name && item.cateInfo.name.toLowerCase().includes(keyword))
   )
 })
 
@@ -118,12 +167,39 @@ const unsyncedCount = computed(() => {
 // 页面加载
 onMounted(() => {
   loadGoodsList()
+  loadServerGoodsList()
 })
 
-// 加载商品列表
+// 加载本地商品列表
 const loadGoodsList = () => {
   goodsStore.init()
   goodsList.value = goodsStore.localGoods.sort((a, b) => b.createTime - a.createTime)
+}
+
+// 加载服务器商品列表
+const loadServerGoodsList = async () => {
+  try {
+    loading.value = true
+    const res = await getGoodsList({
+      page: currentPage.value,
+      pageSize: 20
+    })
+
+    if (res.data && res.data.paginationResponse) {
+      serverGoodsList.value = res.data.paginationResponse.content || []
+      totalPages.value = res.data.paginationResponse.totalPages || 1
+    }
+  } catch (error) {
+    console.error('获取商品列表失败:', error)
+    uni.showToast({
+      title: '获取商品列表失败',
+      icon: 'none'
+    })
+    // 失败时显示本地数据
+    showServerData.value = false
+  } finally {
+    loading.value = false
+  }
 }
 
 // 搜索输入
@@ -134,6 +210,66 @@ const onSearchInput = () => {
 // 清除搜索
 const clearSearch = () => {
   searchKeyword.value = ''
+}
+
+// 切换到服务器数据
+const switchToServerData = () => {
+  showServerData.value = true
+  if (serverGoodsList.value.length === 0) {
+    loadServerGoodsList()
+  }
+}
+
+// 切换到本地数据
+const switchToLocalData = () => {
+  showServerData.value = false
+  loadGoodsList()
+}
+
+// 获取商品图片
+const getGoodsImage = (item) => {
+  if (showServerData.value) {
+    return item.logo || (item.images && item.images.length > 0 ? item.images[0] : null)
+  } else {
+    return item.images && item.images.length > 0 ? item.images[0] : null
+  }
+}
+
+// 获取商品分类
+const getGoodsCategory = (item) => {
+  if (showServerData.value) {
+    return item.cateInfo?.name || '未分类'
+  } else {
+    return item.cateName || '未分类'
+  }
+}
+
+// 获取库存状态样式
+const getStockStatusClass = (item) => {
+  const safetyStock = item.safetyStock || 0
+  const currentStock = item.stock || 0
+
+  if (currentStock <= 0) {
+    return 'out-of-stock'
+  } else if (currentStock <= safetyStock) {
+    return 'low-stock'
+  } else {
+    return 'normal-stock'
+  }
+}
+
+// 获取库存状态文本
+const getStockStatusText = (item) => {
+  const safetyStock = item.safetyStock || 0
+  const currentStock = item.stock || 0
+
+  if (currentStock <= 0) {
+    return '缺货'
+  } else if (currentStock <= safetyStock) {
+    return '库存不足'
+  } else {
+    return '库存正常'
+  }
 }
 
 // 获取同步状态样式类
@@ -183,7 +319,7 @@ const goToAdd = () => {
 }
 
 .search-bar {
-  margin-bottom: 30rpx;
+  margin-bottom: 20rpx;
 
   .search-input-wrapper {
     display: flex;
@@ -214,6 +350,34 @@ const goToAdd = () => {
   }
 }
 
+.data-source-switch {
+  margin-bottom: 20rpx;
+
+  .switch-tabs {
+    display: flex;
+    background: #fff;
+    border-radius: 50rpx;
+    padding: 8rpx;
+    box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
+
+    .switch-tab {
+      flex: 1;
+      text-align: center;
+      padding: 20rpx;
+      border-radius: 40rpx;
+      font-size: 28rpx;
+      color: #606266;
+      transition: all 0.3s;
+
+      &.active {
+        background: linear-gradient(135deg, #3c9cff 0%, #1890ff 100%);
+        color: #fff;
+        font-weight: bold;
+      }
+    }
+  }
+}
+
 .stats-bar {
   display: flex;
   background: #fff;
@@ -239,6 +403,10 @@ const goToAdd = () => {
 
       &.warning {
         color: #ff9900;
+      }
+
+      &.info {
+        color: #3c9cff;
       }
     }
 
@@ -313,7 +481,23 @@ const goToAdd = () => {
   .goods-category {
     font-size: 24rpx;
     color: #909399;
-    margin-bottom: 15rpx;
+    margin-bottom: 10rpx;
+  }
+
+  .goods-stock-info {
+    margin-bottom: 10rpx;
+
+    .stock {
+      display: block;
+      font-size: 24rpx;
+      color: #606266;
+      margin-bottom: 4rpx;
+    }
+
+    .safety-stock {
+      font-size: 22rpx;
+      color: #909399;
+    }
   }
 
   .goods-meta {
@@ -327,9 +511,23 @@ const goToAdd = () => {
       color: #f56c6c;
     }
 
-    .stock {
-      font-size: 24rpx;
-      color: #606266;
+    .status {
+      font-size: 22rpx;
+      padding: 4rpx 12rpx;
+      border-radius: 12rpx;
+      color: #fff;
+
+      &.normal-stock {
+        background: #19be6b;
+      }
+
+      &.low-stock {
+        background: #ff9900;
+      }
+
+      &.out-of-stock {
+        background: #f56c6c;
+      }
     }
   }
 }
@@ -362,6 +560,16 @@ const goToAdd = () => {
   .arrow {
     font-size: 32rpx;
     color: #c0c4cc;
+  }
+}
+
+.loading-state {
+  text-align: center;
+  padding: 100rpx 40rpx;
+
+  .loading-text {
+    font-size: 28rpx;
+    color: #909399;
   }
 }
 

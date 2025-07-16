@@ -1,12 +1,16 @@
 // 用户信息类型定义
 export const UserInfo = {
-  accountId: 0,
+  id: 0,
   accountName: '',
+  realName: '',
   merchantId: 0,
   merchantName: '',
   storeId: 0,
   storeName: '',
-  avatar: ''
+  staffId: 0,
+  token: '',
+  roleIds: '',
+  locked: 0
 }
 
 // 登录请求类型

@@ -10,11 +10,20 @@ export const saveGoods = (data) => {
 }
 
 // 获取商品列表
-export const getGoodsList = (data) => {
+export const getGoodsList = (data = {}) => {
+  // 默认参数
+  const params = {
+    page: 1,
+    pageSize: 20,
+    name: '',
+    cateId: '',
+    ...data
+  }
+
   return request({
     url: '/backendApi/goods/goods/list',
     method: 'POST',
-    data
+    data: params
   })
 }
 

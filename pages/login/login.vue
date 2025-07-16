@@ -1,7 +1,7 @@
 <template>
   <view class="login-container">
     <view class="login-header">
-      <image class="logo" src="/static/logo.png" mode="aspectFit"></image>
+<!--      <image class="logo" src="/static/logo.png" mode="aspectFit"></image>-->
       <text class="title">商品扫码系统</text>
       <text class="subtitle">内部员工专用</text>
     </view>

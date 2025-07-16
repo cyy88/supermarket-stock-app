@@ -41,7 +41,8 @@ class UserStore {
   async getUserInfo() {
     try {
       const res = await getUserInfoApi()
-      this.userInfo = res.data
+      // 从返回的数据中提取accountInfo
+      this.userInfo = res.data.accountInfo
       uni.setStorageSync('userInfo', this.userInfo)
       return res
     } catch (error) {

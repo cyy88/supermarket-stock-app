@@ -1,13 +1,13 @@
 <template>
   <view class="content">
-    <image class="logo" src="/static/logo.png"></image>
+<!--    <image class="logo" src="/static/logo.png"></image>-->
     <view class="text-area">
       <text class="title">{{ title }}</text>
     </view>
 
     <!-- 用户信息显示 -->
     <view v-if="userInfo" class="user-info">
-      <text class="welcome">欢迎回来，{{ userInfo.accountName }}</text>
+      <text class="welcome">欢迎回来，{{ userInfo.realName || userInfo.accountName }}</text>
       <text class="store">{{ userInfo.storeName }}</text>
     </view>
 
@@ -58,7 +58,7 @@ onMounted(() => {
 })
 
 // 检查登录状态
-const checkLoginStatus = () => {
+const checkLoginStatus = async () => {
   if (!userStore.isLoggedIn) {
     // 未登录，跳转到登录页
     uni.reLaunch({
@@ -69,6 +69,16 @@ const checkLoginStatus = () => {
 
   // 已登录，显示用户信息
   userInfo.value = userStore.userInfo
+
+  // 如果本地没有用户信息，尝试从服务器获取
+  if (!userInfo.value) {
+    try {
+      await userStore.getUserInfo()
+      userInfo.value = userStore.userInfo
+    } catch (error) {
+      console.error('获取用户信息失败:', error)
+    }
+  }
 }
 
 // 跳转到扫码页面

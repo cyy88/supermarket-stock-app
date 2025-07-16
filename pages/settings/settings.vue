@@ -3,14 +3,13 @@
     <!-- 用户信息卡片 -->
     <view class="card user-card">
       <view class="user-info">
-        <image 
-          :src="userInfo?.avatar || '/static/default-avatar.png'"
-          class="avatar"
-          mode="aspectFill"
-        />
+        <view class="avatar-placeholder">
+          <text class="avatar-text">{{ getAvatarText() }}</text>
+        </view>
         <view class="user-details">
-          <text class="username">{{ userInfo?.accountName || '用户' }}</text>
+          <text class="username">{{ userInfo?.realName || userInfo?.accountName || '用户' }}</text>
           <text class="store-name">{{ userInfo?.storeName || '门店' }}</text>
+          <text class="merchant-name">{{ userInfo?.merchantName || '' }}</text>
         </view>
       </view>
     </view>
@@ -120,10 +119,26 @@ const syncedCount = computed(() => {
 })
 
 // 页面加载
-onMounted(() => {
+onMounted(async () => {
   userInfo.value = userStore.userInfo
   goodsStore.init()
+
+  // 如果没有用户信息，尝试获取
+  if (!userInfo.value) {
+    try {
+      await userStore.getUserInfo()
+      userInfo.value = userStore.userInfo
+    } catch (error) {
+      console.error('获取用户信息失败:', error)
+    }
+  }
 })
+
+// 获取头像文字
+const getAvatarText = () => {
+  const name = userInfo.value?.realName || userInfo.value?.accountName || '用户'
+  return name.charAt(name.length - 1) // 取最后一个字符作为头像
+}
 
 // 手动同步
 const manualSync = async () => {
@@ -289,11 +304,21 @@ const handleLogout = () => {
     display: flex;
     align-items: center;
 
-    .avatar {
+    .avatar-placeholder {
       width: 120rpx;
       height: 120rpx;
       border-radius: 60rpx;
       margin-right: 30rpx;
+      background: linear-gradient(135deg, #3c9cff 0%, #1890ff 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      .avatar-text {
+        font-size: 48rpx;
+        font-weight: bold;
+        color: #fff;
+      }
     }
 
     .user-details {
@@ -304,12 +329,19 @@ const handleLogout = () => {
         font-size: 36rpx;
         font-weight: bold;
         color: #303133;
-        margin-bottom: 10rpx;
+        margin-bottom: 8rpx;
       }
 
       .store-name {
+        display: block;
         font-size: 28rpx;
         color: #606266;
+        margin-bottom: 4rpx;
+      }
+
+      .merchant-name {
+        font-size: 24rpx;
+        color: #909399;
       }
     }
   }
