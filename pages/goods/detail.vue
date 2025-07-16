@@ -91,7 +91,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
+import { onLoad, onShow } from '@dcloudio/uni-app'
 import goodsStore from '@/stores/goods'
 import { saveGoods } from '@/api/goods'
 
@@ -103,6 +103,13 @@ const goodsId = ref('')
 onLoad((options) => {
   if (options.id) {
     goodsId.value = options.id
+    loadGoodsDetail()
+  }
+})
+
+// 页面显示时刷新数据
+onShow(() => {
+  if (goodsId.value) {
     loadGoodsDetail()
   }
 })

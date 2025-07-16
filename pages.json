@@ -38,6 +38,12 @@
 			}
 		},
 		{
+			"path": "pages/goods/edit",
+			"style": {
+				"navigationBarTitleText": "编辑商品"
+			}
+		},
+		{
 			"path": "pages/settings/settings",
 			"style": {
 				"navigationBarTitleText": "设置"

@@ -1,126 +1,137 @@
 <template>
-  <view class="add-goods-container">
-    <!-- 基本信息卡片 -->
-    <view class="card">
-      <view class="card-title">📦 基本信息</view>
-      
-      <view class="form-item">
-        <text class="label">商品条码</text>
-        <input 
-          v-model="form.goodsNo"
-          placeholder="扫码自动填入或手动输入"
-          class="input readonly"
-          readonly
-        />
-      </view>
-
-      <view class="form-item">
-        <text class="label required">商品名称</text>
-        <input 
-          v-model="form.name"
-          placeholder="请输入商品名称"
-          class="input"
-        />
-      </view>
-
-      <view class="form-item">
-        <text class="label required">商品分类</text>
-        <view class="input select" @click="showCategoryPicker = true">
-          <text :class="{ placeholder: !form.cateName }">
-            {{ form.cateName || '请选择商品分类' }}
-          </text>
-          <text class="arrow">▼</text>
-        </view>
-      </view>
-
-      <view class="form-item">
-        <text class="label required">商品价格</text>
-        <view class="input-group">
+  <view class="edit-goods-container">
+    <view v-if="loading" class="loading-state">
+      <text class="loading-text">加载中...</text>
+    </view>
+    
+    <view v-else-if="goods" class="edit-form">
+      <!-- 基本信息卡片 -->
+      <view class="card">
+        <view class="card-title">📦 基本信息</view>
+        
+        <view class="form-item">
+          <text class="label">商品条码</text>
           <input 
-            v-model="form.price"
-            type="digit"
-            placeholder="请输入价格"
+            v-model="form.goodsNo"
+            placeholder="商品条码"
+            class="input readonly"
+            readonly
+          />
+        </view>
+
+        <view class="form-item">
+          <text class="label required">商品名称</text>
+          <input 
+            v-model="form.name"
+            placeholder="请输入商品名称"
             class="input"
           />
-          <text class="unit">元</text>
         </view>
-      </view>
 
-      <view class="form-item">
-        <text class="label">库存数量</text>
-        <view class="input-group">
-          <input 
-            v-model="form.stock"
-            type="number"
-            placeholder="请输入库存数量"
-            class="input"
-          />
-          <text class="unit">件</text>
-        </view>
-      </view>
-    </view>
-
-    <!-- 商品图片卡片 -->
-    <view class="card">
-      <view class="card-title">🖼️ 商品图片</view>
-      <view class="image-upload">
-        <view class="image-list">
-          <view 
-            v-for="(image, index) in imageList" 
-            :key="index"
-            class="image-item"
-          >
-            <image :src="image.url" mode="aspectFill" class="image" />
-            <view class="image-delete" @click="deleteImage(index)">✕</view>
-          </view>
-          
-          <view 
-            v-if="imageList.length < 5" 
-            class="image-add"
-            @click="chooseImage"
-          >
-            <text class="add-icon">📷</text>
-            <text class="add-text">添加图片</text>
+        <view class="form-item">
+          <text class="label required">商品分类</text>
+          <view class="input select" @click="showCategoryPicker = true">
+            <text :class="{ placeholder: !form.cateName }">
+              {{ form.cateName || '请选择商品分类' }}
+            </text>
+            <text class="arrow">▼</text>
           </view>
         </view>
-        <text class="image-tip">最多可上传5张图片</text>
+
+        <view class="form-item">
+          <text class="label required">商品价格</text>
+          <view class="input-group">
+            <input 
+              v-model="form.price"
+              type="digit"
+              placeholder="请输入价格"
+              class="input"
+            />
+            <text class="unit">元</text>
+          </view>
+        </view>
+
+        <view class="form-item">
+          <text class="label">库存数量</text>
+          <view class="input-group">
+            <input 
+              v-model="form.stock"
+              type="number"
+              placeholder="请输入库存数量"
+              class="input"
+            />
+            <text class="unit">件</text>
+          </view>
+        </view>
       </view>
-    </view>
 
-    <!-- 商品描述卡片 -->
-    <view class="card">
-      <view class="card-title">📝 商品描述</view>
-      <textarea 
-        v-model="form.description"
-        placeholder="请输入商品描述（可选）"
-        class="textarea"
-        maxlength="500"
-      />
-      <view class="char-count">{{ form.description.length }}/500</view>
-    </view>
+      <!-- 商品图片卡片 -->
+      <view class="card">
+        <view class="card-title">🖼️ 商品图片</view>
+        <view class="image-upload">
+          <view class="image-list">
+            <view 
+              v-for="(image, index) in imageList" 
+              :key="index"
+              class="image-item"
+            >
+              <image :src="image" mode="aspectFill" class="image" />
+              <view class="image-delete" @click="deleteImage(index)">✕</view>
+            </view>
+            
+            <view 
+              v-if="imageList.length < 5" 
+              class="image-add"
+              @click="chooseImage"
+            >
+              <text class="add-icon">📷</text>
+              <text class="add-text">添加图片</text>
+            </view>
+          </view>
+          <text class="image-tip">最多可上传5张图片</text>
+        </view>
+      </view>
 
-    <!-- 保存按钮 -->
-    <view class="form-actions">
-      <button
-        class="save-btn"
-        :class="{ loading: saving }"
-        @click="handleSaveGoods"
-        :disabled="saving"
+      <!-- 商品描述卡片 -->
+      <view class="card">
+        <view class="card-title">📝 商品描述</view>
+        <textarea 
+          v-model="form.description"
+          placeholder="请输入商品描述（可选）"
+          class="textarea"
+          maxlength="500"
+        />
+        <view class="char-count">{{ form.description.length }}/500</view>
+      </view>
+
+      <!-- 保存按钮 -->
+      <view class="form-actions">
+        <button
+          class="save-btn"
+          :class="{ loading: saving }"
+          @click="handleUpdateGoods"
+          :disabled="saving"
+        >
+          {{ saving ? '保存中...' : '💾 更新商品' }}
+        </button>
+      </view>
+
+      <!-- 分类选择器 -->
+      <picker
+        v-if="showCategoryPicker"
+        :range="categoryList"
+        range-key="name"
+        @change="onCategoryChange"
+        @cancel="showCategoryPicker = false"
       >
-        {{ saving ? '保存中...' : '💾 保存商品' }}
-      </button>
+        <view></view>
+      </picker>
     </view>
-
-    <!-- 分类选择器 -->
-    <picker
-      v-if="showCategoryPicker"
-      :range="categoryList"
-      range-key="name"
-      @change="onCategoryChange"
-      @cancel="showCategoryPicker = false"
-    >
-      <view></view>
-    </picker>
+    
+    <view v-else class="error-state">
+      <text class="error-text">商品不存在或加载失败</text>
+      <button class="retry-btn" @click="loadGoodsDetail">重试</button>
+    </view>
   </view>
 </template>
 
@@ -128,13 +139,16 @@
 import { ref, reactive, onMounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import goodsStore from '@/stores/goods'
-import { saveGoods as saveGoodsApi, getGoodsCateList, uploadImage } from '@/api/goods'
+import { saveGoods as saveGoodsApi, getGoodsCateList, uploadImage, getGoodsDetail } from '@/api/goods'
 
 // 响应式数据
+const loading = ref(true)
 const saving = ref(false)
 const showCategoryPicker = ref(false)
 const categoryList = ref([])
 const imageList = ref([])
+const goods = ref(null)
+const goodsId = ref('')
 
 const form = reactive({
   goodsNo: '',
@@ -148,33 +162,76 @@ const form = reactive({
 
 // 页面加载
 onLoad((options) => {
-  if (options.barcode) {
-    form.goodsNo = decodeURIComponent(options.barcode)
+  if (options.id) {
+    goodsId.value = options.id
+    loadGoodsDetail()
+    loadCategoryList()
+  } else {
+    uni.showToast({
+      title: '参数错误',
+      icon: 'none'
+    })
+    setTimeout(() => {
+      uni.navigateBack()
+    }, 1500)
   }
-  loadCategoryList()
 })
+
+// 加载商品详情
+const loadGoodsDetail = async () => {
+  try {
+    loading.value = true
+    
+    // 先从本地查找
+    const localGoods = goodsStore.localGoods.find(item => item.id === goodsId.value)
+    if (localGoods) {
+      goods.value = localGoods
+      fillForm(localGoods)
+    } else {
+      uni.showToast({
+        title: '商品不存在',
+        icon: 'none'
+      })
+      setTimeout(() => {
+        uni.navigateBack()
+      }, 1500)
+    }
+  } catch (error) {
+    console.error('加载商品详情失败:', error)
+    uni.showToast({
+      title: '加载失败',
+      icon: 'none'
+    })
+  } finally {
+    loading.value = false
+  }
+}
+
+// 填充表单
+const fillForm = (goodsData) => {
+  form.goodsNo = goodsData.goodsNo || ''
+  form.name = goodsData.name || ''
+  form.cateId = goodsData.cateId || ''
+  form.cateName = goodsData.cateName || ''
+  form.price = goodsData.price?.toString() || ''
+  form.stock = goodsData.stock?.toString() || ''
+  form.description = goodsData.description || ''
+  
+  imageList.value = goodsData.images || []
+}
 
 // 加载商品分类
 const loadCategoryList = async () => {
   try {
     const res = await getGoodsCateList({ status: 'A' })
-
+    
     if (res.code === 200 && res.data && res.data.paginationResponse) {
       categoryList.value = res.data.paginationResponse.content || []
       goodsStore.saveCategories(categoryList.value)
-    } else {
-      throw new Error(res.message || '获取分类失败')
     }
   } catch (error) {
     console.error('获取分类失败:', error)
-    // 从本地获取缓存的分类
     categoryList.value = goodsStore.categories
-    if (categoryList.value.length === 0) {
-      uni.showToast({
-        title: '获取分类失败，请检查网络',
-        icon: 'none'
-      })
-    }
   }
 }
 
@@ -207,10 +264,7 @@ const uploadImages = async (filePaths) => {
   try {
     for (const filePath of filePaths) {
       const imageUrl = await uploadImage(filePath)
-      imageList.value.push({
-        url: imageUrl,
-        name: `image_${Date.now()}`
-      })
+      imageList.value.push(imageUrl)
     }
   } catch (error) {
     uni.showToast({
@@ -256,74 +310,40 @@ const validateForm = () => {
   return true
 }
 
-// 保存商品
-const handleSaveGoods = async () => {
+// 更新商品
+const handleUpdateGoods = async () => {
   try {
-    // 表单验证
     if (!validateForm()) return
 
     saving.value = true
 
-    // 根据API文档构建请求数据
-    const goodsData = {
+    const updatedData = {
       name: form.name.trim(),
       goodsNo: form.goodsNo,
       cateId: parseInt(form.cateId),
-      images: imageList.value.map(item => item.url),
-      type: 'goods',
-      priceType: 'piece',
-      status: 'A',
+      cateName: form.cateName,
       price: parseFloat(form.price),
-      linePrice: parseFloat(form.price) * 1.2, // 划线价设为价格的1.2倍
       stock: parseInt(form.stock) || 0,
-      canUsePoint: 'Y',
-      isMemberDiscount: 'Y',
-      isSingleSpec: 'Y',
-      serviceTime: 0,
-      weight: '',
-      sort: 0,
-      isItaconsumableitem: 2, // 2表示商品
+      images: imageList.value,
       description: form.description.trim()
     }
 
-    // 先保存到本地
-    const localGoods = goodsStore.saveLocalGoods({
-      ...goodsData,
-      cateName: form.cateName
+    // 更新本地数据
+    goodsStore.updateLocalGoods(goodsId.value, updatedData)
+
+    uni.showToast({
+      title: '更新成功',
+      icon: 'success'
     })
 
-    // 尝试同步到服务器
-    try {
-      const response = await saveGoodsApi(goodsData)
-
-      if (response.code === 200) {
-        goodsStore.updateSyncStatus(localGoods.id, 1) // 同步成功
-
-        uni.showToast({
-          title: '商品保存成功',
-          icon: 'success'
-        })
-      } else {
-        throw new Error(response.message || '保存失败')
-      }
-    } catch (error) {
-      console.error('同步到服务器失败:', error)
-      // 网络失败时保持待同步状态
-      uni.showToast({
-        title: '已保存到本地，稍后同步',
-        icon: 'none'
-      })
-    }
-
-    // 返回上一页
     setTimeout(() => {
       uni.navigateBack()
     }, 1500)
 
   } catch (error) {
-    console.error('保存失败:', error)
+    console.error('更新失败:', error)
     uni.showToast({
-      title: error.message || '保存失败，请重试',
+      title: error.message || '更新失败，请重试',
       icon: 'none'
     })
   } finally {
@@ -333,7 +353,7 @@ const handleSaveGoods = async () => {
 </script>
 
 <style lang="scss" scoped>
-.add-goods-container {
+.edit-goods-container {
   padding: 20rpx;
   background: #f8f9fa;
   min-height: 100vh;
@@ -546,6 +566,29 @@ const handleSaveGoods = async () => {
 
   &:disabled {
     background: #c0c4cc;
+  }
+}
+
+.loading-state, .error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 400rpx;
+
+  .loading-text, .error-text {
+    font-size: 28rpx;
+    color: #909399;
+    margin-bottom: 30rpx;
+  }
+
+  .retry-btn {
+    background: linear-gradient(135deg, #3c9cff 0%, #1890ff 100%);
+    color: #fff;
+    border: none;
+    border-radius: 50rpx;
+    padding: 20rpx 40rpx;
+    font-size: 28rpx;
   }
 }
 </style>

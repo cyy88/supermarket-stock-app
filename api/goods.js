@@ -36,11 +36,18 @@ export const getGoodsDetail = (goodsId) => {
 }
 
 // 获取商品分类
-export const getGoodsCateList = (params) => {
+export const getGoodsCateList = (params = {}) => {
+  // 构建查询参数
+  const queryParams = new URLSearchParams({
+    page: params.page || 1,
+    pageSize: params.pageSize || 100,
+    status: params.status || 'A',
+    ...params
+  }).toString()
+
   return request({
-    url: '/backendApi/goods/cate/list',
-    method: 'GET',
-    data: params
+    url: `/backendApi/goods/cate/list?${queryParams}`,
+    method: 'GET'
   })
 }
 
