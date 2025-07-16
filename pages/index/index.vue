@@ -11,13 +11,32 @@
       <text class="store">{{ userInfo.storeName }}</text>
     </view>
 
+    <!-- 统计卡片 -->
+    <view class="stats-section">
+      <view class="stat-card">
+        <text class="stat-number">{{ goodsStore.todayCount }}</text>
+        <text class="stat-label">今日添加</text>
+      </view>
+      <view class="stat-card">
+        <text class="stat-number">{{ goodsStore.localGoods.length }}</text>
+        <text class="stat-label">总商品</text>
+      </view>
+      <view class="stat-card">
+        <text class="stat-number">{{ goodsStore.unsyncedCount }}</text>
+        <text class="stat-label">待同步</text>
+      </view>
+    </view>
+
     <!-- 功能按钮 -->
     <view class="action-buttons">
       <button class="action-btn primary" @click="goToScan">
         📱 开始扫码
       </button>
-      <button class="action-btn" @click="logout">
-        🚪 退出登录
+      <button class="action-btn secondary" @click="goToGoodsList">
+        📦 商品管理
+      </button>
+      <button class="action-btn tertiary" @click="manualAdd">
+        ➕ 手动添加
       </button>
     </view>
   </view>
@@ -26,6 +45,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import userStore from '@/stores/user'
+import goodsStore from '@/stores/goods'
 
 // 响应式数据
 const title = ref('商品扫码系统')
@@ -34,6 +54,7 @@ const userInfo = ref(null)
 // 生命周期钩子
 onMounted(() => {
   checkLoginStatus()
+  goodsStore.init()
 })
 
 // 检查登录状态
@@ -52,25 +73,22 @@ const checkLoginStatus = () => {
 
 // 跳转到扫码页面
 const goToScan = () => {
-  uni.showToast({
-    title: '扫码功能开发中...',
-    icon: 'none'
+  uni.navigateTo({
+    url: '/pages/scan/scan'
   })
 }
 
-// 退出登录
-const logout = async () => {
-  uni.showModal({
-    title: '确认退出',
-    content: '确定要退出登录吗？',
-    success: async (res) => {
-      if (res.confirm) {
-        await userStore.logout()
-        uni.reLaunch({
-          url: '/pages/login/login'
-        })
-      }
-    }
+// 跳转到商品列表
+const goToGoodsList = () => {
+  uni.switchTab({
+    url: '/pages/goods/list'
+  })
+}
+
+// 手动添加商品
+const manualAdd = () => {
+  uni.navigateTo({
+    url: '/pages/goods/add'
   })
 }
 </script>
@@ -126,6 +144,36 @@ const logout = async () => {
   color: #606266;
 }
 
+.stats-section {
+  display: flex;
+  gap: 20rpx;
+  margin-bottom: 40rpx;
+  width: 100%;
+  max-width: 600rpx;
+}
+
+.stat-card {
+  flex: 1;
+  text-align: center;
+  padding: 30rpx 20rpx;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 20rpx;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
+}
+
+.stat-number {
+  display: block;
+  font-size: 48rpx;
+  font-weight: bold;
+  color: #3c9cff;
+  margin-bottom: 10rpx;
+}
+
+.stat-label {
+  font-size: 24rpx;
+  color: #606266;
+}
+
 .action-buttons {
   display: flex;
   flex-direction: column;
@@ -152,6 +200,16 @@ const logout = async () => {
 
 .action-btn.primary {
   background: linear-gradient(135deg, #3c9cff 0%, #1890ff 100%);
+  color: #fff;
+}
+
+.action-btn.secondary {
+  background: linear-gradient(135deg, #19be6b 0%, #52c41a 100%);
+  color: #fff;
+}
+
+.action-btn.tertiary {
+  background: linear-gradient(135deg, #ff9900 0%, #ffad33 100%);
   color: #fff;
 }
 </style>

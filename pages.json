@@ -1,5 +1,5 @@
 {
-	"pages": [ //pages数组中第一项表示应用启动页，参考：https://uniapp.dcloud.io/collocation/pages
+	"pages": [
 		{
 			"path": "pages/login/login",
 			"style": {
@@ -12,6 +12,36 @@
 			"style": {
 				"navigationBarTitleText": "商品扫码"
 			}
+		},
+		{
+			"path": "pages/scan/scan",
+			"style": {
+				"navigationBarTitleText": "扫码"
+			}
+		},
+		{
+			"path": "pages/goods/add",
+			"style": {
+				"navigationBarTitleText": "添加商品"
+			}
+		},
+		{
+			"path": "pages/goods/list",
+			"style": {
+				"navigationBarTitleText": "商品列表"
+			}
+		},
+		{
+			"path": "pages/goods/detail",
+			"style": {
+				"navigationBarTitleText": "商品详情"
+			}
+		},
+		{
+			"path": "pages/settings/settings",
+			"style": {
+				"navigationBarTitleText": "设置"
+			}
 		}
 	],
 	"globalStyle": {
@@ -19,6 +49,26 @@
 		"navigationBarTitleText": "商品扫码系统",
 		"navigationBarBackgroundColor": "#F8F8F8",
 		"backgroundColor": "#F8F8F8"
+	},
+	"tabBar": {
+		"color": "#7A7E83",
+		"selectedColor": "#3c9cff",
+		"borderStyle": "black",
+		"backgroundColor": "#ffffff",
+		"list": [
+			{
+				"pagePath": "pages/index/index",
+				"text": "🏠 首页"
+			},
+			{
+				"pagePath": "pages/goods/list",
+				"text": "📦 商品"
+			},
+			{
+				"pagePath": "pages/settings/settings",
+				"text": "⚙️ 设置"
+			}
+		]
 	},
 	"uniIdRouter": {}
 }
