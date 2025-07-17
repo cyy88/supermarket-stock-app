@@ -36,7 +36,7 @@
       
       <view class="form-item">
         <text class="label">商品条码</text>
-        <input 
+        <input
           v-model="form.goodsNo"
           placeholder="扫码自动填入或手动输入"
           class="input readonly"
@@ -46,12 +46,21 @@
 
       <view class="form-item">
         <text class="label required">商品名称</text>
-        <input
-          v-model="form.name"
-          placeholder="请输入商品名称"
-          class="input"
-          @input="updateStep"
-        />
+        <view class="input-with-ai">
+          <input
+            v-model="form.name"
+            placeholder="请输入商品名称"
+            class="input"
+            @input="updateStep"
+          />
+          <button
+            class="ai-btn"
+            @click="showAIRecognitionModal"
+            :disabled="aiRecognizing"
+          >
+            {{ aiRecognizing ? '🤖 识别中...' : '🤖 AI识别' }}
+          </button>
+        </view>
       </view>
 
       <view class="form-item">
@@ -163,6 +172,62 @@
       </button>
     </view>
 
+    <!-- AI识别模态框 -->
+    <view v-if="showAIModal" class="ai-modal-overlay" @click="closeAIModal">
+      <view class="ai-modal" @click.stop>
+        <view class="ai-modal-header">
+          <text class="ai-modal-title">🤖 AI智能识别</text>
+          <text class="ai-modal-close" @click="closeAIModal">✕</text>
+        </view>
+
+        <view class="ai-modal-content">
+          <view v-if="!aiRecognizing && !aiResult" class="ai-upload-area">
+            <view class="ai-upload-icon">📷</view>
+            <text class="ai-upload-text">选择商品图片进行AI识别</text>
+            <text class="ai-upload-tip">支持JPG、PNG格式，识别约需12秒</text>
+            <button class="ai-upload-btn" @click="chooseImageForAI">选择图片</button>
+          </view>
+
+          <view v-if="aiRecognizing" class="ai-recognizing">
+            <view class="ai-loading">
+              <view class="ai-loading-spinner"></view>
+            </view>
+            <text class="ai-recognizing-text">AI正在识别中...</text>
+            <text class="ai-recognizing-tip">请稍候，大约需要12秒</text>
+            <view class="ai-progress">
+              <view class="ai-progress-bar" :style="{ width: aiProgress + '%' }"></view>
+            </view>
+          </view>
+
+          <view v-if="aiResult && !aiRecognizing" class="ai-result">
+            <view v-if="aiResult.success" class="ai-result-success">
+              <text class="ai-result-title">✅ 识别成功</text>
+              <view class="ai-result-item">
+                <text class="ai-result-label">商品名称：</text>
+                <text class="ai-result-value">{{ aiResult.data.name }}</text>
+              </view>
+              <view class="ai-result-item">
+                <text class="ai-result-label">商品条码：</text>
+                <text class="ai-result-value">{{ aiResult.data.num }}</text>
+              </view>
+              <view class="ai-result-actions">
+                <button class="ai-result-btn apply" @click="applyAIResult">应用结果</button>
+                <button class="ai-result-btn retry" @click="retryAIRecognition">重新识别</button>
+              </view>
+            </view>
+
+            <view v-else class="ai-result-error">
+              <text class="ai-result-title">❌ 识别失败</text>
+              <text class="ai-result-error-msg">{{ aiResult.error }}</text>
+              <view class="ai-result-actions">
+                <button class="ai-result-btn retry" @click="retryAIRecognition">重新识别</button>
+                <button class="ai-result-btn cancel" @click="closeAIModal">取消</button>
+              </view>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
 
   </view>
 </template>
@@ -172,6 +237,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import goodsStore from '@/stores/goods'
 import { saveGoods as saveGoodsApi, getGoodsCateList, uploadImage } from '@/api/goods'
+import { recognizeProductImage } from '@/api/ai'
 
 const saving = ref(false)
 const showCategoryPicker = ref(false)
@@ -179,6 +245,14 @@ const categoryList = ref([])
 const imageList = ref([])
 const currentStep = ref(1)
 const selectedCategoryIndex = ref(0)
+
+// AI识别相关状态
+const showAIModal = ref(false)
+const aiRecognizing = ref(false)
+const aiResult = ref(null)
+const aiProgress = ref(0)
+const aiImageUrl = ref('')
+const aiProgressTimer = ref(null)
 
 const form = reactive({
   goodsNo: '',
@@ -341,6 +415,162 @@ const validateForm = () => {
   }
   
   return true
+}
+
+// AI识别相关方法
+const showAIRecognitionModal = () => {
+  showAIModal.value = true
+  aiResult.value = null
+  aiProgress.value = 0
+}
+
+const closeAIModal = () => {
+  showAIModal.value = false
+  aiRecognizing.value = false
+  aiResult.value = null
+  aiProgress.value = 0
+  aiImageUrl.value = ''
+  if (aiProgressTimer.value) {
+    clearInterval(aiProgressTimer.value)
+    aiProgressTimer.value = null
+  }
+}
+
+const chooseImageForAI = () => {
+  uni.chooseImage({
+    count: 1,
+    sizeType: ['compressed'],
+    sourceType: ['camera', 'album'],
+    success: (res) => {
+      const filePath = res.tempFilePaths[0]
+      uploadImageForAI(filePath)
+    },
+    fail: (error) => {
+      uni.showToast({
+        title: '选择图片失败',
+        icon: 'none'
+      })
+    }
+  })
+}
+
+const uploadImageForAI = async (filePath) => {
+  try {
+    console.log('开始上传图片用于AI识别:', filePath);
+
+    uni.showLoading({
+      title: '上传图片中...'
+    })
+
+    const imageUrl = await uploadImage(filePath)
+    console.log('图片上传成功，URL:', imageUrl);
+
+    aiImageUrl.value = imageUrl
+
+    uni.hideLoading()
+
+    // 开始AI识别
+    console.log('开始调用AI识别...');
+    startAIRecognition(imageUrl)
+  } catch (error) {
+    console.error('图片上传失败:', error);
+    uni.hideLoading()
+    uni.showToast({
+      title: '图片上传失败',
+      icon: 'none'
+    })
+  }
+}
+
+const startAIRecognition = async (imageUrl) => {
+  try {
+    console.log('startAIRecognition 被调用，图片URL:', imageUrl);
+
+    aiRecognizing.value = true
+    aiProgress.value = 0
+
+    // 启动进度条动画
+    startProgressAnimation()
+
+    console.log('开始调用 recognizeProductImage...');
+
+    // 调用AI识别
+    const result = await recognizeProductImage(imageUrl)
+
+    console.log('AI识别完成，结果:', result);
+
+    // 停止进度条动画
+    stopProgressAnimation()
+
+    aiRecognizing.value = false
+    aiResult.value = result
+
+    if (result.success) {
+      console.log('AI识别成功');
+      uni.showToast({
+        title: '识别成功',
+        icon: 'success'
+      })
+    } else {
+      console.log('AI识别失败:', result.error);
+      uni.showToast({
+        title: '识别失败',
+        icon: 'none'
+      })
+    }
+  } catch (error) {
+    console.error('startAIRecognition 异常:', error);
+    stopProgressAnimation()
+    aiRecognizing.value = false
+    aiResult.value = {
+      success: false,
+      error: error.message || '识别失败，请重试'
+    }
+
+    uni.showToast({
+      title: '识别失败',
+      icon: 'none'
+    })
+  }
+}
+
+const startProgressAnimation = () => {
+  aiProgress.value = 0
+  aiProgressTimer.value = setInterval(() => {
+    if (aiProgress.value < 90) {
+      aiProgress.value += Math.random() * 10
+    }
+  }, 500)
+}
+
+const stopProgressAnimation = () => {
+  if (aiProgressTimer.value) {
+    clearInterval(aiProgressTimer.value)
+    aiProgressTimer.value = null
+  }
+  aiProgress.value = 100
+}
+
+const applyAIResult = () => {
+  if (aiResult.value && aiResult.value.success) {
+    form.name = aiResult.value.data.name
+    form.goodsNo = aiResult.value.data.num
+    updateStep()
+    closeAIModal()
+
+    uni.showToast({
+      title: '已应用AI识别结果',
+      icon: 'success'
+    })
+  }
+}
+
+const retryAIRecognition = () => {
+  if (aiImageUrl.value) {
+    startAIRecognition(aiImageUrl.value)
+  } else {
+    chooseImageForAI()
+  }
 }
 
 const handleSaveGoods = async () => {
@@ -661,6 +891,37 @@ const handleSaveGoods = async () => {
       font-size: 28rpx;
     }
   }
+
+  .input-with-ai {
+    display: flex;
+    align-items: center;
+    gap: 20rpx;
+
+    .input {
+      flex: 1;
+    }
+
+    .ai-btn {
+      padding: 0 24rpx;
+      height: 88rpx;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+      border: none;
+      border-radius: 15rpx;
+      font-size: 24rpx;
+      white-space: nowrap;
+      transition: all 0.3s;
+
+      &:active {
+        transform: scale(0.95);
+      }
+
+      &:disabled {
+        background: #c0c4cc;
+        transform: none;
+      }
+    }
+  }
 }
 
 .image-upload {
@@ -805,6 +1066,256 @@ const handleSaveGoods = async () => {
   &:disabled {
     background: linear-gradient(135deg, #adb5bd 0%, #6c757d 100%);
     box-shadow: none;
+  }
+}
+
+// AI识别模态框样式
+.ai-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 40rpx;
+}
+
+.ai-modal {
+  background: #fff;
+  border-radius: 25rpx;
+  width: 100%;
+  max-width: 600rpx;
+  max-height: 80vh;
+  overflow: hidden;
+  box-shadow: 0 20rpx 60rpx rgba(0, 0, 0, 0.3);
+}
+
+.ai-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 30rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
+  .ai-modal-title {
+    font-size: 32rpx;
+    font-weight: bold;
+    color: #fff;
+  }
+
+  .ai-modal-close {
+    width: 60rpx;
+    height: 60rpx;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32rpx;
+    cursor: pointer;
+    transition: all 0.3s;
+
+    &:active {
+      background: rgba(255, 255, 255, 0.3);
+      transform: scale(0.9);
+    }
+  }
+}
+
+.ai-modal-content {
+  padding: 40rpx 30rpx;
+  min-height: 300rpx;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.ai-upload-area {
+  text-align: center;
+
+  .ai-upload-icon {
+    font-size: 120rpx;
+    margin-bottom: 30rpx;
+    opacity: 0.6;
+  }
+
+  .ai-upload-text {
+    display: block;
+    font-size: 32rpx;
+    color: #303133;
+    margin-bottom: 15rpx;
+    font-weight: bold;
+  }
+
+  .ai-upload-tip {
+    display: block;
+    font-size: 24rpx;
+    color: #909399;
+    margin-bottom: 40rpx;
+  }
+
+  .ai-upload-btn {
+    padding: 20rpx 60rpx;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+    border: none;
+    border-radius: 50rpx;
+    font-size: 28rpx;
+    font-weight: bold;
+    transition: all 0.3s;
+
+    &:active {
+      transform: scale(0.95);
+    }
+  }
+}
+
+.ai-recognizing {
+  text-align: center;
+
+  .ai-loading {
+    margin-bottom: 30rpx;
+
+    .ai-loading-spinner {
+      width: 80rpx;
+      height: 80rpx;
+      border: 6rpx solid #f3f3f3;
+      border-top: 6rpx solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto;
+    }
+  }
+
+  .ai-recognizing-text {
+    display: block;
+    font-size: 32rpx;
+    color: #303133;
+    margin-bottom: 15rpx;
+    font-weight: bold;
+  }
+
+  .ai-recognizing-tip {
+    display: block;
+    font-size: 24rpx;
+    color: #909399;
+    margin-bottom: 30rpx;
+  }
+
+  .ai-progress {
+    width: 100%;
+    height: 8rpx;
+    background: #f0f0f0;
+    border-radius: 4rpx;
+    overflow: hidden;
+
+    .ai-progress-bar {
+      height: 100%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      transition: width 0.3s ease;
+      border-radius: 4rpx;
+    }
+  }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.ai-result {
+  .ai-result-success,
+  .ai-result-error {
+    text-align: center;
+  }
+
+  .ai-result-title {
+    display: block;
+    font-size: 32rpx;
+    font-weight: bold;
+    margin-bottom: 30rpx;
+  }
+
+  .ai-result-success .ai-result-title {
+    color: #19be6b;
+  }
+
+  .ai-result-error .ai-result-title {
+    color: #f56c6c;
+  }
+
+  .ai-result-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20rpx;
+    padding: 20rpx;
+    background: #f8f9fa;
+    border-radius: 15rpx;
+
+    .ai-result-label {
+      font-size: 28rpx;
+      color: #606266;
+      min-width: 160rpx;
+    }
+
+    .ai-result-value {
+      flex: 1;
+      font-size: 28rpx;
+      color: #303133;
+      font-weight: bold;
+    }
+  }
+
+  .ai-result-error-msg {
+    display: block;
+    font-size: 28rpx;
+    color: #f56c6c;
+    margin-bottom: 30rpx;
+    padding: 20rpx;
+    background: #fef0f0;
+    border-radius: 15rpx;
+  }
+
+  .ai-result-actions {
+    display: flex;
+    gap: 20rpx;
+    margin-top: 30rpx;
+
+    .ai-result-btn {
+      flex: 1;
+      padding: 20rpx;
+      border: none;
+      border-radius: 15rpx;
+      font-size: 28rpx;
+      font-weight: bold;
+      transition: all 0.3s;
+
+      &:active {
+        transform: scale(0.95);
+      }
+
+      &.apply {
+        background: linear-gradient(135deg, #19be6b 0%, #52c41a 100%);
+        color: #fff;
+      }
+
+      &.retry {
+        background: linear-gradient(135deg, #ff9900 0%, #ffad33 100%);
+        color: #fff;
+      }
+
+      &.cancel {
+        background: #f5f7fa;
+        color: #606266;
+        border: 2rpx solid #dcdfe6;
+      }
+    }
   }
 }
 </style>

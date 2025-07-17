@@ -52,8 +52,11 @@ export const getGoodsCateList = (params = {}) => {
 
 // 上传图片
 export const uploadImage = (filePath) => {
+  console.log('开始上传图片:', filePath);
+
   return new Promise((resolve, reject) => {
     const token = uni.getStorageSync('token')
+    console.log('使用token:', token);
 
     uni.uploadFile({
       url: 'http://msbs-fuint-ts.qingchunnianhua.com:1880/backendApi/file/upload',
@@ -64,18 +67,25 @@ export const uploadImage = (filePath) => {
         'platform': 'MOBILE'
       },
       success: (res) => {
+        console.log('图片上传响应:', res);
         try {
           const data = JSON.parse(res.data)
+          console.log('解析后的上传响应:', data);
+
           if (data.code === 200) {
+            console.log('图片上传成功，URL:', data.data.url);
             resolve(data.data.url)
           } else {
+            console.error('图片上传失败:', data.message);
             reject(new Error(data.message || '上传失败'))
           }
         } catch (error) {
+          console.error('解析上传响应失败:', error);
           reject(new Error('响应解析失败'))
         }
       },
       fail: (error) => {
+        console.error('图片上传请求失败:', error);
         reject(new Error('上传请求失败'))
       }
     })
