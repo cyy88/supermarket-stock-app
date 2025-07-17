@@ -47,30 +47,22 @@ import { ref, onMounted } from 'vue'
 import userStore from '@/stores/user'
 import goodsStore from '@/stores/goods'
 
-// 响应式数据
 const title = ref('商品扫码系统')
 const userInfo = ref(null)
 
-// 生命周期钩子
 onMounted(() => {
   checkLoginStatus()
   goodsStore.init()
 })
 
-// 检查登录状态
 const checkLoginStatus = async () => {
   if (!userStore.isLoggedIn) {
-    // 未登录，跳转到登录页
     uni.reLaunch({
       url: '/pages/login/login'
     })
     return
   }
-
-  // 已登录，显示用户信息
   userInfo.value = userStore.userInfo
-
-  // 如果本地没有用户信息，尝试从服务器获取
   if (!userInfo.value) {
     try {
       await userStore.getUserInfo()
@@ -81,21 +73,18 @@ const checkLoginStatus = async () => {
   }
 }
 
-// 跳转到扫码页面
 const goToScan = () => {
   uni.navigateTo({
     url: '/pages/scan/scan'
   })
 }
 
-// 跳转到商品列表
 const goToGoodsList = () => {
   uni.switchTab({
     url: '/pages/goods/list'
   })
 }
 
-// 手动添加商品
 const manualAdd = () => {
   uni.navigateTo({
     url: '/pages/goods/add'

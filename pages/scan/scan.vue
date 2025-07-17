@@ -77,12 +77,10 @@ const modalForm = reactive({
   barcode: ''
 })
 
-// 页面加载
 onMounted(() => {
   loadRecentScans()
 })
 
-// 开始扫码
 const startScan = () => {
   uni.scanCode({
     success: (res) => {
@@ -102,7 +100,6 @@ const handleScanResult = (barcode) => {
   goToAddGoods(barcode)
 }
 
-// 保存扫码记录
 const saveRecentScan = (barcode) => {
   const scanRecord = {
     barcode,

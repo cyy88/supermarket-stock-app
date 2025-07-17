@@ -1,4 +1,3 @@
-// 数据同步管理器
 import { saveGoods } from '@/api/goods'
 import goodsStore from '@/stores/goods'
 
@@ -7,21 +6,17 @@ class SyncManager {
     this.isSyncing = false
   }
 
-  // 自动同步
   async autoSync() {
     if (this.isSyncing) return
 
-    // 检查网络状态
     const networkType = await this.getNetworkType()
     if (networkType === 'none') {
-      console.log('无网络连接，跳过同步')
       return
     }
 
     await this.syncPendingGoods()
   }
 
-  // 同步待上传商品
   async syncPendingGoods() {
     this.isSyncing = true
 
@@ -29,7 +24,6 @@ class SyncManager {
       const unsyncedGoods = goodsStore.getUnsyncedGoods()
 
       if (unsyncedGoods.length === 0) {
-        console.log('没有待同步商品')
         return { success: 0, failed: 0 }
       }
 
@@ -38,7 +32,6 @@ class SyncManager {
 
       for (const goods of unsyncedGoods) {
         try {
-          // 移除本地字段
           const { id, createTime, updateTime, syncStatus, ...goodsData } = goods
           await saveGoods(goodsData)
 
@@ -47,11 +40,9 @@ class SyncManager {
         } catch (error) {
           goodsStore.updateSyncStatus(goods.id, 2) // 同步失败
           failedCount++
-          console.error('商品同步失败:', goods.name, error)
         }
       }
 
-      // 显示同步结果
       if (successCount > 0) {
         uni.showToast({
           title: `成功同步${successCount}个商品`,
@@ -69,7 +60,6 @@ class SyncManager {
     }
   }
 
-  // 获取网络状态
   getNetworkType() {
     return new Promise((resolve) => {
       uni.getNetworkType({
@@ -83,7 +73,6 @@ class SyncManager {
     })
   }
 
-  // 手动触发同步
   async manualSync() {
     uni.showLoading({
       title: '同步中...'
@@ -113,12 +102,10 @@ class SyncManager {
     }
   }
 
-  // 检查是否需要同步
   needSync() {
     return goodsStore.getUnsyncedGoods().length > 0
   }
 
-  // 获取同步状态
   getSyncStatus() {
     const unsyncedGoods = goodsStore.getUnsyncedGoods()
     const totalGoods = goodsStore.localGoods.length
@@ -132,6 +119,5 @@ class SyncManager {
   }
 }
 
-// 创建单例
 const syncManager = new SyncManager()
 export default syncManager

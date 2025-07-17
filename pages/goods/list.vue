@@ -152,16 +152,14 @@ import { ref, computed, onMounted } from 'vue'
 import goodsStore from '@/stores/goods'
 import { getGoodsList, getGoodsCateList } from '@/api/goods'
 
-// 响应式数据
 const searchKeyword = ref('')
 const goodsList = ref([])
 const serverGoodsList = ref([])
 const loading = ref(false)
 const currentPage = ref(1)
 const totalPages = ref(1)
-const showServerData = ref(true) // 默认显示服务器数据
+const showServerData = ref(true)
 
-// 计算属性
 const filteredGoods = computed(() => {
   const dataSource = showServerData.value ? serverGoodsList.value : goodsList.value
 
@@ -185,7 +183,6 @@ const unsyncedCount = computed(() => {
   return goodsList.value.filter(item => item.syncStatus === 0).length
 })
 
-// 页面加载
 onMounted(() => {
   loadGoodsList()
   loadServerGoodsList()
@@ -233,7 +230,6 @@ const loadServerGoodsList = async () => {
       title: '获取商品列表失败',
       icon: 'none'
     })
-    // 失败时显示本地数据
     showServerData.value = false
   } finally {
     loading.value = false

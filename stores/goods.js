@@ -1,4 +1,3 @@
-// 商品状态管理
 import { saveGoods as saveGoodsApi, getGoodsList as getGoodsListApi } from '@/api/goods'
 
 class GoodsStore {
@@ -8,13 +7,11 @@ class GoodsStore {
     this.init()
   }
 
-  // 初始化
   init() {
     this.localGoods = uni.getStorageSync('localGoods') || []
     this.categories = uni.getStorageSync('categories') || []
   }
 
-  // 计算今日添加数量
   get todayCount() {
     const today = new Date().toDateString()
     return this.localGoods.filter(item =>
@@ -22,12 +19,10 @@ class GoodsStore {
     ).length
   }
 
-  // 计算待同步数量
   get unsyncedCount() {
     return this.localGoods.filter(item => item.syncStatus === 0).length
   }
 
-  // 保存商品到本地
   saveLocalGoods(goods) {
     const newGoods = {
       ...goods,
@@ -42,7 +37,6 @@ class GoodsStore {
     return newGoods
   }
 
-  // 更新商品同步状态
   updateSyncStatus(goodsId, status) {
     const index = this.localGoods.findIndex(item => item.id === goodsId)
     if (index !== -1) {
@@ -52,12 +46,10 @@ class GoodsStore {
     }
   }
 
-  // 获取待同步商品
   getUnsyncedGoods() {
     return this.localGoods.filter(item => item.syncStatus === 0)
   }
 
-  // 删除本地商品
   deleteLocalGoods(goodsId) {
     const index = this.localGoods.findIndex(item => item.id === goodsId)
     if (index !== -1) {
@@ -66,7 +58,6 @@ class GoodsStore {
     }
   }
 
-  // 更新商品信息
   updateLocalGoods(goodsId, updateData) {
     const index = this.localGoods.findIndex(item => item.id === goodsId)
     if (index !== -1) {
@@ -79,18 +70,15 @@ class GoodsStore {
     }
   }
 
-  // 保存分类数据
   saveCategories(categories) {
     this.categories = categories
     uni.setStorageSync('categories', this.categories)
   }
 
-  // 根据条码查找商品
   findGoodsByBarcode(barcode) {
     return this.localGoods.find(item => item.goodsNo === barcode)
   }
 }
 
-// 创建单例
 const goodsStore = new GoodsStore()
 export default goodsStore

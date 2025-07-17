@@ -109,21 +109,17 @@ import { ref, computed, onMounted } from 'vue'
 import userStore from '@/stores/user'
 import goodsStore from '@/stores/goods'
 
-// 响应式数据
 const userInfo = ref(null)
 const serverUrl = ref('http://msbs-fuint-ts.qingchunnianhua.com:1880')
 
-// 计算属性
 const syncedCount = computed(() => {
   return goodsStore.localGoods.filter(item => item.syncStatus === 1).length
 })
 
-// 页面加载
 onMounted(async () => {
   userInfo.value = userStore.userInfo
   goodsStore.init()
 
-  // 如果没有用户信息，尝试获取
   if (!userInfo.value) {
     try {
       await userStore.getUserInfo()
@@ -134,13 +130,11 @@ onMounted(async () => {
   }
 })
 
-// 获取头像文字
 const getAvatarText = () => {
   const name = userInfo.value?.realName || userInfo.value?.accountName || '用户'
-  return name.charAt(name.length - 1) // 取最后一个字符作为头像
+  return name.charAt(name.length - 1)
 }
 
-// 手动同步
 const manualSync = async () => {
   const unsyncedGoods = goodsStore.getUnsyncedGoods()
   
@@ -165,7 +159,6 @@ const manualSync = async () => {
           // 这里应该调用同步管理器
           // await SyncManager.manualSync()
           
-          // 模拟同步过程
           await new Promise(resolve => setTimeout(resolve, 2000))
           
           uni.showToast({
@@ -185,19 +178,16 @@ const manualSync = async () => {
   })
 }
 
-// 清除缓存
 const clearCache = () => {
   uni.showModal({
     title: '清除缓存',
     content: '确定要清除所有本地缓存数据吗？此操作不可恢复。',
     success: (res) => {
       if (res.confirm) {
-        // 清除商品数据
         uni.removeStorageSync('localGoods')
         uni.removeStorageSync('categories')
         uni.removeStorageSync('recentScans')
         
-        // 重新初始化
         goodsStore.init()
         
         uni.showToast({
@@ -209,7 +199,6 @@ const clearCache = () => {
   })
 }
 
-// 导出数据
 const exportData = () => {
   const goods = goodsStore.localGoods
   
@@ -221,10 +210,8 @@ const exportData = () => {
     return
   }
 
-  // 生成CSV格式数据
   const csvData = generateCSV(goods)
   
-  // 在实际应用中，这里应该保存文件或分享数据
   uni.showModal({
     title: '导出数据',
     content: `共 ${goods.length} 条商品数据，是否复制到剪贴板？`,
@@ -244,7 +231,6 @@ const exportData = () => {
   })
 }
 
-// 生成CSV数据
 const generateCSV = (goods) => {
   const headers = ['商品名称', '条码', '分类', '价格', '库存', '状态', '创建时间']
   const rows = goods.map(item => [
@@ -260,7 +246,6 @@ const generateCSV = (goods) => {
   return [headers, ...rows].map(row => row.join(',')).join('\n')
 }
 
-// 退出登录
 const handleLogout = () => {
   uni.showModal({
     title: '确认退出',

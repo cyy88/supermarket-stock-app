@@ -245,7 +245,6 @@ const loadCategoryList = async () => {
       goodsStore.saveCategories(categoryList.value)
     }
   } catch (error) {
-    console.error('获取分类失败:', error)
     categoryList.value = goodsStore.categories
   }
 }
@@ -323,7 +322,6 @@ const validateForm = () => {
   return true
 }
 
-// 更新商品
 const handleUpdateGoods = async () => {
   try {
     if (!validateForm()) return
