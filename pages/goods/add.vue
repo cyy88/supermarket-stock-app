@@ -279,14 +279,30 @@ const uploadImages = async (filePaths) => {
   try {
     for (const filePath of filePaths) {
       const response = await uploadImage(filePath)
-      const imageUrl = response.url || response.data?.url || response
-      imageList.value.push(imageUrl)
+      let imageUrl = ''
+      if (typeof response === 'string') {
+        imageUrl = response
+      } else if (response.url) {
+        imageUrl = response.url
+      } else if (response.data && response.data.url) {
+        imageUrl = response.data.url
+      } else {
+        throw new Error('图片上传失败：无法获取图片URL')
+      }
+      if (imageUrl && imageUrl.trim()) {
+        imageList.value.push({
+          url: imageUrl,
+          tempPath: filePath
+        })
+      } else {
+        throw new Error('图片URL为空')
+      }
     }
     updateStep()
   } catch (error) {
     console.error('图片上传失败:', error)
     uni.showToast({
-      title: '图片上传失败',
+      title: error.message || '图片上传失败',
       icon: 'none'
     })
   } finally {
@@ -333,11 +349,20 @@ const handleSaveGoods = async () => {
 
     saving.value = true
 
+    const imageUrls = imageList.value.map(item => {
+      if (typeof item === 'string') {
+        return item
+      } else if (item && item.url) {
+        return item.url
+      }
+      return null
+    }).filter(url => url)
+
     const goodsData = {
       name: form.name.trim(),
       goodsNo: form.goodsNo,
       cateId: parseInt(form.cateId),
-      images: imageList.value,
+      images: imageUrls,
       type: 'goods',
       priceType: 'piece',
       status: 'A',
