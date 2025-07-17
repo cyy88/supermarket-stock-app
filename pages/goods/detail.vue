@@ -101,18 +101,17 @@
 import { ref, onMounted } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
 import goodsStore from '@/stores/goods'
-import { saveGoods, getGoodsDetail } from '@/api/goods'
+import { saveGoods, getGoodsDetail, getGoodsCateList } from '@/api/goods'
+import { formatTime as formatTimeUtil } from '@/utils/time'
 
-// 响应式数据
 const goods = ref(null)
 const goodsId = ref('')
 
-// 页面加载
 onLoad((options) => {
-  console.log('商品详情页面参数:', options)
   if (options.id) {
     goodsId.value = options.id
     loadGoodsDetail()
+    loadCategoriesIfNeeded()
   } else {
     uni.showToast({
       title: '商品ID参数缺失',
@@ -124,42 +123,51 @@ onLoad((options) => {
   }
 })
 
-// 页面显示时刷新数据
+const loadCategoriesIfNeeded = async () => {
+  if (goodsStore.categories.length === 0) {
+    try {
+      const res = await getGoodsCateList({
+        page: 1,
+        pageSize: 100,
+        status: 'A'
+      })
+
+      if (res.code === 200 && res.data && res.data.paginationResponse) {
+        const categories = res.data.paginationResponse.content || []
+        goodsStore.saveCategories(categories)
+      }
+    } catch (error) {
+    }
+  }
+}
+
 onShow(() => {
   if (goodsId.value) {
     loadGoodsDetail()
   }
 })
 
-// 加载商品详情
 const loadGoodsDetail = async () => {
   try {
-    // 先从本地查找
     const foundGoods = goodsStore.localGoods.find(item => item.id === goodsId.value)
     if (foundGoods) {
       goods.value = foundGoods
       return
     }
 
-    // 本地没有，尝试从服务器获取
     try {
-      console.log('正在获取商品详情，ID:', goodsId.value)
       const response = await getGoodsDetail(goodsId.value)
-      console.log('商品详情响应:', response)
 
       if (response.code === 200 && response.data && response.data.goods) {
-        // 从响应中提取商品信息，并添加imagePath用于图片拼接
         const goodsData = {
           ...response.data.goods,
           imagePath: response.data.imagePath || ''
         }
         goods.value = goodsData
-        console.log('设置商品数据:', goodsData)
       } else {
         throw new Error(response.message || '获取商品详情失败')
       }
     } catch (serverError) {
-      console.error('从服务器获取商品详情失败:', serverError)
       uni.showToast({
         title: '商品不存在或网络错误',
         icon: 'none'
@@ -169,7 +177,6 @@ const loadGoodsDetail = async () => {
       }, 1500)
     }
   } catch (error) {
-    console.error('加载商品详情失败:', error)
     uni.showToast({
       title: '加载失败',
       icon: 'none'
@@ -177,7 +184,6 @@ const loadGoodsDetail = async () => {
   }
 }
 
-// 获取同步状态样式类
 const getSyncStatusClass = (status) => {
   switch (status) {
     case 1: return 'status-synced'
@@ -186,7 +192,6 @@ const getSyncStatusClass = (status) => {
   }
 }
 
-// 获取同步状态文本
 const getSyncStatusText = (status) => {
   switch (status) {
     case 1: return '已同步'
@@ -195,38 +200,44 @@ const getSyncStatusText = (status) => {
   }
 }
 
-// 获取商品分类名称
 const getGoodsCategory = (item) => {
   if (!item) return '未分类'
-  // 服务器数据可能有 cateInfo 对象
+
   if (item.cateInfo && item.cateInfo.name) {
     return item.cateInfo.name
   }
-  // 本地数据直接有 cateName
-  return item.cateName || '未分类'
+
+  if (item.cateName) {
+    return item.cateName
+  }
+
+  if (item.cateId) {
+    const categories = goodsStore.categories
+    const category = categories.find(cat => cat.id === item.cateId)
+    if (category) {
+      return category.name
+    }
+  }
+
+  return '未分类'
 }
 
-// 获取商品图片列表
 const getGoodsImages = (item) => {
   if (!item) return []
 
   const images = []
 
-  // 优先使用logo字段（服务器数据）
   if (item.logo) {
     images.push(item.logo)
   }
 
-  // 处理images字段
   if (item.images) {
     if (typeof item.images === 'string') {
       try {
-        // 如果images是JSON字符串，解析它
         const parsedImages = JSON.parse(item.images)
         if (Array.isArray(parsedImages)) {
           parsedImages.forEach(img => {
             if (img && !images.includes(img)) {
-              // 如果是相对路径，需要拼接imagePath
               if (img.startsWith('/') && item.imagePath) {
                 images.push(item.imagePath + img)
               } else {
@@ -236,10 +247,8 @@ const getGoodsImages = (item) => {
           })
         }
       } catch (e) {
-        console.error('解析images字段失败:', e)
       }
     } else if (Array.isArray(item.images)) {
-      // 如果images是数组
       item.images.forEach(img => {
         if (img && !images.includes(img)) {
           images.push(img)
@@ -248,61 +257,28 @@ const getGoodsImages = (item) => {
     }
   }
 
-  return images.filter(img => img) // 过滤空值
+  return images.filter(img => img)
 }
 
-// 获取创建时间
 const getCreateTime = (item) => {
   if (!item) return null
-  // 根据API响应，直接使用createTime字段
   return item.createTime || item.createDate || item.createdAt || null
 }
 
-// 获取更新时间
 const getUpdateTime = (item) => {
   if (!item) return null
-  // 根据API响应，直接使用updateTime字段
   return item.updateTime || item.modifyDate || item.updatedAt || item.createTime || item.createDate || null
 }
 
-// 判断是否为本地商品
 const isLocalGoods = () => {
   return goodsStore.localGoods.some(item => item.id === goodsId.value)
 }
 
-// 格式化时间
 const formatTime = (timestamp) => {
-  if (!timestamp) return '未知'
-
-  let date
-  // 处理不同的时间格式
-  if (typeof timestamp === 'string') {
-    // 如果是字符串格式的时间 "2024-01-01 12:00:00"
-    date = new Date(timestamp)
-  } else if (typeof timestamp === 'number') {
-    // 如果是时间戳
-    date = new Date(timestamp)
-  } else {
-    return '未知'
-  }
-
-  // 检查日期是否有效
-  if (isNaN(date.getTime())) {
-    return '未知'
-  }
-
-  return date.toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
+  return formatTimeUtil(timestamp)
 }
 
-// 编辑商品
 const editGoods = () => {
-  // 如果是服务器数据，先转换为本地数据格式再编辑
   if (goods.value && !goodsStore.localGoods.find(item => item.id === goodsId.value)) {
     const localGoodsData = {
       id: goodsId.value,
@@ -318,12 +294,11 @@ const editGoods = () => {
       type: goods.value.type || 'goods',
       priceType: goods.value.priceType || 'piece',
       sort: goods.value.sort || 0,
-      syncStatus: 1, // 服务器数据标记为已同步
+      syncStatus: 1,
       createTime: goods.value.createTime || Date.now(),
       updateTime: goods.value.updateTime || Date.now()
     }
 
-    // 添加到本地存储
     goodsStore.localGoods.push(localGoodsData)
     uni.setStorageSync('localGoods', goodsStore.localGoods)
   }
@@ -333,7 +308,6 @@ const editGoods = () => {
   })
 }
 
-// 同步商品
 const syncGoods = async () => {
   if (goods.value.syncStatus === 1) return
 
@@ -365,7 +339,6 @@ const syncGoods = async () => {
   }
 }
 
-// 删除商品
 const deleteGoods = () => {
   uni.showModal({
     title: '确认删除',

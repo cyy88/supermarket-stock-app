@@ -56,12 +56,19 @@
 
       <view class="form-item">
         <text class="label required">商品分类</text>
-        <view class="input select" @click="showCategoryPicker = true">
-          <text :class="{ placeholder: !form.cateName }">
-            {{ form.cateName || '请选择商品分类' }}
-          </text>
-          <text class="arrow">▼</text>
-        </view>
+        <picker
+          :range="categoryList"
+          range-key="name"
+          @change="onCategoryChange"
+          :value="selectedCategoryIndex"
+        >
+          <view class="input select">
+            <text :class="{ placeholder: !form.cateName }">
+              {{ form.cateName || '请选择商品分类' }}
+            </text>
+            <text class="arrow">▼</text>
+          </view>
+        </picker>
       </view>
 
       <view class="form-item">
@@ -156,16 +163,7 @@
       </button>
     </view>
 
-    <!-- 分类选择器 -->
-    <picker
-      v-if="showCategoryPicker"
-      :range="categoryList"
-      range-key="name"
-      @change="onCategoryChange"
-      @cancel="showCategoryPicker = false"
-    >
-      <view></view>
-    </picker>
+
   </view>
 </template>
 
@@ -175,12 +173,12 @@ import { onLoad } from '@dcloudio/uni-app'
 import goodsStore from '@/stores/goods'
 import { saveGoods as saveGoodsApi, getGoodsCateList, uploadImage } from '@/api/goods'
 
-// 响应式数据
 const saving = ref(false)
 const showCategoryPicker = ref(false)
 const categoryList = ref([])
 const imageList = ref([])
 const currentStep = ref(1)
+const selectedCategoryIndex = ref(0)
 
 const form = reactive({
   goodsNo: '',
@@ -192,7 +190,6 @@ const form = reactive({
   description: ''
 })
 
-// 页面加载
 onLoad((options) => {
   if (options.barcode) {
     form.goodsNo = decodeURIComponent(options.barcode)
@@ -201,7 +198,6 @@ onLoad((options) => {
   updateStep()
 })
 
-// 更新步骤
 const updateStep = () => {
   if (form.name && form.cateId && form.price) {
     currentStep.value = 2
@@ -214,40 +210,56 @@ const updateStep = () => {
   }
 }
 
-// 加载商品分类
 const loadCategoryList = async () => {
   try {
-    const res = await getGoodsCateList({ status: 'A' })
+    const res = await getGoodsCateList({
+      page: 1,
+      pageSize: 100,
+      status: 'A'
+    })
 
     if (res.code === 200 && res.data && res.data.paginationResponse) {
-      categoryList.value = res.data.paginationResponse.content || []
+      const categories = res.data.paginationResponse.content || []
+      categoryList.value = categories
       goodsStore.saveCategories(categoryList.value)
+
+      if (categories.length === 0) {
+        uni.showToast({
+          title: '暂无可用分类',
+          icon: 'none'
+        })
+      }
     } else {
       throw new Error(res.message || '获取分类失败')
     }
   } catch (error) {
-    console.error('获取分类失败:', error)
-    // 从本地获取缓存的分类
     categoryList.value = goodsStore.categories
+
     if (categoryList.value.length === 0) {
       uni.showToast({
-        title: '获取分类失败，请检查网络',
+        title: '获取分类失败，请检查网络连接',
+        icon: 'none'
+      })
+    } else {
+      uni.showToast({
+        title: '网络异常，使用本地缓存',
         icon: 'none'
       })
     }
   }
 }
 
-// 分类选择
 const onCategoryChange = (e) => {
   const selectedCategory = categoryList.value[e.detail.value]
-  form.cateId = selectedCategory.id
-  form.cateName = selectedCategory.name
+  if (selectedCategory) {
+    form.cateId = selectedCategory.id
+    form.cateName = selectedCategory.name
+    selectedCategoryIndex.value = e.detail.value
+  }
   showCategoryPicker.value = false
   updateStep()
 }
 
-// 选择图片
 const chooseImage = () => {
   uni.chooseImage({
     count: 5 - imageList.value.length,
@@ -259,7 +271,6 @@ const chooseImage = () => {
   })
 }
 
-// 上传图片
 const uploadImages = async (filePaths) => {
   uni.showLoading({
     title: '上传中...'
@@ -268,7 +279,6 @@ const uploadImages = async (filePaths) => {
   try {
     for (const filePath of filePaths) {
       const response = await uploadImage(filePath)
-      // 从响应中获取正确的URL
       const imageUrl = response.url || response.data?.url || response
       imageList.value.push(imageUrl)
     }
@@ -284,13 +294,11 @@ const uploadImages = async (filePaths) => {
   }
 }
 
-// 删除图片
 const deleteImage = (index) => {
   imageList.value.splice(index, 1)
   updateStep()
 }
 
-// 表单验证
 const validateForm = () => {
   if (!form.name.trim()) {
     uni.showToast({
@@ -319,25 +327,22 @@ const validateForm = () => {
   return true
 }
 
-// 保存商品
 const handleSaveGoods = async () => {
   try {
-    // 表单验证
     if (!validateForm()) return
 
     saving.value = true
 
-    // 根据API文档构建请求数据
     const goodsData = {
       name: form.name.trim(),
       goodsNo: form.goodsNo,
       cateId: parseInt(form.cateId),
-      images: imageList.value, // 直接使用URL数组
+      images: imageList.value,
       type: 'goods',
       priceType: 'piece',
       status: 'A',
       price: parseFloat(form.price),
-      linePrice: parseFloat(form.price) * 1.2, // 划线价设为价格的1.2倍
+      linePrice: parseFloat(form.price) ,
       stock: parseInt(form.stock) || 0,
       canUsePoint: 'Y',
       isMemberDiscount: 'Y',
@@ -345,23 +350,19 @@ const handleSaveGoods = async () => {
       serviceTime: 0,
       weight: '',
       sort: 0,
-      isItaconsumableitem: 2, // 2表示商品
+      isItaconsumableitem: 2,
       description: form.description.trim()
     }
 
-    // 先保存到本地
     const localGoods = goodsStore.saveLocalGoods({
       ...goodsData,
       cateName: form.cateName
     })
 
-    // 尝试同步到服务器
     try {
       const response = await saveGoodsApi(goodsData)
-
       if (response.code === 200) {
-        goodsStore.updateSyncStatus(localGoods.id, 1) // 同步成功
-
+        goodsStore.updateSyncStatus(localGoods.id, 1)
         uni.showToast({
           title: '商品保存成功',
           icon: 'success'
@@ -370,21 +371,16 @@ const handleSaveGoods = async () => {
         throw new Error(response.message || '保存失败')
       }
     } catch (error) {
-      console.error('同步到服务器失败:', error)
-      // 网络失败时保持待同步状态
       uni.showToast({
         title: '已保存到本地，稍后同步',
         icon: 'none'
       })
     }
-
-    // 返回上一页
     setTimeout(() => {
       uni.navigateBack()
     }, 1500)
 
   } catch (error) {
-    console.error('保存失败:', error)
     uni.showToast({
       title: error.message || '保存失败，请重试',
       icon: 'none'
@@ -544,7 +540,7 @@ const handleSaveGoods = async () => {
 .card .image-upload,
 .card .textarea,
 .card .char-count {
-  margin: 0 30rpx;
+  margin: 0 20rpx;
 }
 
 .card .form-item:first-of-type {
@@ -559,6 +555,7 @@ const handleSaveGoods = async () => {
 
 .form-item {
   margin-bottom: 30rpx;
+  padding: 0 10rpx;
 
   .label {
     display: block;

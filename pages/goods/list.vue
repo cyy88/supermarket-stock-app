@@ -150,7 +150,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import goodsStore from '@/stores/goods'
-import { getGoodsList } from '@/api/goods'
+import { getGoodsList, getGoodsCateList } from '@/api/goods'
 
 // 响应式数据
 const searchKeyword = ref('')
@@ -189,15 +189,33 @@ const unsyncedCount = computed(() => {
 onMounted(() => {
   loadGoodsList()
   loadServerGoodsList()
+  loadCategoriesIfNeeded()
 })
 
-// 加载本地商品列表
+const loadCategoriesIfNeeded = async () => {
+  if (goodsStore.categories.length === 0) {
+    try {
+      const res = await getGoodsCateList({
+        page: 1,
+        pageSize: 100,
+        status: 'A'
+      })
+
+      if (res.code === 200 && res.data && res.data.paginationResponse) {
+        const categories = res.data.paginationResponse.content || []
+        goodsStore.saveCategories(categories)
+      }
+    } catch (error) {
+      console.error('获取分类失败:', error)
+    }
+  }
+}
+
 const loadGoodsList = () => {
   goodsStore.init()
   goodsList.value = goodsStore.localGoods.sort((a, b) => b.createTime - a.createTime)
 }
 
-// 加载服务器商品列表
 const loadServerGoodsList = async () => {
   try {
     loading.value = true
@@ -211,7 +229,6 @@ const loadServerGoodsList = async () => {
       totalPages.value = res.data.paginationResponse.totalPages || 1
     }
   } catch (error) {
-    console.error('获取商品列表失败:', error)
     uni.showToast({
       title: '获取商品列表失败',
       icon: 'none'
@@ -223,17 +240,14 @@ const loadServerGoodsList = async () => {
   }
 }
 
-// 搜索输入
+
 const onSearchInput = () => {
-  // 实时搜索，这里可以添加防抖逻辑
 }
 
-// 清除搜索
 const clearSearch = () => {
   searchKeyword.value = ''
 }
 
-// 切换到服务器数据
 const switchToServerData = () => {
   showServerData.value = true
   if (serverGoodsList.value.length === 0) {
@@ -241,13 +255,11 @@ const switchToServerData = () => {
   }
 }
 
-// 切换到本地数据
 const switchToLocalData = () => {
   showServerData.value = false
   loadGoodsList()
 }
 
-// 获取商品图片
 const getGoodsImage = (item) => {
   if (showServerData.value) {
     return item.logo || (item.images && item.images.length > 0 ? item.images[0] : null)
@@ -256,16 +268,26 @@ const getGoodsImage = (item) => {
   }
 }
 
-// 获取商品分类
 const getGoodsCategory = (item) => {
-  if (showServerData.value) {
-    return item.cateInfo?.name || '未分类'
-  } else {
-    return item.cateName || '未分类'
+  if (!item) return '未分类'
+
+  if (item.cateInfo && item.cateInfo.name) {
+    return item.cateInfo.name
   }
+  if (item.cateName) {
+    return item.cateName
+  }
+
+  if (item.cateId) {
+    const categories = goodsStore.categories
+    const category = categories.find(cat => cat.id === item.cateId)
+    if (category) {
+      return category.name
+    }
+  }
+  return '未分类'
 }
 
-// 获取库存状态样式
 const getStockStatusClass = (item) => {
   const safetyStock = item.safetyStock || 0
   const currentStock = item.stock || 0
@@ -279,7 +301,6 @@ const getStockStatusClass = (item) => {
   }
 }
 
-// 获取库存状态文本
 const getStockStatusText = (item) => {
   const safetyStock = item.safetyStock || 0
   const currentStock = item.stock || 0
@@ -293,7 +314,6 @@ const getStockStatusText = (item) => {
   }
 }
 
-// 获取同步状态样式类
 const getSyncStatusClass = (status) => {
   switch (status) {
     case 1: return 'synced'
@@ -302,7 +322,6 @@ const getSyncStatusClass = (status) => {
   }
 }
 
-// 获取同步状态文本
 const getSyncStatusText = (status) => {
   switch (status) {
     case 1: return '已同步'
@@ -311,22 +330,15 @@ const getSyncStatusText = (status) => {
   }
 }
 
-// 跳转到商品详情
 const goToDetail = (item) => {
-  console.log('点击商品详情，商品信息:', item)
-
-  // 如果是服务器数据，直接跳转，让详情页面去请求服务器数据
   if (showServerData.value && item.id) {
-    console.log('跳转到服务器商品详情，ID:', item.id)
     uni.navigateTo({
       url: `/pages/goods/detail?id=${item.id}&source=server`
     })
     return
   }
 
-  // 如果是本地数据，正常跳转
   if (item.id) {
-    console.log('跳转到本地商品详情，ID:', item.id)
     uni.navigateTo({
       url: `/pages/goods/detail?id=${item.id}&source=local`
     })
@@ -338,7 +350,6 @@ const goToDetail = (item) => {
   }
 }
 
-// 跳转到添加商品
 const goToAdd = () => {
   uni.navigateTo({
     url: '/pages/goods/add'
@@ -356,7 +367,7 @@ const goToAdd = () => {
   padding: 20rpx;
   background: #f8f9fa;
   min-height: 100vh;
-  padding-bottom: 120rpx; // 为浮动按钮留空间
+  padding-bottom: 120rpx;
 }
 
 .search-bar {

@@ -29,7 +29,6 @@ export const getGoodsList = (data = {}) => {
 
 // 获取商品详情
 export const getGoodsDetail = (goodsId) => {
-  console.log('发送商品详情请求，ID:', goodsId)
   return request({
     url: `/backendApi/goods/goods/info/${goodsId}`,
     method: 'GET'
@@ -38,12 +37,11 @@ export const getGoodsDetail = (goodsId) => {
 
 // 获取商品分类
 export const getGoodsCateList = (params = {}) => {
-  // 构建查询参数
   const queryParams = new URLSearchParams({
     page: params.page || 1,
-    pageSize: params.pageSize || 100,
-    status: params.status || 'A',
-    ...params
+    pageSize: params.pageSize || 10,
+    name: params.name || '',
+    status: params.status || ''
   }).toString()
 
   return request({
@@ -69,7 +67,6 @@ export const uploadImage = (filePath) => {
         try {
           const data = JSON.parse(res.data)
           if (data.code === 200) {
-            // 返回完整的URL地址
             resolve(data.data.url)
           } else {
             reject(new Error(data.message || '上传失败'))

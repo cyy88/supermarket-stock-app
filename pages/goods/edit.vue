@@ -30,12 +30,19 @@
 
         <view class="form-item">
           <text class="label required">商品分类</text>
-          <view class="input select" @click="showCategoryPicker = true">
-            <text :class="{ placeholder: !form.cateName }">
-              {{ form.cateName || '请选择商品分类' }}
-            </text>
-            <text class="arrow">▼</text>
-          </view>
+          <picker
+            :range="categoryList"
+            range-key="name"
+            @change="onCategoryChange"
+            :value="selectedCategoryIndex"
+          >
+            <view class="input select">
+              <text :class="{ placeholder: !form.cateName }">
+                {{ form.cateName || '请选择商品分类' }}
+              </text>
+              <text class="arrow">▼</text>
+            </view>
+          </picker>
         </view>
 
         <view class="form-item">
@@ -116,7 +123,6 @@
         </button>
       </view>
 
-      <!-- 分类选择器 -->
       <picker
         v-if="showCategoryPicker"
         :range="categoryList"
@@ -141,7 +147,6 @@ import { onLoad } from '@dcloudio/uni-app'
 import goodsStore from '@/stores/goods'
 import { saveGoods as saveGoodsApi, getGoodsCateList, uploadImage, getGoodsDetail } from '@/api/goods'
 
-// 响应式数据
 const loading = ref(true)
 const saving = ref(false)
 const showCategoryPicker = ref(false)
@@ -149,6 +154,7 @@ const categoryList = ref([])
 const imageList = ref([])
 const goods = ref(null)
 const goodsId = ref('')
+const selectedCategoryIndex = ref(0)
 
 const form = reactive({
   goodsNo: '',
@@ -160,7 +166,6 @@ const form = reactive({
   description: ''
 })
 
-// 页面加载
 onLoad((options) => {
   if (options.id) {
     goodsId.value = options.id
@@ -177,12 +182,10 @@ onLoad((options) => {
   }
 })
 
-// 加载商品详情
 const loadGoodsDetail = async () => {
   try {
     loading.value = true
     
-    // 先从本地查找
     const localGoods = goodsStore.localGoods.find(item => item.id === goodsId.value)
     if (localGoods) {
       goods.value = localGoods
@@ -197,7 +200,6 @@ const loadGoodsDetail = async () => {
       }, 1500)
     }
   } catch (error) {
-    console.error('加载商品详情失败:', error)
     uni.showToast({
       title: '加载失败',
       icon: 'none'
@@ -207,7 +209,6 @@ const loadGoodsDetail = async () => {
   }
 }
 
-// 填充表单
 const fillForm = (goodsData) => {
   form.goodsNo = goodsData.goodsNo || ''
   form.name = goodsData.name || ''
@@ -217,7 +218,13 @@ const fillForm = (goodsData) => {
   form.stock = goodsData.stock?.toString() || ''
   form.description = goodsData.description || ''
 
-  // 处理图片数据
+  if (form.cateId && categoryList.value.length > 0) {
+    const categoryIndex = categoryList.value.findIndex(cat => cat.id === form.cateId)
+    if (categoryIndex !== -1) {
+      selectedCategoryIndex.value = categoryIndex
+    }
+  }
+
   if (Array.isArray(goodsData.images)) {
     imageList.value = goodsData.images.filter(img => img)
   } else {
@@ -225,11 +232,14 @@ const fillForm = (goodsData) => {
   }
 }
 
-// 加载商品分类
 const loadCategoryList = async () => {
   try {
-    const res = await getGoodsCateList({ status: 'A' })
-    
+    const res = await getGoodsCateList({
+      page: 1,
+      pageSize: 100,
+      status: 'A'
+    })
+
     if (res.code === 200 && res.data && res.data.paginationResponse) {
       categoryList.value = res.data.paginationResponse.content || []
       goodsStore.saveCategories(categoryList.value)
@@ -240,15 +250,16 @@ const loadCategoryList = async () => {
   }
 }
 
-// 分类选择
 const onCategoryChange = (e) => {
   const selectedCategory = categoryList.value[e.detail.value]
-  form.cateId = selectedCategory.id
-  form.cateName = selectedCategory.name
+  if (selectedCategory) {
+    form.cateId = selectedCategory.id
+    form.cateName = selectedCategory.name
+    selectedCategoryIndex.value = e.detail.value
+  }
   showCategoryPicker.value = false
 }
 
-// 选择图片
 const chooseImage = () => {
   uni.chooseImage({
     count: 5 - imageList.value.length,
@@ -260,7 +271,6 @@ const chooseImage = () => {
   })
 }
 
-// 上传图片
 const uploadImages = async (filePaths) => {
   uni.showLoading({
     title: '上传中...'
@@ -272,7 +282,6 @@ const uploadImages = async (filePaths) => {
       imageList.value.push(imageUrl)
     }
   } catch (error) {
-    console.error('图片上传失败:', error)
     uni.showToast({
       title: '图片上传失败',
       icon: 'none'
@@ -282,12 +291,10 @@ const uploadImages = async (filePaths) => {
   }
 }
 
-// 删除图片
 const deleteImage = (index) => {
   imageList.value.splice(index, 1)
 }
 
-// 表单验证
 const validateForm = () => {
   if (!form.name.trim()) {
     uni.showToast({
@@ -334,7 +341,6 @@ const handleUpdateGoods = async () => {
       description: form.description.trim()
     }
 
-    // 更新本地数据
     goodsStore.updateLocalGoods(goodsId.value, updatedData)
 
     uni.showToast({
@@ -347,7 +353,6 @@ const handleUpdateGoods = async () => {
     }, 1500)
 
   } catch (error) {
-    console.error('更新失败:', error)
     uni.showToast({
       title: error.message || '更新失败，请重试',
       icon: 'none'

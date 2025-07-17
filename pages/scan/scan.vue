@@ -68,8 +68,8 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
+import { formatRelativeTime } from '@/utils/time'
 
-// 响应式数据
 const recentScans = ref([])
 const showModal = ref(false)
 
@@ -86,11 +86,9 @@ onMounted(() => {
 const startScan = () => {
   uni.scanCode({
     success: (res) => {
-      console.log('扫码结果:', res.result)
       handleScanResult(res.result)
     },
     fail: (err) => {
-      console.error('扫码失败:', err)
       uni.showToast({
         title: '扫码失败，请重试',
         icon: 'none'
@@ -99,12 +97,8 @@ const startScan = () => {
   })
 }
 
-// 处理扫码结果
 const handleScanResult = (barcode) => {
-  // 保存扫码记录
   saveRecentScan(barcode)
-
-  // 跳转到添加商品页面
   goToAddGoods(barcode)
 }
 
@@ -114,16 +108,9 @@ const saveRecentScan = (barcode) => {
     barcode,
     time: Date.now()
   }
-
   let scans = uni.getStorageSync('recentScans') || []
-
-  // 去重
   scans = scans.filter(item => item.barcode !== barcode)
-
-  // 添加到开头
   scans.unshift(scanRecord)
-
-  // 只保留最近10条
   if (scans.length > 10) {
     scans = scans.slice(0, 10)
   }
@@ -132,24 +119,20 @@ const saveRecentScan = (barcode) => {
   recentScans.value = scans
 }
 
-// 加载最近扫描记录
 const loadRecentScans = () => {
   recentScans.value = uni.getStorageSync('recentScans') || []
 }
 
-// 显示手动输入弹窗
 const showManualInput = () => {
   modalForm.barcode = ''
   showModal.value = true
 }
 
-// 关闭手动输入弹窗
 const closeManualInput = () => {
   showModal.value = false
   modalForm.barcode = ''
 }
 
-// 确认手动输入
 const confirmManualInput = () => {
   if (!modalForm.barcode.trim()) {
     uni.showToast({
@@ -163,14 +146,12 @@ const confirmManualInput = () => {
   closeManualInput()
 }
 
-// 跳转到添加商品页面
 const goToAddGoods = (barcode) => {
   uni.navigateTo({
     url: `/pages/goods/add?barcode=${encodeURIComponent(barcode)}`
   })
 }
 
-// 格式化时间
 const formatTime = (timestamp) => {
   const date = new Date(timestamp)
   const now = new Date()
