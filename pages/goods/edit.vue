@@ -216,8 +216,13 @@ const fillForm = (goodsData) => {
   form.price = goodsData.price?.toString() || ''
   form.stock = goodsData.stock?.toString() || ''
   form.description = goodsData.description || ''
-  
-  imageList.value = goodsData.images || []
+
+  // 处理图片数据
+  if (Array.isArray(goodsData.images)) {
+    imageList.value = goodsData.images.filter(img => img)
+  } else {
+    imageList.value = []
+  }
 }
 
 // 加载商品分类
@@ -267,6 +272,7 @@ const uploadImages = async (filePaths) => {
       imageList.value.push(imageUrl)
     }
   } catch (error) {
+    console.error('图片上传失败:', error)
     uni.showToast({
       title: '图片上传失败',
       icon: 'none'

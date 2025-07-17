@@ -1,8 +1,38 @@
 <template>
   <view class="add-goods-container">
+    <!-- 页面头部 -->
+    <view class="page-header">
+      <view class="header-content">
+        <text class="page-title">📦 添加新商品</text>
+        <text class="page-subtitle">填写商品信息，快速上架</text>
+      </view>
+      <view class="progress-bar">
+        <view class="progress-step" :class="{ active: currentStep >= 1 }">
+          <text class="step-number">1</text>
+          <text class="step-text">基本信息</text>
+        </view>
+        <view class="progress-line" :class="{ active: currentStep >= 2 }"></view>
+        <view class="progress-step" :class="{ active: currentStep >= 2 }">
+          <text class="step-number">2</text>
+          <text class="step-text">图片描述</text>
+        </view>
+        <view class="progress-line" :class="{ active: currentStep >= 3 }"></view>
+        <view class="progress-step" :class="{ active: currentStep >= 3 }">
+          <text class="step-number">3</text>
+          <text class="step-text">完成</text>
+        </view>
+      </view>
+    </view>
+
     <!-- 基本信息卡片 -->
-    <view class="card">
-      <view class="card-title">📦 基本信息</view>
+    <view class="card" :class="{ active: currentStep === 1 }">
+      <view class="card-header">
+        <view class="card-title">
+          <text class="title-icon">📋</text>
+          <text class="title-text">基本信息</text>
+        </view>
+        <view class="card-badge required">必填</view>
+      </view>
       
       <view class="form-item">
         <text class="label">商品条码</text>
@@ -16,10 +46,11 @@
 
       <view class="form-item">
         <text class="label required">商品名称</text>
-        <input 
+        <input
           v-model="form.name"
           placeholder="请输入商品名称"
           class="input"
+          @input="updateStep"
         />
       </view>
 
@@ -36,11 +67,12 @@
       <view class="form-item">
         <text class="label required">商品价格</text>
         <view class="input-group">
-          <input 
+          <input
             v-model="form.price"
             type="digit"
             placeholder="请输入价格"
             class="input"
+            @input="updateStep"
           />
           <text class="unit">元</text>
         </view>
@@ -61,8 +93,14 @@
     </view>
 
     <!-- 商品图片卡片 -->
-    <view class="card">
-      <view class="card-title">🖼️ 商品图片</view>
+    <view class="card" :class="{ active: currentStep === 2 }">
+      <view class="card-header">
+        <view class="card-title">
+          <text class="title-icon">🖼️</text>
+          <text class="title-text">商品图片</text>
+        </view>
+        <view class="card-badge optional">可选</view>
+      </view>
       <view class="image-upload">
         <view class="image-list">
           <view 
@@ -88,13 +126,20 @@
     </view>
 
     <!-- 商品描述卡片 -->
-    <view class="card">
-      <view class="card-title">📝 商品描述</view>
-      <textarea 
+    <view class="card" :class="{ active: currentStep === 2 }">
+      <view class="card-header">
+        <view class="card-title">
+          <text class="title-icon">📝</text>
+          <text class="title-text">商品描述</text>
+        </view>
+        <view class="card-badge optional">可选</view>
+      </view>
+      <textarea
         v-model="form.description"
         placeholder="请输入商品描述（可选）"
         class="textarea"
         maxlength="500"
+        @input="updateStep"
       />
       <view class="char-count">{{ form.description.length }}/500</view>
     </view>
@@ -135,6 +180,7 @@ const saving = ref(false)
 const showCategoryPicker = ref(false)
 const categoryList = ref([])
 const imageList = ref([])
+const currentStep = ref(1)
 
 const form = reactive({
   goodsNo: '',
@@ -152,7 +198,21 @@ onLoad((options) => {
     form.goodsNo = decodeURIComponent(options.barcode)
   }
   loadCategoryList()
+  updateStep()
 })
+
+// 更新步骤
+const updateStep = () => {
+  if (form.name && form.cateId && form.price) {
+    currentStep.value = 2
+  } else {
+    currentStep.value = 1
+  }
+
+  if (form.name && form.cateId && form.price && (imageList.value.length > 0 || form.description)) {
+    currentStep.value = 3
+  }
+}
 
 // 加载商品分类
 const loadCategoryList = async () => {
@@ -184,6 +244,7 @@ const onCategoryChange = (e) => {
   form.cateId = selectedCategory.id
   form.cateName = selectedCategory.name
   showCategoryPicker.value = false
+  updateStep()
 }
 
 // 选择图片
@@ -206,13 +267,14 @@ const uploadImages = async (filePaths) => {
 
   try {
     for (const filePath of filePaths) {
-      const imageUrl = await uploadImage(filePath)
-      imageList.value.push({
-        url: imageUrl,
-        name: `image_${Date.now()}`
-      })
+      const response = await uploadImage(filePath)
+      // 从响应中获取正确的URL
+      const imageUrl = response.url || response.data?.url || response
+      imageList.value.push(imageUrl)
     }
+    updateStep()
   } catch (error) {
+    console.error('图片上传失败:', error)
     uni.showToast({
       title: '图片上传失败',
       icon: 'none'
@@ -225,6 +287,7 @@ const uploadImages = async (filePaths) => {
 // 删除图片
 const deleteImage = (index) => {
   imageList.value.splice(index, 1)
+  updateStep()
 }
 
 // 表单验证
@@ -269,7 +332,7 @@ const handleSaveGoods = async () => {
       name: form.name.trim(),
       goodsNo: form.goodsNo,
       cateId: parseInt(form.cateId),
-      images: imageList.value.map(item => item.url),
+      images: imageList.value, // 直接使用URL数组
       type: 'goods',
       priceType: 'piece',
       status: 'A',
@@ -334,23 +397,163 @@ const handleSaveGoods = async () => {
 
 <style lang="scss" scoped>
 .add-goods-container {
-  padding: 20rpx;
-  background: #f8f9fa;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   min-height: 100vh;
+  padding-bottom: 120rpx;
+}
+
+.page-header {
+  padding: 40rpx 30rpx;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10rpx);
+  margin-bottom: 30rpx;
+
+  .header-content {
+    text-align: center;
+    margin-bottom: 40rpx;
+
+    .page-title {
+      display: block;
+      font-size: 48rpx;
+      font-weight: bold;
+      color: #fff;
+      margin-bottom: 10rpx;
+    }
+
+    .page-subtitle {
+      font-size: 28rpx;
+      color: rgba(255, 255, 255, 0.8);
+    }
+  }
+
+  .progress-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 20rpx;
+
+    .progress-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      opacity: 0.5;
+      transition: all 0.3s;
+
+      &.active {
+        opacity: 1;
+      }
+
+      .step-number {
+        width: 60rpx;
+        height: 60rpx;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.3);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24rpx;
+        font-weight: bold;
+        margin-bottom: 10rpx;
+        transition: all 0.3s;
+      }
+
+      &.active .step-number {
+        background: #fff;
+        color: #667eea;
+        transform: scale(1.1);
+      }
+
+      .step-text {
+        font-size: 22rpx;
+        color: #fff;
+      }
+    }
+
+    .progress-line {
+      width: 80rpx;
+      height: 4rpx;
+      background: rgba(255, 255, 255, 0.3);
+      margin: 0 20rpx;
+      transition: all 0.3s;
+
+      &.active {
+        background: #fff;
+      }
+    }
+  }
 }
 
 .card {
-  background: #fff;
-  border-radius: 20rpx;
-  padding: 30rpx;
-  margin-bottom: 30rpx;
-  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.05);
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 25rpx;
+  padding: 0;
+  margin: 0 20rpx 30rpx;
+  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10rpx);
+  border: 2rpx solid transparent;
+  transition: all 0.3s;
+
+  &.active {
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-4rpx);
+    box-shadow: 0 12rpx 40rpx rgba(0, 0, 0, 0.15);
+  }
 }
 
-.card-title {
-  font-size: 32rpx;
-  font-weight: bold;
-  color: #303133;
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 30rpx 30rpx 20rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+
+  .card-title {
+    display: flex;
+    align-items: center;
+
+    .title-icon {
+      font-size: 36rpx;
+      margin-right: 15rpx;
+    }
+
+    .title-text {
+      font-size: 32rpx;
+      font-weight: bold;
+      color: #303133;
+    }
+  }
+
+  .card-badge {
+    padding: 8rpx 16rpx;
+    border-radius: 20rpx;
+    font-size: 22rpx;
+    color: #fff;
+
+    &.required {
+      background: linear-gradient(135deg, #f56c6c 0%, #ff4757 100%);
+    }
+
+    &.optional {
+      background: linear-gradient(135deg, #19be6b 0%, #52c41a 100%);
+    }
+  }
+}
+
+.card .form-item,
+.card .image-upload,
+.card .textarea,
+.card .char-count {
+  margin: 0 30rpx;
+}
+
+.card .form-item:first-of-type {
+  margin-top: 30rpx;
+}
+
+.card .form-item:last-of-type,
+.card .image-upload,
+.card .char-count {
   margin-bottom: 30rpx;
 }
 
@@ -371,21 +574,24 @@ const handleSaveGoods = async () => {
 
   .input {
     width: 100%;
-    height: 80rpx;
-    padding: 0 20rpx;
-    border: 2rpx solid #dcdfe6;
-    border-radius: 10rpx;
+    height: 88rpx;
+    padding: 0 24rpx;
+    border: 2rpx solid #e4e7ed;
+    border-radius: 15rpx;
     font-size: 28rpx;
     background: #fff;
+    transition: all 0.3s;
 
     &:focus {
-      border-color: #3c9cff;
+      border-color: #667eea;
       outline: none;
+      box-shadow: 0 0 0 4rpx rgba(102, 126, 234, 0.1);
     }
 
     &.readonly {
-      background: #f5f7fa;
-      color: #909399;
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+      color: #6c757d;
+      border-color: #dee2e6;
     }
 
     &.select {
@@ -395,12 +601,17 @@ const handleSaveGoods = async () => {
       cursor: pointer;
 
       .placeholder {
-        color: #c0c4cc;
+        color: #adb5bd;
       }
 
       .arrow {
-        color: #c0c4cc;
+        color: #6c757d;
         font-size: 24rpx;
+        transition: transform 0.3s;
+      }
+
+      &:active .arrow {
+        transform: rotate(180deg);
       }
     }
   }
@@ -519,33 +730,59 @@ const handleSaveGoods = async () => {
 }
 
 .form-actions {
-  position: sticky;
+  position: fixed;
   bottom: 0;
-  background: #f8f9fa;
-  padding: 30rpx 0;
+  left: 0;
+  right: 0;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10rpx);
+  padding: 30rpx 40rpx;
+  border-top: 1rpx solid rgba(255, 255, 255, 0.2);
+  z-index: 100;
 }
 
 .save-btn {
   width: 100%;
-  height: 90rpx;
-  background: linear-gradient(135deg, #19be6b 0%, #52c41a 100%);
+  height: 100rpx;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: #fff;
   border: none;
-  border-radius: 15rpx;
+  border-radius: 25rpx;
   font-size: 32rpx;
   font-weight: bold;
   transition: all 0.3s;
+  box-shadow: 0 8rpx 24rpx rgba(102, 126, 234, 0.3);
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+  }
 
   &:active {
     transform: translateY(2rpx);
+    box-shadow: 0 4rpx 12rpx rgba(102, 126, 234, 0.4);
+
+    &::before {
+      left: 100%;
+    }
   }
 
   &.loading {
-    background: #c0c4cc;
+    background: linear-gradient(135deg, #adb5bd 0%, #6c757d 100%);
+    box-shadow: none;
   }
 
   &:disabled {
-    background: #c0c4cc;
+    background: linear-gradient(135deg, #adb5bd 0%, #6c757d 100%);
+    box-shadow: none;
   }
 }
 </style>

@@ -79,16 +79,37 @@
         </view>
 
         <view class="goods-info">
-          <view class="goods-name">{{ item.name }}</view>
-          <view class="goods-barcode">条码: {{ item.goodsNo }}</view>
-          <view class="goods-category">分类: {{ getGoodsCategory(item) }}</view>
-          <view class="goods-stock-info">
-            <text class="stock">剩余库存: {{ item.stock }}</text>
-            <text class="safety-stock">安全库存: {{ item.safetyStock || 0 }}</text>
-          </view>
-          <view class="goods-meta">
+          <view class="goods-header">
+            <view class="goods-name">{{ item.name }}</view>
             <text class="price">¥{{ item.price }}</text>
-            <text class="status" :class="getStockStatusClass(item)">
+          </view>
+
+          <view class="goods-details">
+            <view class="detail-left">
+              <view class="detail-item">
+                <text class="label">条码:</text>
+                <text class="value">{{ item.goodsNo }}</text>
+              </view>
+              <view class="detail-item">
+                <text class="label">分类:</text>
+                <text class="value">{{ getGoodsCategory(item) }}</text>
+              </view>
+            </view>
+
+            <view class="detail-right">
+              <view class="detail-item">
+                <text class="label">剩余:</text>
+                <text class="value stock-value" :class="getStockStatusClass(item)">{{ item.stock }}</text>
+              </view>
+              <view class="detail-item">
+                <text class="label">安全:</text>
+                <text class="value">{{ item.safetyStock || 0 }}</text>
+              </view>
+            </view>
+          </view>
+
+          <view class="goods-status">
+            <text class="status-badge" :class="getStockStatusClass(item)">
               {{ getStockStatusText(item) }}
             </text>
           </view>
@@ -292,9 +313,29 @@ const getSyncStatusText = (status) => {
 
 // 跳转到商品详情
 const goToDetail = (item) => {
-  uni.navigateTo({
-    url: `/pages/goods/detail?id=${item.id}`
-  })
+  console.log('点击商品详情，商品信息:', item)
+
+  // 如果是服务器数据，直接跳转，让详情页面去请求服务器数据
+  if (showServerData.value && item.id) {
+    console.log('跳转到服务器商品详情，ID:', item.id)
+    uni.navigateTo({
+      url: `/pages/goods/detail?id=${item.id}&source=server`
+    })
+    return
+  }
+
+  // 如果是本地数据，正常跳转
+  if (item.id) {
+    console.log('跳转到本地商品详情，ID:', item.id)
+    uni.navigateTo({
+      url: `/pages/goods/detail?id=${item.id}&source=local`
+    })
+  } else {
+    uni.showToast({
+      title: '商品ID不存在',
+      icon: 'none'
+    })
+  }
 }
 
 // 跳转到添加商品
@@ -464,56 +505,82 @@ const goToAdd = () => {
 .goods-info {
   flex: 1;
 
-  .goods-name {
-    font-size: 30rpx;
-    font-weight: bold;
-    color: #303133;
-    margin-bottom: 10rpx;
-    line-height: 1.4;
-  }
-
-  .goods-barcode {
-    font-size: 24rpx;
-    color: #909399;
-    margin-bottom: 8rpx;
-  }
-
-  .goods-category {
-    font-size: 24rpx;
-    color: #909399;
-    margin-bottom: 10rpx;
-  }
-
-  .goods-stock-info {
-    margin-bottom: 10rpx;
-
-    .stock {
-      display: block;
-      font-size: 24rpx;
-      color: #606266;
-      margin-bottom: 4rpx;
-    }
-
-    .safety-stock {
-      font-size: 22rpx;
-      color: #909399;
-    }
-  }
-
-  .goods-meta {
+  .goods-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
+    margin-bottom: 15rpx;
+
+    .goods-name {
+      flex: 1;
+      font-size: 30rpx;
+      font-weight: bold;
+      color: #303133;
+      line-height: 1.4;
+      margin-right: 20rpx;
+    }
 
     .price {
       font-size: 32rpx;
       font-weight: bold;
       color: #f56c6c;
+      white-space: nowrap;
+    }
+  }
+
+  .goods-details {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 15rpx;
+
+    .detail-left,
+    .detail-right {
+      flex: 1;
     }
 
-    .status {
-      font-size: 22rpx;
-      padding: 4rpx 12rpx;
+    .detail-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 8rpx;
+
+      .label {
+        font-size: 22rpx;
+        color: #909399;
+        width: 60rpx;
+        flex-shrink: 0;
+      }
+
+      .value {
+        font-size: 24rpx;
+        color: #606266;
+        flex: 1;
+
+        &.stock-value {
+          font-weight: bold;
+
+          &.normal-stock {
+            color: #19be6b;
+          }
+
+          &.low-stock {
+            color: #ff9900;
+          }
+
+          &.out-of-stock {
+            color: #f56c6c;
+          }
+        }
+      }
+    }
+  }
+
+  .goods-status {
+    display: flex;
+    justify-content: flex-end;
+
+    .status-badge {
+      font-size: 20rpx;
+      padding: 6rpx 12rpx;
       border-radius: 12rpx;
       color: #fff;
 

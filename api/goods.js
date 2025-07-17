@@ -29,6 +29,7 @@ export const getGoodsList = (data = {}) => {
 
 // 获取商品详情
 export const getGoodsDetail = (goodsId) => {
+  console.log('发送商品详情请求，ID:', goodsId)
   return request({
     url: `/backendApi/goods/goods/info/${goodsId}`,
     method: 'GET'
@@ -68,7 +69,8 @@ export const uploadImage = (filePath) => {
         try {
           const data = JSON.parse(res.data)
           if (data.code === 200) {
-            resolve(data.data)
+            // 返回完整的URL地址
+            resolve(data.data.url)
           } else {
             reject(new Error(data.message || '上传失败'))
           }
