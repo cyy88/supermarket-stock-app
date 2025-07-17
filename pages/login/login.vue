@@ -1,6 +1,7 @@
 <template>
   <view class="login-container">
     <view class="login-header">
+<!--      <image class="logo" src="/static/logo.png" mode="aspectFit"></image>-->
       <text class="title">商品扫码系统</text>
       <text class="subtitle">内部员工专用</text>
     </view>
@@ -83,6 +84,7 @@ import { ref, reactive, onMounted } from 'vue'
 import userStore from '@/stores/user'
 import { getCaptcha } from '@/api/auth'
 
+// 响应式数据
 const loading = ref(false)
 const captchaUrl = ref('')
 
@@ -94,17 +96,20 @@ const form = reactive({
   rememberMe: false
 })
 
+// 页面加载
 onMounted(() => {
   loadCaptcha()
   loadRememberedCredentials()
 })
 
+// 加载验证码
 const loadCaptcha = async () => {
   try {
     const res = await getCaptcha()
     captchaUrl.value = res.data.captcha
     form.uuid = res.data.uuid
   } catch (error) {
+    console.error('获取验证码失败:', error)
     uni.showToast({
       title: '获取验证码失败',
       icon: 'none'
@@ -112,11 +117,13 @@ const loadCaptcha = async () => {
   }
 }
 
+// 刷新验证码
 const refreshCaptcha = () => {
   form.captchaCode = ''
   loadCaptcha()
 }
 
+// 加载记住的登录信息
 const loadRememberedCredentials = () => {
   const remembered = uni.getStorageSync('rememberedLogin')
   if (remembered) {
@@ -126,10 +133,12 @@ const loadRememberedCredentials = () => {
   }
 }
 
+// 记住密码选择变化
 const onRememberChange = (e) => {
   form.rememberMe = e.detail.value.length > 0
 }
 
+// 保存登录信息
 const saveCredentials = () => {
   if (form.rememberMe) {
     uni.setStorageSync('rememberedLogin', {
@@ -141,6 +150,7 @@ const saveCredentials = () => {
   }
 }
 
+// 表单验证
 const validateForm = () => {
   if (!form.username.trim()) {
     uni.showToast({
@@ -169,21 +179,31 @@ const validateForm = () => {
   return true
 }
 
+// 登录处理
 const handleLogin = async () => {
   try {
+    // 表单验证
     if (!validateForm()) return
+
     loading.value = true
+
+    // 调用登录
     await userStore.login({
       username: form.username,
       password: form.password,
       captchaCode: form.captchaCode,
       uuid: form.uuid
     })
+
+    // 保存登录信息
     saveCredentials()
+
     uni.showToast({
       title: '登录成功',
       icon: 'success'
     })
+
+    // 跳转到首页
     setTimeout(() => {
       uni.reLaunch({
         url: '/pages/index/index'
@@ -191,7 +211,11 @@ const handleLogin = async () => {
     }, 1500)
 
   } catch (error) {
+    console.error('登录失败:', error)
+
+    // 登录失败后刷新验证码
     refreshCaptcha()
+
     uni.showToast({
       title: error.message || '登录失败',
       icon: 'none'

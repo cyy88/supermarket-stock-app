@@ -1,3 +1,4 @@
+// 网络请求工具
 const BASE_URL = 'http://msbs-fuint-ts.qingchunnianhua.com:1880'
 
 // 请求拦截器

@@ -8,7 +8,9 @@ export const formatTime = (timestamp) => {
       const timeStr = timestamp.replace(' ', 'T')
       date = new Date(timeStr)
       
+      // 如果解析失败，尝试其他方式
       if (isNaN(date.getTime())) {
+        // 尝试手动解析 "2025-06-24 16:07:31" 格式
         const parts = timestamp.match(/(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):(\d{2})/)
         if (parts) {
           date = new Date(
@@ -77,6 +79,7 @@ export const formatRelativeTime = (timestamp) => {
       return formatTime(timestamp)
     }
   } catch (error) {
+    console.error('相对时间格式化失败:', error, timestamp)
     return '未知'
   }
 }

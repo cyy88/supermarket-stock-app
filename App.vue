@@ -3,11 +3,15 @@
 
 	export default {
 		onLaunch: function() {
+			console.log('App Launch')
+			// 初始化用户状态
 			userStore.init()
 		},
 		onShow: function() {
+			console.log('App Show')
 		},
 		onHide: function() {
+			console.log('App Hide')
 		}
 	}
 </script>
