@@ -37,6 +37,7 @@
       <view class="form-item">
         <text class="label">商品条码</text>
         <input
+            style="width: 85%;"
           v-model="form.goodsNo"
           placeholder="扫码自动填入或手动输入"
           class="input readonly"
@@ -66,6 +67,7 @@
       <view class="form-item">
         <text class="label required">商品分类</text>
         <picker
+            style="width: 85%;"
           :range="categoryList"
           range-key="name"
           @change="onCategoryChange"
@@ -82,7 +84,7 @@
 
       <view class="form-item">
         <text class="label required">商品价格</text>
-        <view class="input-group">
+        <view class="input-group"  style="width: 50%;">
           <input
             v-model="form.price"
             type="digit"
@@ -96,14 +98,14 @@
 
       <view class="form-item">
         <text class="label">库存数量</text>
-        <view class="input-group">
+        <view class="input-group"  style="width: 50%;">
           <input 
             v-model="form.stock"
             type="number"
             placeholder="请输入库存数量"
             class="input"
           />
-          <text class="unit">件</text>
+<!--          <text class="unit">件</text>-->
         </view>
       </view>
     </view>
@@ -146,11 +148,12 @@
       <view class="card-header">
         <view class="card-title">
           <text class="title-icon">📝</text>
-          <text class="title-text">商品描述</text>
+          <text class="title-text" >商品描述</text>
         </view>
         <view class="card-badge optional">可选</view>
       </view>
       <textarea
+          style="width: 90%;"
         v-model="form.description"
         placeholder="请输入商品描述（可选）"
         class="textarea"
