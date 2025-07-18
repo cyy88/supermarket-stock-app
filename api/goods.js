@@ -1,4 +1,5 @@
 import request from '@/utils/request'
+import { buildQueryString } from '@/utils/url'
 
 // 保存商品
 export const saveGoods = (data) => {
@@ -37,15 +38,20 @@ export const getGoodsDetail = (goodsId) => {
 
 // 获取商品分类
 export const getGoodsCateList = (params = {}) => {
-  const queryParams = new URLSearchParams({
-    page: params.page || 1,
-    pageSize: params.pageSize || 10,
-    name: params.name || '',
-    status: params.status || ''
-  }).toString()
+  const defaultParams = {
+    page: 1,
+    pageSize: 100,
+    name: '',
+    status: ''
+  }
+
+  const finalParams = { ...defaultParams, ...params }
+
+  const queryString = buildQueryString(finalParams)
+  const fullUrl = `/backendApi/goods/cate/list?${queryString}`
 
   return request({
-    url: `/backendApi/goods/cate/list?${queryParams}`,
+    url: fullUrl,
     method: 'GET'
   })
 }
