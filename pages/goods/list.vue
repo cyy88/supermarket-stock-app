@@ -34,6 +34,24 @@
       </view>
     </view>
 
+    <!-- 商品总数统计 -->
+    <view class="total-count-bar">
+      <view class="total-count">
+        <text class="count-number">{{ getTotalDataSourceCount() }}</text>
+        <text class="count-label">{{ showServerData ? '服务器商品' : '本地商品' }}</text>
+      </view>
+      <view v-if="!showServerData" class="sync-stats">
+        <view class="sync-item">
+          <text class="sync-number success">{{ syncedCount }}</text>
+          <text class="sync-label">已同步</text>
+        </view>
+        <view class="sync-item">
+          <text class="sync-number warning">{{ unsyncedCount }}</text>
+          <text class="sync-label">待同步</text>
+        </view>
+      </view>
+    </view>
+
     <!-- 库存状态筛选 -->
     <view class="stock-filter">
       <view class="filter-tabs">
@@ -68,20 +86,9 @@
       </view>
     </view>
 
-    <!-- 统计信息 -->
-    <view class="stats-bar">
-      <view class="stat-item">
-        <text class="stat-number">{{ filteredGoods.length }}</text>
-        <text class="stat-label">{{ showServerData ? '服务器商品' : '本地商品' }}</text>
-      </view>
-      <view v-if="!showServerData" class="stat-item">
-        <text class="stat-number success">{{ syncedCount }}</text>
-        <text class="stat-label">已同步</text>
-      </view>
-      <view v-if="!showServerData" class="stat-item">
-        <text class="stat-number warning">{{ unsyncedCount }}</text>
-        <text class="stat-label">待同步</text>
-      </view>
+    <!-- 筛选结果统计 -->
+    <view v-if="hasActiveFilters" class="filter-result-bar">
+      <text class="filter-result-text">筛选结果：{{ filteredGoods.length }} 件商品</text>
     </view>
 
     <!-- 商品列表 -->
@@ -183,24 +190,32 @@
           <text class="category-title">选择分类</text>
           <text class="category-close" @click="showCategoryFilter = false">✕</text>
         </view>
-        <view class="category-list">
-          <view
-            class="category-item"
-            :class="{ active: selectedCategory === null }"
-            @click="selectCategory(null)"
-          >
-            <text class="category-name">全部分类</text>
-            <text class="category-count">({{ getTotalCount() }})</text>
-          </view>
-          <view
-            v-for="category in categories"
-            :key="category.id"
-            class="category-item"
-            :class="{ active: selectedCategory === category.id }"
-            @click="selectCategory(category.id)"
-          >
-            <text class="category-name">{{ category.name }}</text>
-            <text class="category-count">({{ getCategoryCount(category.id) }})</text>
+        <view class="category-content">
+          <view class="category-list">
+            <view
+              class="category-item"
+              :class="{ active: selectedCategory === null }"
+              @click="selectCategory(null)"
+            >
+              <view class="category-info">
+                <text class="category-name">全部分类</text>
+                <text class="category-count">({{ getTotalCount() }})</text>
+              </view>
+              <text v-if="selectedCategory === null" class="category-check">✓</text>
+            </view>
+            <view
+              v-for="category in categories"
+              :key="category.id"
+              class="category-item"
+              :class="{ active: selectedCategory === category.id }"
+              @click="selectCategory(category.id)"
+            >
+              <view class="category-info">
+                <text class="category-name">{{ category.name }}</text>
+                <text class="category-count">({{ getCategoryCount(category.id) }})</text>
+              </view>
+              <text v-if="selectedCategory === category.id" class="category-check">✓</text>
+            </view>
           </view>
         </view>
       </view>
@@ -270,6 +285,15 @@ const syncedCount = computed(() => {
 const unsyncedCount = computed(() => {
   return goodsList.value.filter(item => item.syncStatus === 0).length
 })
+
+const hasActiveFilters = computed(() => {
+  return searchKeyword.value || stockFilter.value !== 'all' || selectedCategory.value !== null
+})
+
+const getTotalDataSourceCount = () => {
+  const dataSource = showServerData.value ? serverGoodsList.value : goodsList.value
+  return dataSource.length
+}
 
 onMounted(() => {
   loadGoodsList()
@@ -515,7 +539,7 @@ const getTotalCount = () => {
 }
 
 .data-source-switch {
-  margin-bottom: 20rpx;
+  margin-bottom: 15rpx;
 
   .switch-tabs {
     display: flex;
@@ -542,8 +566,66 @@ const getTotalCount = () => {
   }
 }
 
+.total-count-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fff;
+  border-radius: 15rpx;
+  padding: 20rpx 30rpx;
+  margin-bottom: 15rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+
+  .total-count {
+    display: flex;
+    align-items: baseline;
+    gap: 10rpx;
+
+    .count-number {
+      font-size: 48rpx;
+      font-weight: bold;
+      color: #3c9cff;
+    }
+
+    .count-label {
+      font-size: 24rpx;
+      color: #909399;
+    }
+  }
+
+  .sync-stats {
+    display: flex;
+    gap: 30rpx;
+
+    .sync-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+
+      .sync-number {
+        font-size: 28rpx;
+        font-weight: bold;
+        margin-bottom: 4rpx;
+
+        &.success {
+          color: #19be6b;
+        }
+
+        &.warning {
+          color: #ff9900;
+        }
+      }
+
+      .sync-label {
+        font-size: 20rpx;
+        color: #909399;
+      }
+    }
+  }
+}
+
 .stock-filter {
-  margin-bottom: 20rpx;
+  margin-bottom: 15rpx;
 
   .filter-tabs {
     display: flex;
@@ -567,6 +649,19 @@ const getTotalCount = () => {
         font-weight: bold;
       }
     }
+  }
+}
+
+.filter-result-bar {
+  background: #f8f9fa;
+  border-radius: 10rpx;
+  padding: 15rpx 20rpx;
+  margin-bottom: 20rpx;
+  border-left: 6rpx solid #3c9cff;
+
+  .filter-result-text {
+    font-size: 24rpx;
+    color: #606266;
   }
 }
 
@@ -881,10 +976,12 @@ const getTotalCount = () => {
 }
 
 .category-panel {
-  width: 600rpx;
+  width: 650rpx;
   height: 100vh;
   background: #fff;
   animation: slideInLeft 0.3s ease-out;
+  display: flex;
+  flex-direction: column;
 }
 
 @keyframes slideInLeft {
@@ -900,43 +997,56 @@ const getTotalCount = () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 40rpx 30rpx;
-  border-bottom: 1rpx solid #f0f0f0;
+  padding: 50rpx 30rpx 30rpx;
   background: linear-gradient(135deg, #3c9cff 0%, #1890ff 100%);
+  box-shadow: 0 4rpx 12rpx rgba(60, 156, 255, 0.2);
 
   .category-title {
-    font-size: 32rpx;
+    font-size: 36rpx;
     font-weight: bold;
     color: #fff;
   }
 
   .category-close {
-    font-size: 36rpx;
+    font-size: 40rpx;
     color: #fff;
     cursor: pointer;
+    width: 60rpx;
+    height: 60rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
   }
 }
 
+.category-content {
+  flex: 1;
+  overflow: hidden;
+}
+
 .category-list {
-  padding: 20rpx 0;
-  max-height: calc(100vh - 120rpx);
+  height: 100%;
   overflow-y: auto;
+  padding: 20rpx 0;
 }
 
 .category-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 30rpx;
+  padding: 25rpx 30rpx;
   border-bottom: 1rpx solid #f5f5f5;
   transition: all 0.3s;
+  position: relative;
 
   &:active {
     background: #f8f9fa;
   }
 
   &.active {
-    background: #e6f7ff;
+    background: linear-gradient(90deg, #e6f7ff 0%, #f0f9ff 100%);
     border-left: 6rpx solid #3c9cff;
 
     .category-name {
@@ -949,14 +1059,29 @@ const getTotalCount = () => {
     }
   }
 
-  .category-name {
-    font-size: 28rpx;
-    color: #303133;
+  .category-info {
+    display: flex;
+    align-items: baseline;
+    gap: 15rpx;
+    flex: 1;
+
+    .category-name {
+      font-size: 30rpx;
+      color: #303133;
+      transition: all 0.3s;
+    }
+
+    .category-count {
+      font-size: 24rpx;
+      color: #909399;
+      transition: all 0.3s;
+    }
   }
 
-  .category-count {
-    font-size: 24rpx;
-    color: #909399;
+  .category-check {
+    font-size: 32rpx;
+    color: #3c9cff;
+    font-weight: bold;
   }
 }
 </style>
