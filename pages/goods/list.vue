@@ -48,14 +48,6 @@
         <text class="stat-number warning">{{ unsyncedCount }}</text>
         <text class="stat-label">待同步</text>
       </view>
-      <view v-if="showServerData" class="stat-item">
-        <text class="stat-number info">{{ currentPage }}</text>
-        <text class="stat-label">当前页</text>
-      </view>
-      <view v-if="showServerData" class="stat-item">
-        <text class="stat-number info">{{ totalPages }}</text>
-        <text class="stat-label">总页数</text>
-      </view>
     </view>
 
     <!-- 商品列表 -->
@@ -157,8 +149,6 @@ const searchKeyword = ref('')
 const goodsList = ref([])
 const serverGoodsList = ref([])
 const loading = ref(false)
-const currentPage = ref(1)
-const totalPages = ref(1)
 const showServerData = ref(true) // 默认显示服务器数据
 
 // 计算属性
@@ -220,13 +210,12 @@ const loadServerGoodsList = async () => {
   try {
     loading.value = true
     const res = await getGoodsList({
-      page: currentPage.value,
-      pageSize: 20
+      page: 1,
+      pageSize: 1000
     })
 
     if (res.data && res.data.paginationResponse) {
       serverGoodsList.value = res.data.paginationResponse.content || []
-      totalPages.value = res.data.paginationResponse.totalPages || 1
     }
   } catch (error) {
     uni.showToast({
