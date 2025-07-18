@@ -34,6 +34,40 @@
       </view>
     </view>
 
+    <!-- 库存状态筛选 -->
+    <view class="stock-filter">
+      <view class="filter-tabs">
+        <view
+          class="filter-tab"
+          :class="{ active: stockFilter === 'all' }"
+          @click="setStockFilter('all')"
+        >
+          全部
+        </view>
+        <view
+          class="filter-tab"
+          :class="{ active: stockFilter === 'safe' }"
+          @click="setStockFilter('safe')"
+        >
+          安全库存
+        </view>
+        <view
+          class="filter-tab"
+          :class="{ active: stockFilter === 'low' }"
+          @click="setStockFilter('low')"
+        >
+          库存不足
+        </view>
+        <view
+          class="filter-tab"
+          :class="{ active: stockFilter === 'out' }"
+          @click="setStockFilter('out')"
+        >
+          缺货
+        </view>
+      </view>
+    </view>
+
     <!-- 统计信息 -->
     <view class="stats-bar">
       <view class="stat-item">
@@ -132,9 +166,44 @@
       </button>
     </view>
 
+    <!-- 分类筛选悬浮按钮 -->
+    <view class="category-fab" @click="showCategoryFilter = true">
+      <text class="category-fab-icon">📂</text>
+    </view>
+
     <!-- 浮动添加按钮 -->
     <view class="fab" @click="goToAdd">
       <text class="fab-icon">➕</text>
+    </view>
+
+    <!-- 分类筛选弹窗 -->
+    <view v-if="showCategoryFilter" class="category-overlay" @click="showCategoryFilter = false">
+      <view class="category-panel" @click.stop>
+        <view class="category-header">
+          <text class="category-title">选择分类</text>
+          <text class="category-close" @click="showCategoryFilter = false">✕</text>
+        </view>
+        <view class="category-list">
+          <view
+            class="category-item"
+            :class="{ active: selectedCategory === null }"
+            @click="selectCategory(null)"
+          >
+            <text class="category-name">全部分类</text>
+            <text class="category-count">({{ getTotalCount() }})</text>
+          </view>
+          <view
+            v-for="category in categories"
+            :key="category.id"
+            class="category-item"
+            :class="{ active: selectedCategory === category.id }"
+            @click="selectCategory(category.id)"
+          >
+            <text class="category-name">{{ category.name }}</text>
+            <text class="category-count">({{ getCategoryCount(category.id) }})</text>
+          </view>
+        </view>
+      </view>
     </view>
   </view>
 </template>
@@ -144,27 +213,54 @@ import { ref, computed, onMounted } from 'vue'
 import goodsStore from '@/stores/goods'
 import { getGoodsList, getGoodsCateList } from '@/api/goods'
 
-// 响应式数据
 const searchKeyword = ref('')
 const goodsList = ref([])
 const serverGoodsList = ref([])
 const loading = ref(false)
-const showServerData = ref(true) // 默认显示服务器数据
+const showServerData = ref(true)
+const stockFilter = ref('all')
+const showCategoryFilter = ref(false)
+const selectedCategory = ref(null)
+const categories = ref([])
 
-// 计算属性
 const filteredGoods = computed(() => {
-  const dataSource = showServerData.value ? serverGoodsList.value : goodsList.value
+  let dataSource = showServerData.value ? serverGoodsList.value : goodsList.value
 
-  if (!searchKeyword.value) {
-    return dataSource
+  if (searchKeyword.value) {
+    const keyword = searchKeyword.value.toLowerCase()
+    dataSource = dataSource.filter(item =>
+      item.name.toLowerCase().includes(keyword) ||
+      item.goodsNo.toLowerCase().includes(keyword) ||
+      (item.cateInfo?.name && item.cateInfo.name.toLowerCase().includes(keyword))
+    )
   }
 
-  const keyword = searchKeyword.value.toLowerCase()
-  return dataSource.filter(item =>
-    item.name.toLowerCase().includes(keyword) ||
-    item.goodsNo.toLowerCase().includes(keyword) ||
-    (item.cateInfo?.name && item.cateInfo.name.toLowerCase().includes(keyword))
-  )
+  if (selectedCategory.value !== null) {
+    dataSource = dataSource.filter(item =>
+      item.cateId === selectedCategory.value ||
+      item.cateInfo?.id === selectedCategory.value
+    )
+  }
+
+  if (stockFilter.value !== 'all') {
+    dataSource = dataSource.filter(item => {
+      const stock = item.stock || 0
+      const safeStock = item.safeStock || 10 // 默认安全库存为10
+
+      switch (stockFilter.value) {
+        case 'out':
+          return stock === 0
+        case 'low':
+          return stock > 0 && stock < safeStock
+        case 'safe':
+          return stock >= safeStock
+        default:
+          return true
+      }
+    })
+  }
+
+  return dataSource
 })
 
 const syncedCount = computed(() => {
@@ -175,7 +271,6 @@ const unsyncedCount = computed(() => {
   return goodsList.value.filter(item => item.syncStatus === 0).length
 })
 
-// 页面加载
 onMounted(() => {
   loadGoodsList()
   loadServerGoodsList()
@@ -192,12 +287,15 @@ const loadCategoriesIfNeeded = async () => {
       })
 
       if (res.code === 200 && res.data && res.data.paginationResponse) {
-        const categories = res.data.paginationResponse.content || []
-        goodsStore.saveCategories(categories)
+        const categoriesData = res.data.paginationResponse.content || []
+        goodsStore.saveCategories(categoriesData)
+        categories.value = categoriesData
       }
     } catch (error) {
       console.error('获取分类失败:', error)
     }
+  } else {
+    categories.value = goodsStore.categories
   }
 }
 
@@ -345,6 +443,31 @@ const goToAdd = () => {
   })
 }
 
+// 库存筛选方法
+const setStockFilter = (filter) => {
+  stockFilter.value = filter
+}
+
+// 分类筛选方法
+const selectCategory = (categoryId) => {
+  selectedCategory.value = categoryId
+  showCategoryFilter.value = false
+}
+
+// 获取分类商品数量
+const getCategoryCount = (categoryId) => {
+  const dataSource = showServerData.value ? serverGoodsList.value : goodsList.value
+  return dataSource.filter(item =>
+    item.cateId === categoryId || item.cateInfo?.id === categoryId
+  ).length
+}
+
+// 获取总商品数量
+const getTotalCount = () => {
+  const dataSource = showServerData.value ? serverGoodsList.value : goodsList.value
+  return dataSource.length
+}
+
 // 页面显示时刷新数据
 // onShow(() => {
 //   loadGoodsList()
@@ -412,6 +535,34 @@ const goToAdd = () => {
 
       &.active {
         background: linear-gradient(135deg, #3c9cff 0%, #1890ff 100%);
+        color: #fff;
+        font-weight: bold;
+      }
+    }
+  }
+}
+
+.stock-filter {
+  margin-bottom: 20rpx;
+
+  .filter-tabs {
+    display: flex;
+    background: #fff;
+    border-radius: 20rpx;
+    padding: 8rpx;
+    box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+
+    .filter-tab {
+      flex: 1;
+      text-align: center;
+      padding: 16rpx 8rpx;
+      border-radius: 12rpx;
+      font-size: 24rpx;
+      color: #606266;
+      transition: all 0.3s;
+
+      &.active {
+        background: linear-gradient(135deg, #19be6b 0%, #52c41a 100%);
         color: #fff;
         font-weight: bold;
       }
@@ -668,6 +819,30 @@ const goToAdd = () => {
   }
 }
 
+.category-fab {
+  position: fixed;
+  left: 40rpx;
+  bottom: 40rpx;
+  width: 100rpx;
+  height: 100rpx;
+  background: linear-gradient(135deg, #ff9900 0%, #ffad33 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8rpx 20rpx rgba(255, 153, 0, 0.3);
+  z-index: 100;
+
+  .category-fab-icon {
+    font-size: 48rpx;
+    color: #fff;
+  }
+
+  &:active {
+    transform: scale(0.9);
+  }
+}
+
 .fab {
   position: fixed;
   right: 40rpx;
@@ -689,6 +864,99 @@ const goToAdd = () => {
 
   &:active {
     transform: scale(0.9);
+  }
+}
+
+.category-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.category-panel {
+  width: 600rpx;
+  height: 100vh;
+  background: #fff;
+  animation: slideInLeft 0.3s ease-out;
+}
+
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.category-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 40rpx 30rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+  background: linear-gradient(135deg, #3c9cff 0%, #1890ff 100%);
+
+  .category-title {
+    font-size: 32rpx;
+    font-weight: bold;
+    color: #fff;
+  }
+
+  .category-close {
+    font-size: 36rpx;
+    color: #fff;
+    cursor: pointer;
+  }
+}
+
+.category-list {
+  padding: 20rpx 0;
+  max-height: calc(100vh - 120rpx);
+  overflow-y: auto;
+}
+
+.category-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 30rpx;
+  border-bottom: 1rpx solid #f5f5f5;
+  transition: all 0.3s;
+
+  &:active {
+    background: #f8f9fa;
+  }
+
+  &.active {
+    background: #e6f7ff;
+    border-left: 6rpx solid #3c9cff;
+
+    .category-name {
+      color: #3c9cff;
+      font-weight: bold;
+    }
+
+    .category-count {
+      color: #3c9cff;
+    }
+  }
+
+  .category-name {
+    font-size: 28rpx;
+    color: #303133;
+  }
+
+  .category-count {
+    font-size: 24rpx;
+    color: #909399;
   }
 }
 </style>
