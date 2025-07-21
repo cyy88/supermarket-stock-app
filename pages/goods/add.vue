@@ -14,11 +14,16 @@
         <view class="progress-line" :class="{ active: currentStep >= 2 }"></view>
         <view class="progress-step" :class="{ active: currentStep >= 2 }">
           <text class="step-number">2</text>
-          <text class="step-text">图片描述</text>
+          <text class="step-text">扩展信息</text>
         </view>
         <view class="progress-line" :class="{ active: currentStep >= 3 }"></view>
         <view class="progress-step" :class="{ active: currentStep >= 3 }">
           <text class="step-number">3</text>
+          <text class="step-text">图片描述</text>
+        </view>
+        <view class="progress-line" :class="{ active: currentStep >= 4 }"></view>
+        <view class="progress-step" :class="{ active: currentStep >= 4 }">
+          <text class="step-number">4</text>
           <text class="step-text">完成</text>
         </view>
       </view>
@@ -33,16 +38,56 @@
         </view>
         <view class="card-badge required">必填</view>
       </view>
-      
+
+      <!-- 商品类型 -->
       <view class="form-item">
-        <text class="label">商品条码</text>
-        <input
-            style="width: 85%;"
-          v-model="form.goodsNo"
-          placeholder="扫码自动填入或手动输入"
-          class="input readonly"
-          readonly
-        />
+        <text class="label required">商品类型</text>
+        <picker
+          style="width: 85%;"
+          :range="typeOptions"
+          range-key="name"
+          @change="onTypeChange"
+          :value="selectedTypeIndex"
+        >
+          <view class="input select">
+            <text :class="{ placeholder: !form.typeName }">
+              {{ form.typeName || '请选择商品类型' }}
+            </text>
+            <text class="arrow">▼</text>
+          </view>
+        </picker>
+      </view>
+
+      <!-- 计价方式 -->
+      <view class="form-item" v-if="form.type === 'goods'">
+        <text class="label required">计价方式</text>
+        <view class="radio-group">
+          <label class="radio-item" @click="form.priceType = 'piece'">
+            <radio :checked="form.priceType === 'piece'" color="#007AFF" />
+            <text>计件商品</text>
+          </label>
+          <label class="radio-item" @click="form.priceType = 'weight'">
+            <radio :checked="form.priceType === 'weight'" color="#007AFF" />
+            <text>称重商品</text>
+          </label>
+        </view>
+        <view class="form-tips">提示：计件商品按数量计价，称重商品按重量计价</view>
+      </view>
+
+      <view class="form-item">
+        <text class="label required">商品条码</text>
+        <view class="input-with-generate">
+          <input
+            style="width: 70%;"
+            v-model="form.goodsNo"
+            placeholder="请输入商品条码，或使用扫码枪扫描"
+            class="input"
+            @input="updateStep"
+          />
+          <button class="generate-btn" @click="generateGoodsNo">
+            随机生成
+          </button>
+        </view>
       </view>
 
       <view class="form-item">
@@ -84,7 +129,7 @@
 
       <view class="form-item">
         <text class="label required">商品价格</text>
-        <view class="input-group"  style="width: 50%;">
+        <view class="input-group" style="width: 50%;">
           <input
             v-model="form.price"
             type="digit"
@@ -92,26 +137,177 @@
             class="input"
             @input="updateStep"
           />
+          <text class="unit">{{ form.priceType === 'weight' ? '元/千克' : '元' }}</text>
+        </view>
+      </view>
+
+      <view class="form-item">
+        <text class="label">划线价格</text>
+        <view class="input-group" style="width: 50%;">
+          <input
+            v-model="form.linePrice"
+            type="digit"
+            placeholder="请输入划线价格，空则不显示"
+            class="input"
+          />
           <text class="unit">元</text>
         </view>
       </view>
 
       <view class="form-item">
         <text class="label">库存数量</text>
-        <view class="input-group"  style="width: 50%;">
-          <input 
+        <view class="input-group" style="width: 50%;">
+          <input
             v-model="form.stock"
             type="number"
             placeholder="请输入库存数量"
             class="input"
           />
-<!--          <text class="unit">件</text>-->
+        </view>
+      </view>
+
+      <view class="form-item">
+        <text class="label required">安全库存</text>
+        <view class="input-group" style="width: 50%;">
+          <input
+            v-model="form.safetyStock"
+            type="number"
+            placeholder="请输入安全库存"
+            class="input"
+            @input="updateStep"
+          />
+        </view>
+      </view>
+
+      <!-- 商品重量 -->
+      <view class="form-item" v-if="form.type === 'goods' && form.priceType === 'piece'">
+        <text class="label">商品重量</text>
+        <view class="input-group" style="width: 50%;">
+          <input
+            v-model="form.weight"
+            type="digit"
+            placeholder="请输入商品重量"
+            class="input"
+          />
+          <text class="unit">千克</text>
+        </view>
+        <view class="form-tips">提示：输入数字，单位kg（用于物流计算）</view>
+      </view>
+
+      <!-- 商品卖点 -->
+      <view class="form-item">
+        <text class="label">商品卖点</text>
+        <input
+          style="width: 85%;"
+          v-model="form.salePoint"
+          placeholder="请输入商品卖点，几个字总结"
+          class="input"
+          maxlength="50"
+        />
+      </view>
+
+      <view class="form-item">
+        <text class="label">显示排序</text>
+        <view class="input-group" style="width: 50%;">
+          <input
+            v-model="form.sort"
+            type="number"
+            placeholder="请输入排序值"
+            class="input"
+          />
+        </view>
+        <view class="form-tips">提示：数值越小，排行越靠前</view>
+      </view>
+
+      <!-- 商品状态 -->
+      <view class="form-item">
+        <text class="label">商品状态</text>
+        <view class="radio-group">
+          <label class="radio-item" @click="form.status = 'A'">
+            <radio :checked="form.status === 'A'" color="#007AFF" />
+            <text>上架</text>
+          </label>
+          <label class="radio-item" @click="form.status = 'N'">
+            <radio :checked="form.status === 'N'" color="#007AFF" />
+            <text>下架</text>
+          </label>
         </view>
       </view>
     </view>
 
-    <!-- 商品图片卡片 -->
+    <!-- 扩展信息卡片 -->
     <view class="card" :class="{ active: currentStep === 2 }">
+      <view class="card-header">
+        <view class="card-title">
+          <text class="title-icon">⚙️</text>
+          <text class="title-text">扩展信息</text>
+        </view>
+        <view class="card-badge optional">可选</view>
+      </view>
+
+      <!-- 积分抵扣 -->
+      <view class="form-item">
+        <text class="label">积分抵扣</text>
+        <view class="radio-group">
+          <label class="radio-item" @click="form.canUsePoint = 'Y'">
+            <radio :checked="form.canUsePoint === 'Y'" color="#007AFF" />
+            <text>可用</text>
+          </label>
+          <label class="radio-item" @click="form.canUsePoint = 'N'">
+            <radio :checked="form.canUsePoint === 'N'" color="#007AFF" />
+            <text>不可用</text>
+          </label>
+        </view>
+      </view>
+
+      <!-- 会员折扣 -->
+      <view class="form-item">
+        <text class="label">会员折扣</text>
+        <view class="radio-group">
+          <label class="radio-item" @click="form.isMemberDiscount = 'Y'">
+            <radio :checked="form.isMemberDiscount === 'Y'" color="#007AFF" />
+            <text>有折扣</text>
+          </label>
+          <label class="radio-item" @click="form.isMemberDiscount = 'N'">
+            <radio :checked="form.isMemberDiscount === 'N'" color="#007AFF" />
+            <text>无折扣</text>
+          </label>
+        </view>
+      </view>
+
+      <!-- 规格类型 -->
+      <view class="form-item">
+        <text class="label">规格类型</text>
+        <view class="radio-group">
+          <label class="radio-item" @click="form.isSingleSpec = 'Y'">
+            <radio :checked="form.isSingleSpec === 'Y'" color="#007AFF" />
+            <text>单规格</text>
+          </label>
+          <label class="radio-item" @click="form.isSingleSpec = 'N'">
+            <radio :checked="form.isSingleSpec === 'N'" color="#007AFF" />
+            <text>多规格</text>
+          </label>
+        </view>
+      </view>
+
+      <!-- 服务时长 -->
+      <view class="form-item" v-if="form.type === 'service'">
+        <text class="label">服务时长</text>
+        <view class="input-group" style="width: 50%;">
+          <input
+            v-model="form.serviceTime"
+            type="number"
+            placeholder="请输入服务时长"
+            class="input"
+          />
+          <text class="unit">分钟</text>
+        </view>
+        <view class="form-tips">提示：输入数字，单位：分钟</view>
+      </view>
+    </view>
+
+    <!-- 商品图片卡片 -->
+    <view class="card" :class="{ active: currentStep === 3 }">
       <view class="card-header">
         <view class="card-title">
           <text class="title-icon">🖼️</text>
@@ -144,7 +340,7 @@
     </view>
 
     <!-- 商品描述卡片 -->
-    <view class="card" :class="{ active: currentStep === 2 }">
+    <view class="card" :class="{ active: currentStep === 4 }">
       <view class="card-header">
         <view class="card-title">
           <text class="title-icon">📝</text>
@@ -245,9 +441,14 @@ import { recognizeProductImage } from '@/api/ai'
 const saving = ref(false)
 const showCategoryPicker = ref(false)
 const categoryList = ref([])
+const typeOptions = ref([
+  { key: 'goods', name: '实物商品' },
+  { key: 'service', name: '服务商品' }
+])
 const imageList = ref([])
 const currentStep = ref(1)
 const selectedCategoryIndex = ref(0)
+const selectedTypeIndex = ref(0)
 
 // AI识别相关状态
 const showAIModal = ref(false)
@@ -258,12 +459,30 @@ const aiImageUrl = ref('')
 const aiProgressTimer = ref(null)
 
 const form = reactive({
+  // 基础信息
+  type: 'goods',
+  typeName: '实物商品',
+  priceType: 'piece',
   goodsNo: '',
   name: '',
   cateId: '',
   cateName: '',
   price: '',
+  linePrice: '',
   stock: '',
+  safetyStock: '',
+  weight: '',
+  salePoint: '',
+  sort: 0,
+  status: 'A',
+
+  // 扩展信息
+  canUsePoint: 'Y',
+  isMemberDiscount: 'Y',
+  isSingleSpec: 'Y',
+  serviceTime: 0,
+
+  // 商品描述
   description: ''
 })
 
@@ -276,14 +495,25 @@ onLoad((options) => {
 })
 
 const updateStep = () => {
-  if (form.name && form.cateId && form.price) {
+  // 步骤1：基本信息必填项
+  if (form.name && form.cateId && form.price && form.goodsNo && form.safetyStock !== '') {
     currentStep.value = 2
   } else {
     currentStep.value = 1
+    return
   }
 
-  if (form.name && form.cateId && form.price && (imageList.value.length > 0 || form.description)) {
+  // 步骤2：扩展信息（可选）
+  currentStep.value = 2
+
+  // 步骤3：图片上传（可选）
+  if (imageList.value.length > 0) {
     currentStep.value = 3
+  }
+
+  // 步骤4：商品描述（可选）
+  if (form.description) {
+    currentStep.value = 4
   }
 }
 
@@ -334,6 +564,35 @@ const onCategoryChange = (e) => {
     selectedCategoryIndex.value = e.detail.value
   }
   showCategoryPicker.value = false
+  updateStep()
+}
+
+// 商品类型选择
+const onTypeChange = (e) => {
+  const selectedType = typeOptions.value[e.detail.value]
+  if (selectedType) {
+    form.type = selectedType.key
+    form.typeName = selectedType.name
+    selectedTypeIndex.value = e.detail.value
+
+    // 如果选择服务商品，默认设置为计件
+    if (form.type === 'service') {
+      form.priceType = 'piece'
+    }
+  }
+  updateStep()
+}
+
+// 生成随机条码
+const generateGoodsNo = () => {
+  if (form.priceType === 'weight') {
+    // 称重商品生成4位随机码
+    form.goodsNo = Math.floor(1000 + Math.random() * 9000).toString()
+  } else {
+    // 计件商品生成长条码
+    let sn = (Math.random() + 1) * 100000000000000
+    form.goodsNo = sn.toFixed(0)
+  }
   updateStep()
 }
 
@@ -400,7 +659,34 @@ const validateForm = () => {
     })
     return false
   }
-  
+
+  if (!form.goodsNo.trim()) {
+    uni.showToast({
+      title: '请输入商品条码',
+      icon: 'none'
+    })
+    return false
+  }
+
+  // 验证条码格式
+  if (form.priceType === 'weight') {
+    if (!/^\d{4}$/.test(form.goodsNo)) {
+      uni.showToast({
+        title: '称重商品条码必须是4位数字',
+        icon: 'none'
+      })
+      return false
+    }
+  } else {
+    if (!/^\d+$/.test(form.goodsNo)) {
+      uni.showToast({
+        title: '计件商品条码必须是数字',
+        icon: 'none'
+      })
+      return false
+    }
+  }
+
   if (!form.cateId) {
     uni.showToast({
       title: '请选择商品分类',
@@ -408,7 +694,7 @@ const validateForm = () => {
     })
     return false
   }
-  
+
   if (!form.price || parseFloat(form.price) <= 0) {
     uni.showToast({
       title: '请输入正确的商品价格',
@@ -416,7 +702,15 @@ const validateForm = () => {
     })
     return false
   }
-  
+
+  if (form.safetyStock === '' || parseInt(form.safetyStock) < 0) {
+    uni.showToast({
+      title: '请输入正确的安全库存',
+      icon: 'none'
+    })
+    return false
+  }
+
   return true
 }
 
@@ -592,23 +886,32 @@ const handleSaveGoods = async () => {
     }).filter(url => url)
 
     const goodsData = {
+      // 基础信息
       name: form.name.trim(),
-      goodsNo: form.goodsNo,
+      goodsNo: form.goodsNo.trim(),
       cateId: parseInt(form.cateId),
       images: imageUrls,
-      type: 'goods',
-      priceType: 'piece',
-      status: 'A',
+      type: form.type,
+      priceType: form.priceType,
+      status: form.status,
       price: parseFloat(form.price),
-      linePrice: parseFloat(form.price) ,
+      linePrice: form.linePrice ? parseFloat(form.linePrice) : null,
       stock: parseInt(form.stock) || 0,
-      canUsePoint: 'Y',
-      isMemberDiscount: 'Y',
-      isSingleSpec: 'Y',
-      serviceTime: 0,
-      weight: '',
-      sort: 0,
+      safetyStock: parseInt(form.safetyStock),
+      weight: form.weight ? parseFloat(form.weight) : null,
+      salePoint: form.salePoint.trim(),
+      sort: parseInt(form.sort) || 0,
+
+      // 扩展信息
+      canUsePoint: form.canUsePoint,
+      isMemberDiscount: form.isMemberDiscount,
+      isSingleSpec: form.isSingleSpec,
+      serviceTime: form.type === 'service' ? parseInt(form.serviceTime) || 0 : 0,
+
+      // 固定字段
       isItaconsumableitem: 2,
+
+      // 商品描述
       description: form.description.trim()
     }
 
@@ -924,6 +1227,61 @@ const handleSaveGoods = async () => {
         transform: none;
       }
     }
+  }
+
+  .input-with-generate {
+    display: flex;
+    align-items: center;
+    gap: 20rpx;
+
+    .input {
+      flex: 1;
+    }
+
+    .generate-btn {
+      padding: 0 24rpx;
+      height: 88rpx;
+      background: linear-gradient(135deg, #409eff 0%, #36cfc9 100%);
+      color: #fff;
+      border: none;
+      border-radius: 15rpx;
+      font-size: 24rpx;
+      white-space: nowrap;
+      transition: all 0.3s;
+
+      &:active {
+        transform: scale(0.95);
+      }
+    }
+  }
+
+  .radio-group {
+    display: flex;
+    gap: 40rpx;
+    margin-top: 20rpx;
+
+    .radio-item {
+      display: flex;
+      align-items: center;
+      gap: 10rpx;
+      cursor: pointer;
+
+      radio {
+        transform: scale(1.2);
+      }
+
+      text {
+        font-size: 28rpx;
+        color: #606266;
+      }
+    }
+  }
+
+  .form-tips {
+    font-size: 24rpx;
+    color: #909399;
+    margin-top: 10rpx;
+    line-height: 1.4;
   }
 }
 
