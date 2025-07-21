@@ -70,12 +70,7 @@
               {{ goods.status === 'A' ? '上架' : '下架' }}
             </text>
           </view>
-          <view v-if="isLocalGoods()" class="info-item">
-            <text class="info-label">同步状态</text>
-            <text class="info-value" :class="getSyncStatusClass(goods.syncStatus)">
-              {{ getSyncStatusText(goods.syncStatus) }}
-            </text>
-          </view>
+
         </view>
       </view>
 
@@ -134,10 +129,7 @@
         <button class="action-btn edit" @click="editGoods">
           ✏️ 编辑商品
         </button>
-        <button v-if="isLocalGoods()" class="action-btn sync" @click="syncGoods" :disabled="goods.syncStatus === 1">
-          🔄 {{ goods.syncStatus === 1 ? '已同步' : '立即同步' }}
-        </button>
-        <button v-if="isLocalGoods()" class="action-btn delete" @click="deleteGoods">
+        <button class="action-btn delete" @click="deleteGoodsHandler">
           🗑️ 删除商品
         </button>
       </view>
@@ -154,7 +146,7 @@
 import { ref, onMounted } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
 import goodsStore from '@/stores/goods'
-import { saveGoods, getGoodsDetail, getGoodsCateList } from '@/api/goods'
+import { getGoodsDetail, getGoodsCateList, deleteGoods } from '@/api/goods'
 import { formatTime as formatTimeUtil } from '@/utils/time'
 
 const goods = ref(null)
@@ -202,56 +194,29 @@ onShow(() => {
 
 const loadGoodsDetail = async () => {
   try {
-    const foundGoods = goodsStore.localGoods.find(item => item.id === goodsId.value)
-    if (foundGoods) {
-      goods.value = foundGoods
-      return
-    }
+    const response = await getGoodsDetail(goodsId.value)
 
-    try {
-      const response = await getGoodsDetail(goodsId.value)
-
-      if (response.code === 200 && response.data && response.data.goods) {
-        const goodsData = {
-          ...response.data.goods,
-          imagePath: response.data.imagePath || ''
-        }
-        goods.value = goodsData
-      } else {
-        throw new Error(response.message || '获取商品详情失败')
+    if (response.code === 200 && response.data && response.data.goods) {
+      const goodsData = {
+        ...response.data.goods,
+        imagePath: response.data.imagePath || ''
       }
-    } catch (serverError) {
-      uni.showToast({
-        title: '商品不存在或网络错误',
-        icon: 'none'
-      })
-      setTimeout(() => {
-        uni.navigateBack()
-      }, 1500)
+      goods.value = goodsData
+    } else {
+      throw new Error(response.message || '获取商品详情失败')
     }
   } catch (error) {
     uni.showToast({
-      title: '加载失败',
+      title: '商品不存在或网络错误',
       icon: 'none'
     })
+    setTimeout(() => {
+      uni.navigateBack()
+    }, 1500)
   }
 }
 
-const getSyncStatusClass = (status) => {
-  switch (status) {
-    case 1: return 'status-synced'
-    case 2: return 'status-failed'
-    default: return 'status-pending'
-  }
-}
 
-const getSyncStatusText = (status) => {
-  switch (status) {
-    case 1: return '已同步'
-    case 2: return '同步失败'
-    default: return '待同步'
-  }
-}
 
 const getGoodsCategory = (item) => {
   if (!item) return '未分类'
@@ -323,9 +288,7 @@ const getUpdateTime = (item) => {
   return item.updateTime || item.modifyDate || item.updatedAt || item.createTime || item.createDate || null
 }
 
-const isLocalGoods = () => {
-  return goodsStore.localGoods.some(item => item.id === goodsId.value)
-}
+
 
 const formatTime = (timestamp) => {
   return formatTimeUtil(timestamp)
@@ -337,80 +300,39 @@ const getStockUnit = (item) => {
 }
 
 const editGoods = () => {
-  if (goods.value && !goodsStore.localGoods.find(item => item.id === goodsId.value)) {
-    const localGoodsData = {
-      id: goodsId.value,
-      name: goods.value.name,
-      goodsNo: goods.value.goodsNo,
-      cateId: goods.value.cateId,
-      cateName: getGoodsCategory(goods.value),
-      price: goods.value.price,
-      stock: goods.value.stock,
-      images: getGoodsImages(goods.value),
-      description: goods.value.description || '',
-      status: goods.value.status,
-      type: goods.value.type || 'goods',
-      priceType: goods.value.priceType || 'piece',
-      sort: goods.value.sort || 0,
-      syncStatus: 1,
-      createTime: goods.value.createTime || Date.now(),
-      updateTime: goods.value.updateTime || Date.now()
-    }
-
-    goodsStore.localGoods.push(localGoodsData)
-    uni.setStorageSync('localGoods', goodsStore.localGoods)
-  }
-
   uni.navigateTo({
     url: `/pages/goods/edit?id=${goodsId.value}`
   })
 }
 
-const syncGoods = async () => {
-  if (goods.value.syncStatus === 1) return
-
-  uni.showLoading({
-    title: '同步中...'
-  })
-
-  try {
-    const { id, createTime, updateTime, syncStatus, ...goodsData } = goods.value
-    await saveGoods(goodsData)
-    
-    goodsStore.updateSyncStatus(goodsId.value, 1)
-    goods.value.syncStatus = 1
-    
-    uni.showToast({
-      title: '同步成功',
-      icon: 'success'
-    })
-  } catch (error) {
-    goodsStore.updateSyncStatus(goodsId.value, 2)
-    goods.value.syncStatus = 2
-    
-    uni.showToast({
-      title: '同步失败',
-      icon: 'none'
-    })
-  } finally {
-    uni.hideLoading()
-  }
-}
-
-const deleteGoods = () => {
+const deleteGoodsHandler = async () => {
   uni.showModal({
     title: '确认删除',
     content: '确定要删除这个商品吗？删除后无法恢复。',
-    success: (res) => {
+    success: async (res) => {
       if (res.confirm) {
-        goodsStore.deleteLocalGoods(goodsId.value)
-        uni.showToast({
-          title: '删除成功',
-          icon: 'success'
-        })
-        setTimeout(() => {
-          uni.navigateBack()
-        }, 1500)
+        try {
+          uni.showLoading({
+            title: '删除中...'
+          })
+
+          await deleteGoods(goodsId.value)
+
+          uni.showToast({
+            title: '删除成功',
+            icon: 'success'
+          })
+          setTimeout(() => {
+            uni.navigateBack()
+          }, 1500)
+        } catch (error) {
+          uni.showToast({
+            title: '删除失败',
+            icon: 'none'
+          })
+        } finally {
+          uni.hideLoading()
+        }
       }
     }
   })

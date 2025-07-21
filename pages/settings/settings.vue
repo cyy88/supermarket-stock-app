@@ -211,17 +211,16 @@ const manualSync = async () => {
 const clearCache = () => {
   uni.showModal({
     title: '清除缓存',
-    content: '确定要清除所有本地缓存数据吗？此操作不可恢复。',
+    content: '确定要清除分类缓存数据吗？',
     success: (res) => {
       if (res.confirm) {
-        // 清除商品数据
-        uni.removeStorageSync('localGoods')
+        // 只清除分类数据
         uni.removeStorageSync('categories')
         uni.removeStorageSync('recentScans')
-        
+
         // 重新初始化
         goodsStore.init()
-        
+
         uni.showToast({
           title: '缓存已清除',
           icon: 'success'
@@ -233,18 +232,11 @@ const clearCache = () => {
 
 // 导出数据
 const exportData = () => {
-  const goods = goodsStore.localGoods
-  
-  if (goods.length === 0) {
-    uni.showToast({
-      title: '没有数据可导出',
-      icon: 'none'
-    })
-    return
-  }
-
-  // 生成CSV格式数据
-  const csvData = generateCSV(goods)
+  uni.showToast({
+    title: '数据导出功能已移除',
+    icon: 'none'
+  })
+  return
   
   // 在实际应用中，这里应该保存文件或分享数据
   uni.showModal({

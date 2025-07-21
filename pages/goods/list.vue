@@ -14,41 +14,11 @@
       </view>
     </view>
 
-    <!-- 数据源切换 -->
-    <view class="data-source-switch">
-      <view class="switch-tabs">
-        <view
-          class="switch-tab"
-          :class="{ active: showServerData }"
-          @click="switchToServerData"
-        >
-          服务器数据
-        </view>
-        <view
-          class="switch-tab"
-          :class="{ active: !showServerData }"
-          @click="switchToLocalData"
-        >
-          本地数据
-        </view>
-      </view>
-    </view>
-
     <!-- 商品总数统计 -->
     <view class="total-count-bar">
       <view class="total-count">
-        <text class="count-number">{{ getTotalDataSourceCount() }}</text>
-        <text class="count-label">{{ showServerData ? '服务器商品' : '本地商品' }}</text>
-      </view>
-      <view v-if="!showServerData" class="sync-stats">
-        <view class="sync-item">
-          <text class="sync-number success">{{ syncedCount }}</text>
-          <text class="sync-label">已同步</text>
-        </view>
-        <view class="sync-item">
-          <text class="sync-number warning">{{ unsyncedCount }}</text>
-          <text class="sync-label">待同步</text>
-        </view>
+        <text class="count-number">{{ goodsList.length }}</text>
+        <text class="count-label">商品总数</text>
       </view>
     </view>
 
@@ -149,9 +119,6 @@
         </view>
 
         <view class="goods-actions">
-          <view v-if="!showServerData" class="sync-status" :class="getSyncStatusClass(item.syncStatus)">
-            {{ getSyncStatusText(item.syncStatus) }}
-          </view>
           <text class="arrow">→</text>
         </view>
       </view>
@@ -166,9 +133,9 @@
     <view v-else-if="filteredGoods.length === 0" class="empty-state">
       <text class="empty-icon">📦</text>
       <text class="empty-text">
-        {{ searchKeyword ? '没有找到相关商品' : (showServerData ? '服务器暂无商品数据' : '还没有添加商品') }}
+        {{ searchKeyword ? '没有找到相关商品' : '暂无商品数据' }}
       </text>
-      <button v-if="!searchKeyword && !showServerData" class="add-btn" @click="goToAdd">
+      <button v-if="!searchKeyword" class="add-btn" @click="goToAdd">
         ➕ 添加第一个商品
       </button>
     </view>
@@ -230,16 +197,14 @@ import { getGoodsList, getGoodsCateList } from '@/api/goods'
 
 const searchKeyword = ref('')
 const goodsList = ref([])
-const serverGoodsList = ref([])
 const loading = ref(false)
-const showServerData = ref(true)
 const stockFilter = ref('all')
 const showCategoryFilter = ref(false)
 const selectedCategory = ref(null)
 const categories = ref([])
 
 const filteredGoods = computed(() => {
-  let dataSource = showServerData.value ? serverGoodsList.value : goodsList.value
+  let dataSource = goodsList.value
 
   // 过滤掉消耗品，只显示普通商品
   dataSource = dataSource.filter(item => {
@@ -284,29 +249,12 @@ const filteredGoods = computed(() => {
   return dataSource
 })
 
-const syncedCount = computed(() => {
-  // 直接从已过滤的本地商品列表统计
-  return goodsList.value.filter(item => item.syncStatus === 1).length
-})
-
-const unsyncedCount = computed(() => {
-  // 直接从已过滤的本地商品列表统计
-  return goodsList.value.filter(item => item.syncStatus === 0).length
-})
-
 const hasActiveFilters = computed(() => {
   return searchKeyword.value || stockFilter.value !== 'all' || selectedCategory.value !== null
 })
 
-const getTotalDataSourceCount = () => {
-  const dataSource = showServerData.value ? serverGoodsList.value : goodsList.value
-  // 只统计普通商品，排除消耗品
-  return dataSource.filter(item => !item.isItaconsumableitem || item.isItaconsumableitem === 0).length
-}
-
 onMounted(() => {
   loadGoodsList()
-  loadServerGoodsList()
   loadCategoriesIfNeeded()
 })
 
@@ -332,15 +280,7 @@ const loadCategoriesIfNeeded = async () => {
   }
 }
 
-const loadGoodsList = () => {
-  goodsStore.init()
-  // 只加载普通商品，排除消耗品
-  goodsList.value = goodsStore.localGoods
-    .filter(item => !item.isItaconsumableitem || item.isItaconsumableitem === 0)
-    .sort((a, b) => b.createTime - a.createTime)
-}
-
-const loadServerGoodsList = async () => {
+const loadGoodsList = async () => {
   try {
     loading.value = true
     const res = await getGoodsList({
@@ -349,15 +289,13 @@ const loadServerGoodsList = async () => {
     })
 
     if (res.data && res.data.paginationResponse) {
-      serverGoodsList.value = res.data.paginationResponse.content || []
+      goodsList.value = res.data.paginationResponse.content || []
     }
   } catch (error) {
     uni.showToast({
       title: '获取商品列表失败',
       icon: 'none'
     })
-    // 失败时显示本地数据
-    showServerData.value = false
   } finally {
     loading.value = false
   }
@@ -371,24 +309,10 @@ const clearSearch = () => {
   searchKeyword.value = ''
 }
 
-const switchToServerData = () => {
-  showServerData.value = true
-  if (serverGoodsList.value.length === 0) {
-    loadServerGoodsList()
-  }
-}
 
-const switchToLocalData = () => {
-  showServerData.value = false
-  loadGoodsList()
-}
 
 const getGoodsImage = (item) => {
-  if (showServerData.value) {
-    return item.logo || (item.images && item.images.length > 0 ? item.images[0] : null)
-  } else {
-    return item.images && item.images.length > 0 ? item.images[0] : null
-  }
+  return item.logo || (item.images && item.images.length > 0 ? item.images[0] : null)
 }
 
 const getGoodsCategory = (item) => {
@@ -437,33 +361,12 @@ const getStockStatusText = (item) => {
   }
 }
 
-const getSyncStatusClass = (status) => {
-  switch (status) {
-    case 1: return 'synced'
-    case 2: return 'failed'
-    default: return 'pending'
-  }
-}
 
-const getSyncStatusText = (status) => {
-  switch (status) {
-    case 1: return '已同步'
-    case 2: return '同步失败'
-    default: return '待同步'
-  }
-}
 
 const goToDetail = (item) => {
-  if (showServerData.value && item.id) {
-    uni.navigateTo({
-      url: `/pages/goods/detail?id=${item.id}&source=server`
-    })
-    return
-  }
-
   if (item.id) {
     uni.navigateTo({
-      url: `/pages/goods/detail?id=${item.id}&source=local`
+      url: `/pages/goods/detail?id=${item.id}`
     })
   } else {
     uni.showToast({
@@ -492,8 +395,7 @@ const selectCategory = (categoryId) => {
 
 // 获取分类商品数量
 const getCategoryCount = (categoryId) => {
-  const dataSource = showServerData.value ? serverGoodsList.value : goodsList.value
-  return dataSource.filter(item =>
+  return goodsList.value.filter(item =>
     (item.cateId === categoryId || item.cateInfo?.id === categoryId) &&
     (!item.isItaconsumableitem || item.isItaconsumableitem === 0)
   ).length
@@ -501,9 +403,8 @@ const getCategoryCount = (categoryId) => {
 
 // 获取总商品数量
 const getTotalCount = () => {
-  const dataSource = showServerData.value ? serverGoodsList.value : goodsList.value
   // 只统计普通商品，排除消耗品
-  return dataSource.filter(item => !item.isItaconsumableitem || item.isItaconsumableitem === 0).length
+  return goodsList.value.filter(item => !item.isItaconsumableitem || item.isItaconsumableitem === 0).length
 }
 
 // 页面显示时刷新数据

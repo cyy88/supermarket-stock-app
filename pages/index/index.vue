@@ -21,10 +21,6 @@
         <text class="stat-number">{{ statistics.totalCount }}</text>
         <text class="stat-label">总商品</text>
       </view>
-      <view class="stat-card">
-        <text class="stat-number">{{ statistics.unsyncedCount }}</text>
-        <text class="stat-label">待同步</text>
-      </view>
     </view>
 
     <!-- 功能按钮 -->
@@ -55,8 +51,7 @@ const title = ref('商品扫码系统')
 const userInfo = ref(null)
 const statistics = ref({
   todayCount: 0,
-  totalCount: 0,
-  unsyncedCount: 0
+  totalCount: 0
 })
 
 // 生命周期钩子

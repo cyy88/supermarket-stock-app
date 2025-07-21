@@ -976,31 +976,25 @@ const handleSaveGoods = async () => {
       description: form.description.trim()
     }
 
-    const localGoods = goodsStore.saveLocalGoods({
-      ...goodsData,
-      cateName: form.cateName
-    })
-
     try {
       const response = await saveGoodsApi(goodsData)
       if (response.code === 200) {
-        goodsStore.updateSyncStatus(localGoods.id, 1)
         uni.showToast({
           title: '商品保存成功',
           icon: 'success'
         })
+        setTimeout(() => {
+          uni.navigateBack()
+        }, 1500)
       } else {
         throw new Error(response.message || '保存失败')
       }
     } catch (error) {
       uni.showToast({
-        title: '已保存到本地，稍后同步',
+        title: error.message || '保存失败，请重试',
         icon: 'none'
       })
     }
-    setTimeout(() => {
-      uni.navigateBack()
-    }, 1500)
 
   } catch (error) {
     uni.showToast({

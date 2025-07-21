@@ -36,6 +36,22 @@ export const getGoodsDetail = (goodsId) => {
   })
 }
 
+// 删除商品
+export const deleteGoods = (goodsId) => {
+  return request({
+    url: `/backendApi/goods/goods/delete/${goodsId}`,
+    method: 'DELETE'
+  })
+}
+
+// 获取商品统计数据
+export const getGoodsStatistics = () => {
+  return request({
+    url: '/backendApi/goods/goods/statistics',
+    method: 'GET'
+  })
+}
+
 // 获取商品分类
 export const getGoodsCateList = (params = {}) => {
   const defaultParams = {

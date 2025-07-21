@@ -530,55 +530,23 @@ const loadGoodsDetail = async () => {
   try {
     loading.value = true
 
-    // 首先尝试从本地加载
-    const localGoods = goodsStore.localGoods.find(item => item.id === goodsId.value)
-    if (localGoods) {
-      goods.value = localGoods
-      fillForm(localGoods)
-      return
-    }
+    const response = await getGoodsDetail(goodsId.value)
 
-    // 如果本地没有，尝试从服务器加载
-    try {
-      const response = await getGoodsDetail(goodsId.value)
-
-      if (response.code === 200 && response.data && response.data.goodsInfo) {
-        const goodsData = response.data.goodsInfo
-        goods.value = goodsData
-        fillForm(goodsData)
-
-        // 将服务器数据保存到本地，方便下次编辑
-        const localGoodsData = {
-          ...goodsData,
-          id: goodsId.value,
-          syncStatus: 1, // 标记为已同步
-          createTime: goodsData.createTime || Date.now(),
-          updateTime: goodsData.updateTime || Date.now()
-        }
-
-        // 检查本地是否已存在，如果不存在则添加
-        const existingIndex = goodsStore.localGoods.findIndex(item => item.id === goodsId.value)
-        if (existingIndex === -1) {
-          goodsStore.localGoods.push(localGoodsData)
-          uni.setStorageSync('localGoods', goodsStore.localGoods)
-        }
-      } else {
-        throw new Error(response.message || '获取商品详情失败')
-      }
-    } catch (serverError) {
-      uni.showToast({
-        title: '商品不存在或网络错误',
-        icon: 'none'
-      })
-      setTimeout(() => {
-        uni.navigateBack()
-      }, 1500)
+    if (response.code === 200 && response.data && response.data.goodsInfo) {
+      const goodsData = response.data.goodsInfo
+      goods.value = goodsData
+      fillForm(goodsData)
+    } else {
+      throw new Error(response.message || '获取商品详情失败')
     }
   } catch (error) {
     uni.showToast({
-      title: '加载失败',
+      title: '商品不存在或网络错误',
       icon: 'none'
     })
+    setTimeout(() => {
+      uni.navigateBack()
+    }, 1500)
   } finally {
     loading.value = false
   }

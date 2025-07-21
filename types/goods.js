@@ -24,7 +24,7 @@ export const GoodsInfo = {
   isSingleSpec: 'Y', // 规格类型 Y:单规格 N:多规格
   serviceTime: 0, // 服务时长（分钟）
 
-  syncStatus: 0, // 0:待同步 1:已同步 2:同步失败
+
   createTime: 0,
   updateTime: 0
 }
