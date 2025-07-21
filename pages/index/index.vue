@@ -14,15 +14,15 @@
     <!-- 统计卡片 -->
     <view class="stats-section">
       <view class="stat-card">
-        <text class="stat-number">{{ goodsStore.todayCount }}</text>
+        <text class="stat-number">{{ statistics.todayCount }}</text>
         <text class="stat-label">今日添加</text>
       </view>
       <view class="stat-card">
-        <text class="stat-number">{{ goodsStore.localGoods.length }}</text>
+        <text class="stat-number">{{ statistics.totalCount }}</text>
         <text class="stat-label">总商品</text>
       </view>
       <view class="stat-card">
-        <text class="stat-number">{{ goodsStore.unsyncedCount }}</text>
+        <text class="stat-number">{{ statistics.unsyncedCount }}</text>
         <text class="stat-label">待同步</text>
       </view>
     </view>
@@ -50,6 +50,11 @@ import goodsStore from '@/stores/goods'
 // 响应式数据
 const title = ref('商品扫码系统')
 const userInfo = ref(null)
+const statistics = ref({
+  todayCount: 0,
+  totalCount: 0,
+  unsyncedCount: 0
+})
 
 // 生命周期钩子
 onMounted(() => {
@@ -77,6 +82,25 @@ const checkLoginStatus = async () => {
       userInfo.value = userStore.userInfo
     } catch (error) {
       console.error('获取用户信息失败:', error)
+    }
+  }
+
+  // 加载统计数据
+  await loadStatistics()
+}
+
+// 加载统计数据
+const loadStatistics = async () => {
+  try {
+    const stats = await goodsStore.fetchStatistics()
+    statistics.value = stats
+  } catch (error) {
+    console.error('加载统计数据失败:', error)
+    // 使用默认值
+    statistics.value = {
+      todayCount: goodsStore.todayCount,
+      totalCount: goodsStore.localGoods.length,
+      unsyncedCount: goodsStore.unsyncedCount
     }
   }
 }

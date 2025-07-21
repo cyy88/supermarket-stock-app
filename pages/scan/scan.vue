@@ -3,7 +3,21 @@
     <!-- 扫码头部 -->
     <view class="scan-header">
       <text class="scan-title">📱 扫描商品条码</text>
-      <text class="scan-tip">将条码对准扫描框进行扫描</text>
+      <text class="scan-tip">将条码对准扫描框，支持一维条形码和二维码</text>
+      <view class="scan-features">
+        <view class="feature-item">
+          <text class="feature-icon">📏</text>
+          <text class="feature-text">横向条形码优化</text>
+        </view>
+        <view class="feature-item">
+          <text class="feature-icon">🎯</text>
+          <text class="feature-text">快速识别</text>
+        </view>
+        <view class="feature-item">
+          <text class="feature-icon">💡</text>
+          <text class="feature-text">自动对焦</text>
+        </view>
+      </view>
     </view>
 
     <!-- 扫码按钮 -->
@@ -85,10 +99,20 @@ onMounted(() => {
 // 开始扫码
 const startScan = () => {
   uni.scanCode({
+    // 只扫描条形码和二维码
+    scanType: ['barCode', 'qrCode'],
+    // 是否只能从相机扫码，不允许从相册选择图片
+    onlyFromCamera: true,
+    // 扫码提示文字
+    prompt: '将条码对准扫描框',
+    // 是否显示相册按钮
+    albumButton: false,
     success: (res) => {
+      console.log('扫码成功:', res)
       handleScanResult(res.result)
     },
     fail: (err) => {
+      console.error('扫码失败:', err)
       uni.showToast({
         title: '扫码失败，请重试',
         icon: 'none'
@@ -191,6 +215,32 @@ const formatTime = (timestamp) => {
   .scan-tip {
     font-size: 28rpx;
     color: #909399;
+    margin-bottom: 40rpx;
+  }
+
+  .scan-features {
+    display: flex;
+    justify-content: center;
+    gap: 40rpx;
+    flex-wrap: wrap;
+
+    .feature-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10rpx;
+
+      .feature-icon {
+        font-size: 32rpx;
+        margin-bottom: 5rpx;
+      }
+
+      .feature-text {
+        font-size: 24rpx;
+        color: #67c23a;
+        font-weight: 500;
+      }
+    }
   }
 }
 

@@ -5,6 +5,8 @@ class GoodsStore {
   constructor() {
     this.localGoods = []
     this.categories = []
+    this.totalGoodsCount = 0
+    this.todayAddedCount = 0
     this.init()
   }
 
@@ -14,12 +16,14 @@ class GoodsStore {
     this.categories = uni.getStorageSync('categories') || []
   }
 
-  // 计算今日添加数量
+  // 计算今日添加数量（本地）
   get todayCount() {
-    const today = new Date().toDateString()
-    return this.localGoods.filter(item =>
-      new Date(item.createTime || 0).toDateString() === today
-    ).length
+    return this.todayAddedCount
+  }
+
+  // 获取总商品数
+  get totalCount() {
+    return this.totalGoodsCount
   }
 
   // 计算待同步数量
@@ -88,6 +92,43 @@ class GoodsStore {
   // 根据条码查找商品
   findGoodsByBarcode(barcode) {
     return this.localGoods.find(item => item.goodsNo === barcode)
+  }
+
+  // 获取统计数据
+  async fetchStatistics() {
+    try {
+      // 获取总商品数
+      const response = await getGoodsListApi({ page: 1, limit: 1 })
+      if (response.code === 200 && response.data) {
+        this.totalGoodsCount = response.data.total || 0
+      }
+
+      // 计算今日添加数量（从本地数据计算）
+      const today = new Date().toDateString()
+      this.todayAddedCount = this.localGoods.filter(item =>
+        new Date(item.createTime || 0).toDateString() === today
+      ).length
+
+      return {
+        totalCount: this.totalGoodsCount,
+        todayCount: this.todayAddedCount,
+        unsyncedCount: this.unsyncedCount
+      }
+    } catch (error) {
+      console.error('获取统计数据失败:', error)
+      // 如果API失败，使用本地数据
+      const today = new Date().toDateString()
+      this.todayAddedCount = this.localGoods.filter(item =>
+        new Date(item.createTime || 0).toDateString() === today
+      ).length
+      this.totalGoodsCount = this.localGoods.length
+
+      return {
+        totalCount: this.totalGoodsCount,
+        todayCount: this.todayAddedCount,
+        unsyncedCount: this.unsyncedCount
+      }
+    }
   }
 }
 
