@@ -50,11 +50,11 @@
           </view>
           <view class="info-item">
             <text class="info-label">库存数量</text>
-            <text class="info-value">{{ goods.stock }} 件</text>
+            <text class="info-value">{{ goods.stock }} {{ getStockUnit(goods) }}</text>
           </view>
           <view class="info-item">
             <text class="info-label">安全库存</text>
-            <text class="info-value">{{ goods.safetyStock || 0 }} 件</text>
+            <text class="info-value">{{ goods.safetyStock || 0 }} {{ getStockUnit(goods) }}</text>
           </view>
           <view v-if="goods.weight" class="info-item">
             <text class="info-label">商品重量</text>
@@ -329,6 +329,11 @@ const isLocalGoods = () => {
 
 const formatTime = (timestamp) => {
   return formatTimeUtil(timestamp)
+}
+
+const getStockUnit = (item) => {
+  if (!item) return '件'
+  return item.priceType === 'weight' ? 'g' : '件'
 }
 
 const editGoods = () => {

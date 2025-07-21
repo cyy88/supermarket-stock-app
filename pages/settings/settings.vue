@@ -148,7 +148,6 @@ const loadStatistics = async () => {
     const stats = await goodsStore.fetchStatistics()
     statistics.value = stats
   } catch (error) {
-    console.error('加载统计数据失败:', error)
     // 使用默认值
     statistics.value = {
       todayCount: goodsStore.todayCount,
@@ -186,7 +185,6 @@ const manualSync = async () => {
         })
 
         try {
-          // 这里应该调用同步管理器
           // await SyncManager.manualSync()
           
           // 模拟同步过程
