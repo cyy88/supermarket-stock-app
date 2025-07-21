@@ -22,9 +22,23 @@
 
       <!-- 商品基本信息 -->
       <view class="info-section">
-        <view class="goods-name">{{ goods.name }}</view>
-        <view class="goods-price">¥{{ goods.price }}</view>
-        
+        <view class="goods-header">
+          <view class="goods-name">{{ goods.name }}</view>
+          <view class="goods-type-badge" :class="goods.type">
+            {{ goods.type === 'goods' ? '实物商品' : '服务商品' }}
+          </view>
+        </view>
+
+        <view class="price-section">
+          <view class="goods-price">¥{{ goods.price }}</view>
+          <view v-if="goods.linePrice && goods.linePrice > 0" class="line-price">
+            原价：¥{{ goods.linePrice }}
+          </view>
+          <view class="price-type">
+            {{ goods.priceType === 'piece' ? '按件计价' : '按重量计价' }}
+          </view>
+        </view>
+
         <view class="info-grid">
           <view class="info-item">
             <text class="info-label">商品条码</text>
@@ -42,6 +56,24 @@
             <text class="info-label">安全库存</text>
             <text class="info-value">{{ goods.safetyStock || 0 }} 件</text>
           </view>
+          <view v-if="goods.weight" class="info-item">
+            <text class="info-label">商品重量</text>
+            <text class="info-value">{{ goods.weight }} 千克</text>
+          </view>
+          <view v-if="goods.salePoint" class="info-item">
+            <text class="info-label">商品卖点</text>
+            <text class="info-value">{{ goods.salePoint }}</text>
+          </view>
+          <view class="info-item">
+            <text class="info-label">显示排序</text>
+            <text class="info-value">{{ goods.sort || 0 }}</text>
+          </view>
+          <view class="info-item">
+            <text class="info-label">商品状态</text>
+            <text class="info-value" :class="goods.status === 'A' ? 'status-active' : 'status-inactive'">
+              {{ goods.status === 'A' ? '上架' : '下架' }}
+            </text>
+          </view>
           <view v-if="isLocalGoods()" class="info-item">
             <text class="info-label">同步状态</text>
             <text class="info-value" :class="getSyncStatusClass(goods.syncStatus)">
@@ -51,6 +83,35 @@
           <view v-else class="info-item">
             <text class="info-label">数据来源</text>
             <text class="info-value status-synced">服务器数据</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 扩展信息 -->
+      <view class="extend-section">
+        <view class="section-title">⚙️ 扩展信息</view>
+        <view class="extend-grid">
+          <view class="extend-item">
+            <text class="extend-label">积分抵扣</text>
+            <text class="extend-value" :class="goods.canUsePoint === 'Y' ? 'status-active' : 'status-inactive'">
+              {{ goods.canUsePoint === 'Y' ? '可用' : '不可用' }}
+            </text>
+          </view>
+          <view class="extend-item">
+            <text class="extend-label">会员折扣</text>
+            <text class="extend-value" :class="goods.isMemberDiscount === 'Y' ? 'status-active' : 'status-inactive'">
+              {{ goods.isMemberDiscount === 'Y' ? '有折扣' : '无折扣' }}
+            </text>
+          </view>
+          <view class="extend-item">
+            <text class="extend-label">规格类型</text>
+            <text class="extend-value">
+              {{ goods.isSingleSpec === 'Y' ? '单规格' : '多规格' }}
+            </text>
+          </view>
+          <view v-if="goods.type === 'service' && goods.serviceTime" class="extend-item">
+            <text class="extend-label">服务时长</text>
+            <text class="extend-value">{{ goods.serviceTime }} 分钟</text>
           </view>
         </view>
       </view>
@@ -404,19 +465,63 @@ const deleteGoods = () => {
   padding: 40rpx;
   margin-top: 20rpx;
 
-  .goods-name {
-    font-size: 36rpx;
-    font-weight: bold;
-    color: #303133;
-    margin-bottom: 20rpx;
-    line-height: 1.4;
+  .goods-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 30rpx;
+
+    .goods-name {
+      flex: 1;
+      font-size: 36rpx;
+      font-weight: bold;
+      color: #303133;
+      line-height: 1.4;
+      margin-right: 20rpx;
+    }
+
+    .goods-type-badge {
+      padding: 8rpx 16rpx;
+      border-radius: 20rpx;
+      font-size: 24rpx;
+      color: #fff;
+      white-space: nowrap;
+
+      &.goods {
+        background: linear-gradient(135deg, #409eff 0%, #36cfc9 100%);
+      }
+
+      &.service {
+        background: linear-gradient(135deg, #67c23a 0%, #85ce61 100%);
+      }
+    }
   }
 
-  .goods-price {
-    font-size: 48rpx;
-    font-weight: bold;
-    color: #f56c6c;
+  .price-section {
     margin-bottom: 40rpx;
+
+    .goods-price {
+      font-size: 48rpx;
+      font-weight: bold;
+      color: #f56c6c;
+      margin-bottom: 10rpx;
+    }
+
+    .line-price {
+      font-size: 28rpx;
+      color: #909399;
+      text-decoration: line-through;
+      margin-bottom: 10rpx;
+    }
+
+    .price-type {
+      font-size: 24rpx;
+      color: #67c23a;
+      background: rgba(103, 194, 58, 0.1);
+      padding: 4rpx 12rpx;
+      border-radius: 12rpx;
+      display: inline-block;
+    }
   }
 
   .info-grid {
@@ -447,6 +552,56 @@ const deleteGoods = () => {
       }
 
       &.status-failed {
+        color: #f56c6c;
+      }
+
+      &.status-active {
+        color: #67c23a;
+      }
+
+      &.status-inactive {
+        color: #f56c6c;
+      }
+    }
+  }
+}
+
+.extend-section {
+  background: #fff;
+  padding: 40rpx;
+  margin-top: 20rpx;
+
+  .section-title {
+    font-size: 32rpx;
+    font-weight: bold;
+    color: #303133;
+    margin-bottom: 30rpx;
+  }
+
+  .extend-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30rpx;
+  }
+
+  .extend-item {
+    .extend-label {
+      display: block;
+      font-size: 24rpx;
+      color: #909399;
+      margin-bottom: 10rpx;
+    }
+
+    .extend-value {
+      font-size: 28rpx;
+      color: #303133;
+      font-weight: 500;
+
+      &.status-active {
+        color: #67c23a;
+      }
+
+      &.status-inactive {
         color: #f56c6c;
       }
     }

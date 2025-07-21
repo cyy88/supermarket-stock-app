@@ -61,16 +61,18 @@
       <!-- 计价方式 -->
       <view class="form-item" v-if="form.type === 'goods'">
         <text class="label required">计价方式</text>
-        <view class="radio-group">
-          <label class="radio-item" @click="form.priceType = 'piece'">
-            <radio :checked="form.priceType === 'piece'" color="#007AFF" />
-            <text>计件商品</text>
-          </label>
-          <label class="radio-item" @click="form.priceType = 'weight'">
-            <radio :checked="form.priceType === 'weight'" color="#007AFF" />
-            <text>称重商品</text>
-          </label>
-        </view>
+        <radio-group @change="onPriceTypeChange">
+          <view class="radio-group">
+            <label class="radio-item">
+              <radio value="piece" :checked="form.priceType === 'piece'" color="#007AFF" />
+              <text>计件商品</text>
+            </label>
+            <label class="radio-item">
+              <radio value="weight" :checked="form.priceType === 'weight'" color="#007AFF" />
+              <text>称重商品</text>
+            </label>
+          </view>
+        </radio-group>
         <view class="form-tips">提示：计件商品按数量计价，称重商品按重量计价</view>
       </view>
 
@@ -154,17 +156,17 @@
         </view>
       </view>
 
-      <view class="form-item">
-        <text class="label">库存数量</text>
-        <view class="input-group" style="width: 50%;">
-          <input
-            v-model="form.stock"
-            type="number"
-            placeholder="请输入库存数量"
-            class="input"
-          />
-        </view>
-      </view>
+<!--      <view class="form-item">-->
+<!--        <text class="label">库存数量</text>-->
+<!--        <view class="input-group" style="width: 50%;">-->
+<!--          <input-->
+<!--            v-model="form.stock"-->
+<!--            type="number"-->
+<!--            placeholder="请输入库存数量"-->
+<!--            class="input"-->
+<!--          />-->
+<!--        </view>-->
+<!--      </view>-->
 
       <view class="form-item">
         <text class="label required">安全库存</text>
@@ -206,32 +208,34 @@
         />
       </view>
 
-      <view class="form-item">
-        <text class="label">显示排序</text>
-        <view class="input-group" style="width: 50%;">
-          <input
-            v-model="form.sort"
-            type="number"
-            placeholder="请输入排序值"
-            class="input"
-          />
-        </view>
-        <view class="form-tips">提示：数值越小，排行越靠前</view>
-      </view>
+<!--      <view class="form-item">-->
+<!--        <text class="label">显示排序</text>-->
+<!--        <view class="input-group" style="width: 50%;">-->
+<!--          <input-->
+<!--            v-model="form.sort"-->
+<!--            type="number"-->
+<!--            placeholder="请输入排序值"-->
+<!--            class="input"-->
+<!--          />-->
+<!--        </view>-->
+<!--        <view class="form-tips">提示：数值越小，排行越靠前</view>-->
+<!--      </view>-->
 
       <!-- 商品状态 -->
       <view class="form-item">
         <text class="label">商品状态</text>
-        <view class="radio-group">
-          <label class="radio-item" @click="form.status = 'A'">
-            <radio :checked="form.status === 'A'" color="#007AFF" />
-            <text>上架</text>
-          </label>
-          <label class="radio-item" @click="form.status = 'N'">
-            <radio :checked="form.status === 'N'" color="#007AFF" />
-            <text>下架</text>
-          </label>
-        </view>
+        <radio-group @change="onStatusChange">
+          <view class="radio-group">
+            <label class="radio-item">
+              <radio value="A" :checked="form.status === 'A'" color="#007AFF" />
+              <text>上架</text>
+            </label>
+            <label class="radio-item">
+              <radio value="N" :checked="form.status === 'N'" color="#007AFF" />
+              <text>下架</text>
+            </label>
+          </view>
+        </radio-group>
       </view>
     </view>
 
@@ -248,46 +252,52 @@
       <!-- 积分抵扣 -->
       <view class="form-item">
         <text class="label">积分抵扣</text>
-        <view class="radio-group">
-          <label class="radio-item" @click="form.canUsePoint = 'Y'">
-            <radio :checked="form.canUsePoint === 'Y'" color="#007AFF" />
-            <text>可用</text>
-          </label>
-          <label class="radio-item" @click="form.canUsePoint = 'N'">
-            <radio :checked="form.canUsePoint === 'N'" color="#007AFF" />
-            <text>不可用</text>
-          </label>
-        </view>
+        <radio-group @change="onCanUsePointChange">
+          <view class="radio-group">
+            <label class="radio-item">
+              <radio value="Y" :checked="form.canUsePoint === 'Y'" color="#007AFF" />
+              <text>可用</text>
+            </label>
+            <label class="radio-item">
+              <radio value="N" :checked="form.canUsePoint === 'N'" color="#007AFF" />
+              <text>不可用</text>
+            </label>
+          </view>
+        </radio-group>
       </view>
 
       <!-- 会员折扣 -->
       <view class="form-item">
         <text class="label">会员折扣</text>
-        <view class="radio-group">
-          <label class="radio-item" @click="form.isMemberDiscount = 'Y'">
-            <radio :checked="form.isMemberDiscount === 'Y'" color="#007AFF" />
-            <text>有折扣</text>
-          </label>
-          <label class="radio-item" @click="form.isMemberDiscount = 'N'">
-            <radio :checked="form.isMemberDiscount === 'N'" color="#007AFF" />
-            <text>无折扣</text>
-          </label>
-        </view>
+        <radio-group @change="onMemberDiscountChange">
+          <view class="radio-group">
+            <label class="radio-item">
+              <radio value="Y" :checked="form.isMemberDiscount === 'Y'" color="#007AFF" />
+              <text>有折扣</text>
+            </label>
+            <label class="radio-item">
+              <radio value="N" :checked="form.isMemberDiscount === 'N'" color="#007AFF" />
+              <text>无折扣</text>
+            </label>
+          </view>
+        </radio-group>
       </view>
 
       <!-- 规格类型 -->
       <view class="form-item">
         <text class="label">规格类型</text>
-        <view class="radio-group">
-          <label class="radio-item" @click="form.isSingleSpec = 'Y'">
-            <radio :checked="form.isSingleSpec === 'Y'" color="#007AFF" />
-            <text>单规格</text>
-          </label>
-          <label class="radio-item" @click="form.isSingleSpec = 'N'">
-            <radio :checked="form.isSingleSpec === 'N'" color="#007AFF" />
-            <text>多规格</text>
-          </label>
-        </view>
+        <radio-group @change="onSingleSpecChange">
+          <view class="radio-group">
+            <label class="radio-item">
+              <radio value="Y" :checked="form.isSingleSpec === 'Y'" color="#007AFF" />
+              <text>单规格</text>
+            </label>
+            <label class="radio-item">
+              <radio value="N" :checked="form.isSingleSpec === 'N'" color="#007AFF" />
+              <text>多规格</text>
+            </label>
+          </view>
+        </radio-group>
       </view>
 
       <!-- 服务时长 -->
@@ -344,7 +354,7 @@
       <view class="card-header">
         <view class="card-title">
           <text class="title-icon">📝</text>
-          <text class="title-text" >商品描述</text>
+          <text class="title-text" >商品介绍</text>
         </view>
         <view class="card-badge optional">可选</view>
       </view>
@@ -435,6 +445,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import goodsStore from '@/stores/goods'
+import userStore from '@/stores/user'
 import { saveGoods as saveGoodsApi, getGoodsCateList, uploadImage } from '@/api/goods'
 import { recognizeProductImage } from '@/api/ai'
 
@@ -469,7 +480,7 @@ const form = reactive({
   cateName: '',
   price: '',
   linePrice: '',
-  stock: '',
+  stock: '0',
   safetyStock: '',
   weight: '',
   salePoint: '',
@@ -583,10 +594,46 @@ const onTypeChange = (e) => {
   updateStep()
 }
 
+// 设置计价方式
+const setPriceType = (type) => {
+  form.priceType = type
+  // 如果切换计价方式，清空条码让用户重新生成
+  if (form.goodsNo) {
+    form.goodsNo = ''
+  }
+  updateStep()
+}
+
+// 计价方式改变事件
+const onPriceTypeChange = (e) => {
+  const newPriceType = e.detail.value
+  setPriceType(newPriceType)
+}
+
+// 商品状态改变事件
+const onStatusChange = (e) => {
+  form.status = e.detail.value
+}
+
+// 积分抵扣改变事件
+const onCanUsePointChange = (e) => {
+  form.canUsePoint = e.detail.value
+}
+
+// 会员折扣改变事件
+const onMemberDiscountChange = (e) => {
+  form.isMemberDiscount = e.detail.value
+}
+
+// 规格类型改变事件
+const onSingleSpecChange = (e) => {
+  form.isSingleSpec = e.detail.value
+}
+
 // 生成随机条码
 const generateGoodsNo = () => {
   if (form.priceType === 'weight') {
-    // 称重商品生成4位随机码
+    // 称重商品生成4位随机码 (1000-9999)
     form.goodsNo = Math.floor(1000 + Math.random() * 9000).toString()
   } else {
     // 计件商品生成长条码
@@ -885,6 +932,16 @@ const handleSaveGoods = async () => {
       return null
     }).filter(url => url)
 
+    // 获取用户信息
+    const userInfo = userStore.userInfo
+    if (!userInfo || !userInfo.storeId || !userInfo.merchantId) {
+      uni.showToast({
+        title: '用户信息不完整，请重新登录',
+        icon: 'none'
+      })
+      return
+    }
+
     const goodsData = {
       // 基础信息
       name: form.name.trim(),
@@ -902,6 +959,10 @@ const handleSaveGoods = async () => {
       salePoint: form.salePoint.trim(),
       sort: parseInt(form.sort) || 0,
 
+      // 店铺和商户信息
+      storeId: userInfo.storeId,
+      merchantId: userInfo.merchantId,
+
       // 扩展信息
       canUsePoint: form.canUsePoint,
       isMemberDiscount: form.isMemberDiscount,
@@ -909,7 +970,7 @@ const handleSaveGoods = async () => {
       serviceTime: form.type === 'service' ? parseInt(form.serviceTime) || 0 : 0,
 
       // 固定字段
-      isItaconsumableitem: 2,
+      isItaconsumableitem: 0,
 
       // 商品描述
       description: form.description.trim()
