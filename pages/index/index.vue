@@ -35,6 +35,9 @@
       <button class="action-btn secondary" @click="goToGoodsList">
         📦 商品管理
       </button>
+      <button class="action-btn consumables" @click="goToConsumablesList">
+        🧴 消耗品管理
+      </button>
       <button class="action-btn tertiary" @click="manualAdd">
         ➕ 手动添加
       </button>
@@ -116,6 +119,13 @@ const goToScan = () => {
 const goToGoodsList = () => {
   uni.switchTab({
     url: '/pages/goods/list'
+  })
+}
+
+// 跳转到消耗品列表
+const goToConsumablesList = () => {
+  uni.navigateTo({
+    url: '/pages/consumables/list'
   })
 }
 
@@ -239,6 +249,11 @@ const manualAdd = () => {
 
 .action-btn.secondary {
   background: linear-gradient(135deg, #19be6b 0%, #52c41a 100%);
+  color: #fff;
+}
+
+.action-btn.consumables {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
   color: #fff;
 }
 

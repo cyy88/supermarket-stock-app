@@ -1102,8 +1102,8 @@ const handleUpdateGoods = async () => {
       isSingleSpec: form.isSingleSpec,
       serviceTime: form.type === 'service' ? parseInt(form.serviceTime) || 0 : 0,
 
-      // 固定字段
-      isItaconsumableitem: 2,
+      // 保持原有的消耗品标识
+      isItaconsumableitem: goods.value.isItaconsumableitem || 0,
 
       // 图片和描述
       images: imageUrls,
@@ -1468,7 +1468,7 @@ const handleUpdateGoods = async () => {
       cursor: pointer;
 
       radio {
-        transform: scale(1.2);
+        transform: scale(0.9);
       }
 
       text {

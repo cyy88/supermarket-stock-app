@@ -1,10 +1,10 @@
 <template>
-  <view class="add-goods-container">
+  <view class="add-consumables-container">
     <!-- 页面头部 -->
     <view class="page-header">
       <view class="header-content">
-        <text class="page-title">📦 添加新商品</text>
-        <text class="page-subtitle">填写商品信息，快速上架</text>
+        <text class="page-title">🧴 添加新消耗品</text>
+        <text class="page-subtitle">填写消耗品信息，快速上架</text>
       </view>
       <view class="progress-bar">
         <view class="progress-step" :class="{ active: currentStep >= 1 }">
@@ -39,9 +39,9 @@
         <view class="card-badge required">必填</view>
       </view>
 
-      <!-- 商品类型 -->
+      <!-- 消耗品类型 -->
       <view class="form-item">
-        <text class="label required">商品类型</text>
+        <text class="label required">消耗品类型</text>
         <picker
           style="width: 85%;"
           :range="typeOptions"
@@ -51,7 +51,7 @@
         >
           <view class="input select">
             <text :class="{ placeholder: !form.typeName }">
-              {{ form.typeName || '请选择商品类型' }}
+              {{ form.typeName || '请选择消耗品类型' }}
             </text>
             <text class="arrow">▼</text>
           </view>
@@ -64,11 +64,11 @@
         <radio-group @change="onPriceTypeChange">
           <view class="radio-group">
             <label class="radio-item">
-              <radio value="piece" :checked="form.priceType === 'piece'" color="#007AFF" />
+              <radio value="piece" :checked="form.priceType === 'piece'" color="#ff6b6b" />
               <text>计件商品</text>
             </label>
             <label class="radio-item">
-              <radio value="weight" :checked="form.priceType === 'weight'" color="#007AFF" />
+              <radio value="weight" :checked="form.priceType === 'weight'" color="#ff6b6b" />
               <text>称重商品</text>
             </label>
           </view>
@@ -77,12 +77,12 @@
       </view>
 
       <view class="form-item">
-        <text class="label required">商品条码</text>
+        <text class="label required">消耗品条码</text>
         <view class="input-with-generate">
           <input
             style="width: 70%;"
             v-model="form.goodsNo"
-            placeholder="请输入商品条码，或使用扫码枪扫描"
+            placeholder="请输入消耗品条码，或使用扫码枪扫描"
             class="input"
             @input="updateStep"
           />
@@ -93,11 +93,11 @@
       </view>
 
       <view class="form-item">
-        <text class="label required">商品名称</text>
+        <text class="label required">消耗品名称</text>
         <view class="input-with-ai">
           <input
             v-model="form.name"
-            placeholder="请输入商品名称"
+            placeholder="请输入消耗品名称"
             class="input"
             @input="updateStep"
           />
@@ -112,25 +112,7 @@
       </view>
 
       <view class="form-item">
-        <text class="label required">商品分类</text>
-        <picker
-            style="width: 85%;"
-          :range="categoryList"
-          range-key="name"
-          @change="onCategoryChange"
-          :value="selectedCategoryIndex"
-        >
-          <view class="input select">
-            <text :class="{ placeholder: !form.cateName }">
-              {{ form.cateName || '请选择商品分类' }}
-            </text>
-            <text class="arrow">▼</text>
-          </view>
-        </picker>
-      </view>
-
-      <view class="form-item">
-        <text class="label required">商品价格</text>
+        <text class="label required">消耗品价格</text>
         <view class="input-group" style="width: 50%;">
           <input
             v-model="form.price"
@@ -181,14 +163,14 @@
         </view>
       </view>
 
-      <!-- 商品重量 -->
+      <!-- 消耗品重量 -->
       <view class="form-item" v-if="form.type === 'goods' && form.priceType === 'piece'">
-        <text class="label">商品重量</text>
+        <text class="label">消耗品重量</text>
         <view class="input-group" style="width: 50%;">
           <input
             v-model="form.weight"
             type="digit"
-            placeholder="请输入商品重量"
+            placeholder="请输入消耗品重量"
             class="input"
           />
           <text class="unit">千克</text>
@@ -196,13 +178,13 @@
         <view class="form-tips">提示：输入数字，单位kg（用于物流计算）</view>
       </view>
 
-      <!-- 商品卖点 -->
+      <!-- 消耗品卖点 -->
       <view class="form-item">
-        <text class="label">商品卖点</text>
+        <text class="label">消耗品卖点</text>
         <input
           style="width: 85%;"
           v-model="form.salePoint"
-          placeholder="请输入商品卖点，几个字总结"
+          placeholder="请输入消耗品卖点，几个字总结"
           class="input"
           maxlength="50"
         />
@@ -221,17 +203,17 @@
         <view class="form-tips">提示：数值越小，排行越靠前</view>
       </view>
 
-      <!-- 商品状态 -->
+      <!-- 消耗品状态 -->
       <view class="form-item">
-        <text class="label">商品状态</text>
+        <text class="label">消耗品状态</text>
         <radio-group @change="onStatusChange">
           <view class="radio-group">
             <label class="radio-item">
-              <radio value="A" :checked="form.status === 'A'" color="#007AFF" />
+              <radio value="A" :checked="form.status === 'A'" color="#ff6b6b" />
               <text>上架</text>
             </label>
             <label class="radio-item">
-              <radio value="N" :checked="form.status === 'N'" color="#007AFF" />
+              <radio value="N" :checked="form.status === 'N'" color="#ff6b6b" />
               <text>下架</text>
             </label>
           </view>
@@ -255,11 +237,11 @@
         <radio-group @change="onCanUsePointChange">
           <view class="radio-group">
             <label class="radio-item">
-              <radio value="Y" :checked="form.canUsePoint === 'Y'" color="#007AFF" />
+              <radio value="Y" :checked="form.canUsePoint === 'Y'" color="#ff6b6b" />
               <text>可用</text>
             </label>
             <label class="radio-item">
-              <radio value="N" :checked="form.canUsePoint === 'N'" color="#007AFF" />
+              <radio value="N" :checked="form.canUsePoint === 'N'" color="#ff6b6b" />
               <text>不可用</text>
             </label>
           </view>
@@ -272,11 +254,11 @@
         <radio-group @change="onMemberDiscountChange">
           <view class="radio-group">
             <label class="radio-item">
-              <radio value="Y" :checked="form.isMemberDiscount === 'Y'" color="#007AFF" />
+              <radio value="Y" :checked="form.isMemberDiscount === 'Y'" color="#ff6b6b" />
               <text>有折扣</text>
             </label>
             <label class="radio-item">
-              <radio value="N" :checked="form.isMemberDiscount === 'N'" color="#007AFF" />
+              <radio value="N" :checked="form.isMemberDiscount === 'N'" color="#ff6b6b" />
               <text>无折扣</text>
             </label>
           </view>
@@ -289,11 +271,11 @@
         <radio-group @change="onSingleSpecChange">
           <view class="radio-group">
             <label class="radio-item">
-              <radio value="Y" :checked="form.isSingleSpec === 'Y'" color="#007AFF" />
+              <radio value="Y" :checked="form.isSingleSpec === 'Y'" color="#ff6b6b" />
               <text>单规格</text>
             </label>
             <label class="radio-item">
-              <radio value="N" :checked="form.isSingleSpec === 'N'" color="#007AFF" />
+              <radio value="N" :checked="form.isSingleSpec === 'N'" color="#ff6b6b" />
               <text>多规格</text>
             </label>
           </view>
@@ -316,12 +298,12 @@
       </view>
     </view>
 
-    <!-- 商品图片卡片 -->
+    <!-- 消耗品图片卡片 -->
     <view class="card" :class="{ active: currentStep === 3 }">
       <view class="card-header">
         <view class="card-title">
           <text class="title-icon">🖼️</text>
-          <text class="title-text">商品图片</text>
+          <text class="title-text">消耗品图片</text>
         </view>
         <view class="card-badge optional">可选</view>
       </view>
@@ -349,19 +331,19 @@
       </view>
     </view>
 
-    <!-- 商品描述卡片 -->
+    <!-- 消耗品描述卡片 -->
     <view class="card" :class="{ active: currentStep === 4 }">
       <view class="card-header">
         <view class="card-title">
           <text class="title-icon">📝</text>
-          <text class="title-text" >商品描述</text>
+          <text class="title-text" >消耗品描述</text>
         </view>
         <view class="card-badge optional">可选</view>
       </view>
       <textarea
           style="width: 90%;"
         v-model="form.description"
-        placeholder="请输入商品描述（可选）"
+        placeholder="请输入消耗品描述（可选）"
         class="textarea"
         maxlength="500"
         @input="updateStep"
@@ -374,10 +356,10 @@
       <button
         class="save-btn"
         :class="{ loading: saving }"
-        @click="handleSaveGoods"
+        @click="handleSaveConsumables"
         :disabled="saving"
       >
-        {{ saving ? '保存中...' : '💾 保存商品' }}
+        {{ saving ? '保存中...' : '💾 保存消耗品' }}
       </button>
     </view>
 
@@ -392,7 +374,7 @@
         <view class="ai-modal-content">
           <view v-if="!aiRecognizing && !aiResult" class="ai-upload-area">
             <view class="ai-upload-icon">📷</view>
-            <text class="ai-upload-text">选择商品图片进行AI识别</text>
+            <text class="ai-upload-text">选择消耗品图片进行AI识别</text>
             <text class="ai-upload-tip">支持JPG、PNG格式，识别约需12秒</text>
             <button class="ai-upload-btn" @click="chooseImageForAI">选择图片</button>
           </view>
@@ -412,11 +394,11 @@
             <view v-if="aiResult.success" class="ai-result-success">
               <text class="ai-result-title">✅ 识别成功</text>
               <view class="ai-result-item">
-                <text class="ai-result-label">商品名称：</text>
+                <text class="ai-result-label">消耗品名称：</text>
                 <text class="ai-result-value">{{ aiResult.data.name }}</text>
               </view>
               <view class="ai-result-item">
-                <text class="ai-result-label">商品条码：</text>
+                <text class="ai-result-label">消耗品条码：</text>
                 <text class="ai-result-value">{{ aiResult.data.num }}</text>
               </view>
               <view class="ai-result-actions">
@@ -446,19 +428,16 @@ import { ref, reactive, onMounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import goodsStore from '@/stores/goods'
 import userStore from '@/stores/user'
-import { saveGoods as saveGoodsApi, getGoodsCateList, uploadImage } from '@/api/goods'
+import { saveGoods as saveGoodsApi, uploadImage } from '@/api/goods'
 import { recognizeProductImage } from '@/api/ai'
 
 const saving = ref(false)
-const showCategoryPicker = ref(false)
-const categoryList = ref([])
 const typeOptions = ref([
-  { key: 'goods', name: '实物商品' },
-  { key: 'service', name: '服务商品' }
+  { key: 'goods', name: '实物消耗品' },
+  { key: 'service', name: '服务消耗品' }
 ])
 const imageList = ref([])
 const currentStep = ref(1)
-const selectedCategoryIndex = ref(0)
 const selectedTypeIndex = ref(0)
 
 // AI识别相关状态
@@ -472,12 +451,12 @@ const aiProgressTimer = ref(null)
 const form = reactive({
   // 基础信息
   type: 'goods',
-  typeName: '实物商品',
+  typeName: '实物消耗品',
   priceType: 'piece',
   goodsNo: '',
   name: '',
-  cateId: '',
-  cateName: '',
+  cateId: 0, // 消耗品没有分类，设为0
+  cateName: '消耗品',
   price: '',
   linePrice: '',
   stock: '',
@@ -493,7 +472,7 @@ const form = reactive({
   isSingleSpec: 'Y',
   serviceTime: 0,
 
-  // 商品描述
+  // 消耗品描述
   description: ''
 })
 
@@ -501,13 +480,12 @@ onLoad((options) => {
   if (options.barcode) {
     form.goodsNo = decodeURIComponent(options.barcode)
   }
-  loadCategoryList()
   updateStep()
 })
 
 const updateStep = () => {
   // 步骤1：基本信息必填项
-  if (form.name && form.cateId && form.price && form.goodsNo && form.safetyStock !== '') {
+  if (form.name && form.price && form.goodsNo && form.safetyStock !== '') {
     currentStep.value = 2
   } else {
     currentStep.value = 1
@@ -522,63 +500,13 @@ const updateStep = () => {
     currentStep.value = 3
   }
 
-  // 步骤4：商品描述（可选）
+  // 步骤4：消耗品描述（可选）
   if (form.description) {
     currentStep.value = 4
   }
 }
 
-const loadCategoryList = async () => {
-  try {
-    const res = await getGoodsCateList({
-      page: 1,
-      pageSize: 100,
-      status: 'A'
-    })
-
-    if (res.code === 200 && res.data && res.data.paginationResponse) {
-      const categories = res.data.paginationResponse.content || []
-      categoryList.value = categories
-      goodsStore.saveCategories(categoryList.value)
-
-      if (categories.length === 0) {
-        uni.showToast({
-          title: '暂无可用分类',
-          icon: 'none'
-        })
-      }
-    } else {
-      throw new Error(res.message || '获取分类失败')
-    }
-  } catch (error) {
-    categoryList.value = goodsStore.categories
-
-    if (categoryList.value.length === 0) {
-      uni.showToast({
-        title: '获取分类失败，请检查网络连接',
-        icon: 'none'
-      })
-    } else {
-      uni.showToast({
-        title: '网络异常，使用本地缓存',
-        icon: 'none'
-      })
-    }
-  }
-}
-
-const onCategoryChange = (e) => {
-  const selectedCategory = categoryList.value[e.detail.value]
-  if (selectedCategory) {
-    form.cateId = selectedCategory.id
-    form.cateName = selectedCategory.name
-    selectedCategoryIndex.value = e.detail.value
-  }
-  showCategoryPicker.value = false
-  updateStep()
-}
-
-// 商品类型选择
+// 消耗品类型选择
 const onTypeChange = (e) => {
   const selectedType = typeOptions.value[e.detail.value]
   if (selectedType) {
@@ -586,7 +514,7 @@ const onTypeChange = (e) => {
     form.typeName = selectedType.name
     selectedTypeIndex.value = e.detail.value
 
-    // 如果选择服务商品，默认设置为计件
+    // 如果选择服务消耗品，默认设置为计件
     if (form.type === 'service') {
       form.priceType = 'piece'
     }
@@ -610,7 +538,7 @@ const onPriceTypeChange = (e) => {
   setPriceType(newPriceType)
 }
 
-// 商品状态改变事件
+// 消耗品状态改变事件
 const onStatusChange = (e) => {
   form.status = e.detail.value
 }
@@ -633,10 +561,10 @@ const onSingleSpecChange = (e) => {
 // 生成随机条码
 const generateGoodsNo = () => {
   if (form.priceType === 'weight') {
-    // 称重商品生成4位随机码 (1000-9999)
+    // 称重消耗品生成4位随机码 (1000-9999)
     form.goodsNo = Math.floor(1000 + Math.random() * 9000).toString()
   } else {
-    // 计件商品生成长条码
+    // 计件消耗品生成长条码
     let sn = (Math.random() + 1) * 100000000000000
     form.goodsNo = sn.toFixed(0)
   }
@@ -701,7 +629,7 @@ const deleteImage = (index) => {
 const validateForm = () => {
   if (!form.name.trim()) {
     uni.showToast({
-      title: '请输入商品名称',
+      title: '请输入消耗品名称',
       icon: 'none'
     })
     return false
@@ -709,7 +637,7 @@ const validateForm = () => {
 
   if (!form.goodsNo.trim()) {
     uni.showToast({
-      title: '请输入商品条码',
+      title: '请输入消耗品条码',
       icon: 'none'
     })
     return false
@@ -719,7 +647,7 @@ const validateForm = () => {
   if (form.priceType === 'weight') {
     if (!/^\d{4}$/.test(form.goodsNo)) {
       uni.showToast({
-        title: '称重商品条码必须是4位数字',
+        title: '称重消耗品条码必须是4位数字',
         icon: 'none'
       })
       return false
@@ -727,24 +655,16 @@ const validateForm = () => {
   } else {
     if (!/^\d+$/.test(form.goodsNo)) {
       uni.showToast({
-        title: '计件商品条码必须是数字',
+        title: '计件消耗品条码必须是数字',
         icon: 'none'
       })
       return false
     }
   }
 
-  if (!form.cateId) {
-    uni.showToast({
-      title: '请选择商品分类',
-      icon: 'none'
-    })
-    return false
-  }
-
   if (!form.price || parseFloat(form.price) <= 0) {
     uni.showToast({
-      title: '请输入正确的商品价格',
+      title: '请输入正确的消耗品价格',
       icon: 'none'
     })
     return false
@@ -917,7 +837,7 @@ const retryAIRecognition = () => {
   }
 }
 
-const handleSaveGoods = async () => {
+const handleSaveConsumables = async () => {
   try {
     if (!validateForm()) return
 
@@ -942,11 +862,11 @@ const handleSaveGoods = async () => {
       return
     }
 
-    const goodsData = {
+    const consumablesData = {
       // 基础信息
       name: form.name.trim(),
       goodsNo: form.goodsNo.trim(),
-      cateId: parseInt(form.cateId),
+      cateId: 0, // 消耗品没有分类
       images: imageUrls,
       type: form.type,
       priceType: form.priceType,
@@ -969,24 +889,24 @@ const handleSaveGoods = async () => {
       isSingleSpec: form.isSingleSpec,
       serviceTime: form.type === 'service' ? parseInt(form.serviceTime) || 0 : 0,
 
-      // 固定字段
-      isItaconsumableitem: 0,
+      // 标记为消耗品
+      isItaconsumableitem: 1,
 
-      // 商品描述
+      // 消耗品描述
       description: form.description.trim()
     }
 
-    const localGoods = goodsStore.saveLocalGoods({
-      ...goodsData,
+    const localConsumables = goodsStore.saveLocalGoods({
+      ...consumablesData,
       cateName: form.cateName
     })
 
     try {
-      const response = await saveGoodsApi(goodsData)
+      const response = await saveGoodsApi(consumablesData)
       if (response.code === 200) {
-        goodsStore.updateSyncStatus(localGoods.id, 1)
+        goodsStore.updateSyncStatus(localConsumables.id, 1)
         uni.showToast({
-          title: '商品保存成功',
+          title: '消耗品保存成功',
           icon: 'success'
         })
       } else {
@@ -1014,8 +934,8 @@ const handleSaveGoods = async () => {
 </script>
 
 <style lang="scss" scoped>
-.add-goods-container {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+.add-consumables-container {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
   min-height: 100vh;
   padding-bottom: 120rpx;
 }
@@ -1078,7 +998,7 @@ const handleSaveGoods = async () => {
 
       &.active .step-number {
         background: #fff;
-        color: #667eea;
+        color: #ff6b6b;
         transform: scale(1.1);
       }
 
@@ -1202,9 +1122,9 @@ const handleSaveGoods = async () => {
     transition: all 0.3s;
 
     &:focus {
-      border-color: #667eea;
+      border-color: #ff6b6b;
       outline: none;
-      box-shadow: 0 0 0 4rpx rgba(102, 126, 234, 0.1);
+      box-shadow: 0 0 0 4rpx rgba(255, 107, 107, 0.1);
     }
 
     &.readonly {
@@ -1243,7 +1163,7 @@ const handleSaveGoods = async () => {
     background: #fff;
 
     &:focus-within {
-      border-color: #3c9cff;
+      border-color: #ff6b6b;
     }
 
     .input {
@@ -1271,7 +1191,7 @@ const handleSaveGoods = async () => {
     .ai-btn {
       padding: 0 24rpx;
       height: 88rpx;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
       color: #fff;
       border: none;
       border-radius: 15rpx;
@@ -1422,7 +1342,7 @@ const handleSaveGoods = async () => {
   resize: none;
 
   &:focus {
-    border-color: #3c9cff;
+    border-color: #ff6b6b;
     outline: none;
   }
 }
@@ -1449,14 +1369,14 @@ const handleSaveGoods = async () => {
 .save-btn {
   width: 100%;
   height: 100rpx;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
   color: #fff;
   border: none;
   border-radius: 25rpx;
   font-size: 32rpx;
   font-weight: bold;
   transition: all 0.3s;
-  box-shadow: 0 8rpx 24rpx rgba(102, 126, 234, 0.3);
+  box-shadow: 0 8rpx 24rpx rgba(255, 107, 107, 0.3);
   position: relative;
   overflow: hidden;
 
@@ -1473,7 +1393,7 @@ const handleSaveGoods = async () => {
 
   &:active {
     transform: translateY(2rpx);
-    box-shadow: 0 4rpx 12rpx rgba(102, 126, 234, 0.4);
+    box-shadow: 0 4rpx 12rpx rgba(255, 107, 107, 0.4);
 
     &::before {
       left: 100%;
@@ -1522,7 +1442,7 @@ const handleSaveGoods = async () => {
   align-items: center;
   padding: 30rpx;
   border-bottom: 1rpx solid #f0f0f0;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
 
   .ai-modal-title {
     font-size: 32rpx;
@@ -1584,7 +1504,7 @@ const handleSaveGoods = async () => {
 
   .ai-upload-btn {
     padding: 20rpx 60rpx;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
     color: #fff;
     border: none;
     border-radius: 50rpx;
@@ -1608,7 +1528,7 @@ const handleSaveGoods = async () => {
       width: 80rpx;
       height: 80rpx;
       border: 6rpx solid #f3f3f3;
-      border-top: 6rpx solid #667eea;
+      border-top: 6rpx solid #ff6b6b;
       border-radius: 50%;
       animation: spin 1s linear infinite;
       margin: 0 auto;
@@ -1639,7 +1559,7 @@ const handleSaveGoods = async () => {
 
     .ai-progress-bar {
       height: 100%;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
       transition: width 0.3s ease;
       border-radius: 4rpx;
     }

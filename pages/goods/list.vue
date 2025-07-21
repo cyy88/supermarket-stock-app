@@ -4,9 +4,9 @@
     <view class="search-bar">
       <view class="search-input-wrapper">
         <text class="search-icon">🔍</text>
-        <input 
+        <input
           v-model="searchKeyword"
-          placeholder="搜索商品名称或条码"
+          placeholder="搜索商品名称或条码（不含消耗品）"
           class="search-input"
           @input="onSearchInput"
         />
@@ -241,6 +241,12 @@ const categories = ref([])
 const filteredGoods = computed(() => {
   let dataSource = showServerData.value ? serverGoodsList.value : goodsList.value
 
+  // 过滤掉消耗品，只显示普通商品
+  dataSource = dataSource.filter(item => {
+    // isItaconsumableitem 为 0 或者不存在时，表示普通商品
+    return !item.isItaconsumableitem || item.isItaconsumableitem === 0
+  })
+
   if (searchKeyword.value) {
     const keyword = searchKeyword.value.toLowerCase()
     dataSource = dataSource.filter(item =>
@@ -279,10 +285,12 @@ const filteredGoods = computed(() => {
 })
 
 const syncedCount = computed(() => {
+  // 直接从已过滤的本地商品列表统计
   return goodsList.value.filter(item => item.syncStatus === 1).length
 })
 
 const unsyncedCount = computed(() => {
+  // 直接从已过滤的本地商品列表统计
   return goodsList.value.filter(item => item.syncStatus === 0).length
 })
 
@@ -292,7 +300,8 @@ const hasActiveFilters = computed(() => {
 
 const getTotalDataSourceCount = () => {
   const dataSource = showServerData.value ? serverGoodsList.value : goodsList.value
-  return dataSource.length
+  // 只统计普通商品，排除消耗品
+  return dataSource.filter(item => !item.isItaconsumableitem || item.isItaconsumableitem === 0).length
 }
 
 onMounted(() => {
@@ -325,7 +334,10 @@ const loadCategoriesIfNeeded = async () => {
 
 const loadGoodsList = () => {
   goodsStore.init()
-  goodsList.value = goodsStore.localGoods.sort((a, b) => b.createTime - a.createTime)
+  // 只加载普通商品，排除消耗品
+  goodsList.value = goodsStore.localGoods
+    .filter(item => !item.isItaconsumableitem || item.isItaconsumableitem === 0)
+    .sort((a, b) => b.createTime - a.createTime)
 }
 
 const loadServerGoodsList = async () => {
@@ -482,14 +494,16 @@ const selectCategory = (categoryId) => {
 const getCategoryCount = (categoryId) => {
   const dataSource = showServerData.value ? serverGoodsList.value : goodsList.value
   return dataSource.filter(item =>
-    item.cateId === categoryId || item.cateInfo?.id === categoryId
+    (item.cateId === categoryId || item.cateInfo?.id === categoryId) &&
+    (!item.isItaconsumableitem || item.isItaconsumableitem === 0)
   ).length
 }
 
 // 获取总商品数量
 const getTotalCount = () => {
   const dataSource = showServerData.value ? serverGoodsList.value : goodsList.value
-  return dataSource.length
+  // 只统计普通商品，排除消耗品
+  return dataSource.filter(item => !item.isItaconsumableitem || item.isItaconsumableitem === 0).length
 }
 
 // 页面显示时刷新数据

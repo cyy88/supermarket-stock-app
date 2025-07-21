@@ -44,6 +44,18 @@
 			}
 		},
 		{
+			"path": "pages/consumables/list",
+			"style": {
+				"navigationBarTitleText": "消耗品管理"
+			}
+		},
+		{
+			"path": "pages/consumables/add",
+			"style": {
+				"navigationBarTitleText": "添加消耗品"
+			}
+		},
+		{
 			"path": "pages/settings/settings",
 			"style": {
 				"navigationBarTitleText": "设置"
