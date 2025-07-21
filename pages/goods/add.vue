@@ -156,17 +156,17 @@
         </view>
       </view>
 
-      <view class="form-item">
-        <text class="label">库存数量</text>
-        <view class="input-group" style="width: 50%;">
-          <input
-            v-model="form.stock"
-            type="number"
-            placeholder="请输入库存数量"
-            class="input"
-          />
-        </view>
-      </view>
+<!--      <view class="form-item">-->
+<!--        <text class="label">库存数量</text>-->
+<!--        <view class="input-group" style="width: 50%;">-->
+<!--          <input-->
+<!--            v-model="form.stock"-->
+<!--            type="number"-->
+<!--            placeholder="请输入库存数量"-->
+<!--            class="input"-->
+<!--          />-->
+<!--        </view>-->
+<!--      </view>-->
 
       <view class="form-item">
         <text class="label required">安全库存</text>
@@ -208,18 +208,18 @@
         />
       </view>
 
-      <view class="form-item">
-        <text class="label">显示排序</text>
-        <view class="input-group" style="width: 50%;">
-          <input
-            v-model="form.sort"
-            type="number"
-            placeholder="请输入排序值"
-            class="input"
-          />
-        </view>
-        <view class="form-tips">提示：数值越小，排行越靠前</view>
-      </view>
+<!--      <view class="form-item">-->
+<!--        <text class="label">显示排序</text>-->
+<!--        <view class="input-group" style="width: 50%;">-->
+<!--          <input-->
+<!--            v-model="form.sort"-->
+<!--            type="number"-->
+<!--            placeholder="请输入排序值"-->
+<!--            class="input"-->
+<!--          />-->
+<!--        </view>-->
+<!--        <view class="form-tips">提示：数值越小，排行越靠前</view>-->
+<!--      </view>-->
 
       <!-- 商品状态 -->
       <view class="form-item">

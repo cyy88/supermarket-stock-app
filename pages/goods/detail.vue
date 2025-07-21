@@ -65,10 +65,6 @@
             <text class="info-value">{{ goods.salePoint }}</text>
           </view>
           <view class="info-item">
-            <text class="info-label">显示排序</text>
-            <text class="info-value">{{ goods.sort || 0 }}</text>
-          </view>
-          <view class="info-item">
             <text class="info-label">商品状态</text>
             <text class="info-value" :class="goods.status === 'A' ? 'status-active' : 'status-inactive'">
               {{ goods.status === 'A' ? '上架' : '下架' }}
@@ -79,10 +75,6 @@
             <text class="info-value" :class="getSyncStatusClass(goods.syncStatus)">
               {{ getSyncStatusText(goods.syncStatus) }}
             </text>
-          </view>
-          <view v-else class="info-item">
-            <text class="info-label">数据来源</text>
-            <text class="info-value status-synced">服务器数据</text>
           </view>
         </view>
       </view>
