@@ -14,41 +14,13 @@
       </view>
     </view>
 
-    <!-- 数据源切换 -->
-    <view class="data-source-switch">
-      <view class="switch-tabs">
-        <view
-          class="switch-tab"
-          :class="{ active: showServerData }"
-          @click="switchToServerData"
-        >
-          服务器数据
-        </view>
-        <view
-          class="switch-tab"
-          :class="{ active: !showServerData }"
-          @click="switchToLocalData"
-        >
-          本地数据
-        </view>
-      </view>
-    </view>
+
 
     <!-- 消耗品总数统计 -->
     <view class="total-count-bar">
       <view class="total-count">
         <text class="count-number">{{ getTotalDataSourceCount() }}</text>
-        <text class="count-label">{{ showServerData ? '服务器消耗品' : '本地消耗品' }}</text>
-      </view>
-      <view v-if="!showServerData" class="sync-stats">
-        <view class="sync-item">
-          <text class="sync-number success">{{ syncedCount }}</text>
-          <text class="sync-label">已同步</text>
-        </view>
-        <view class="sync-item">
-          <text class="sync-number warning">{{ unsyncedCount }}</text>
-          <text class="sync-label">待同步</text>
-        </view>
+        <text class="count-label">服务器消耗品</text>
       </view>
     </view>
 
@@ -137,9 +109,6 @@
               <text class="status" :class="item.status === 'A' ? 'active' : 'inactive'">
                 {{ item.status === 'A' ? '上架' : '下架' }}
               </text>
-              <text v-if="!showServerData" class="sync-status" :class="getSyncStatusClass(item.syncStatus)">
-                {{ getSyncStatusText(item.syncStatus) }}
-              </text>
             </view>
             <view class="actions">
               <button class="edit-btn" @click.stop="goToEdit(item)">编辑</button>
@@ -172,13 +141,11 @@ import { getGoodsList } from '@/api/goods'
 
 const searchKeyword = ref('')
 const consumablesList = ref([])
-const serverConsumablesList = ref([])
 const loading = ref(false)
-const showServerData = ref(true)
 const stockFilter = ref('all')
 
 const filteredConsumables = computed(() => {
-  let dataSource = showServerData.value ? serverConsumablesList.value : consumablesList.value
+  let dataSource = consumablesList.value
 
   if (searchKeyword.value) {
     const keyword = searchKeyword.value.toLowerCase()
@@ -209,41 +176,19 @@ const filteredConsumables = computed(() => {
   return dataSource
 })
 
-const syncedCount = computed(() => {
-  return consumablesList.value.filter(item => 
-    item.syncStatus === 1 && item.isItaconsumableitem === 1
-  ).length
-})
-
-const unsyncedCount = computed(() => {
-  return consumablesList.value.filter(item => 
-    item.syncStatus === 0 && item.isItaconsumableitem === 1
-  ).length
-})
-
 const hasActiveFilters = computed(() => {
   return searchKeyword.value || stockFilter.value !== 'all'
 })
 
 const getTotalDataSourceCount = () => {
-  const dataSource = showServerData.value ? serverConsumablesList.value : consumablesList.value
-  return dataSource.length
+  return consumablesList.value.length
 }
 
 onMounted(() => {
   loadConsumablesList()
-  loadServerConsumablesList()
 })
 
-const loadConsumablesList = () => {
-  goodsStore.init()
-  // 只获取消耗品（isItaconsumableitem = 1）
-  consumablesList.value = goodsStore.localGoods
-    .filter(item => item.isItaconsumableitem === 1)
-    .sort((a, b) => b.createTime - a.createTime)
-}
-
-const loadServerConsumablesList = async () => {
+const loadConsumablesList = async () => {
   try {
     loading.value = true
     const res = await getGoodsList({
@@ -253,16 +198,14 @@ const loadServerConsumablesList = async () => {
 
     if (res.data && res.data.paginationResponse) {
       const allGoods = res.data.paginationResponse.content || []
-      // 只保留消耗品
-      serverConsumablesList.value = allGoods.filter(item => item.isItaconsumableitem === 1)
+      consumablesList.value = allGoods.filter(item => item.isItaconsumableitem === 1)
     }
   } catch (error) {
     uni.showToast({
       title: '获取消耗品列表失败',
       icon: 'none'
     })
-    // 失败时显示本地数据
-    showServerData.value = false
+    consumablesList.value = []
   } finally {
     loading.value = false
   }
@@ -275,24 +218,8 @@ const clearSearch = () => {
   searchKeyword.value = ''
 }
 
-const switchToServerData = () => {
-  showServerData.value = true
-  if (serverConsumablesList.value.length === 0) {
-    loadServerConsumablesList()
-  }
-}
-
-const switchToLocalData = () => {
-  showServerData.value = false
-  loadConsumablesList()
-}
-
 const getConsumablesImage = (item) => {
-  if (showServerData.value) {
-    return item.logo || (item.images && item.images.length > 0 ? item.images[0] : null)
-  } else {
-    return item.images && item.images.length > 0 ? item.images[0] : null
-  }
+  return item.logo || (item.images && item.images.length > 0 ? item.images[0] : null)
 }
 
 const getStockClass = (item) => {
@@ -304,33 +231,10 @@ const getStockClass = (item) => {
   return 'safe-stock'
 }
 
-const getSyncStatusClass = (status) => {
-  switch (status) {
-    case 1: return 'synced'
-    case 2: return 'sync-failed'
-    default: return 'unsynced'
-  }
-}
-
-const getSyncStatusText = (status) => {
-  switch (status) {
-    case 1: return '已同步'
-    case 2: return '同步失败'
-    default: return '待同步'
-  }
-}
-
 const goToDetail = (item) => {
-  if (showServerData.value && item.id) {
-    uni.navigateTo({
-      url: `/pages/goods/detail?id=${item.id}&source=server`
-    })
-    return
-  }
-
   if (item.id) {
     uni.navigateTo({
-      url: `/pages/goods/detail?id=${item.id}&source=local`
+      url: `/pages/goods/detail?id=${item.id}&source=server`
     })
   } else {
     uni.showToast({
@@ -403,34 +307,7 @@ const setStockFilter = (filter) => {
   }
 }
 
-.data-source-switch {
-  margin-bottom: 20rpx;
 
-  .switch-tabs {
-    display: flex;
-    background: #fff;
-    border-radius: 15rpx;
-    padding: 8rpx;
-    box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.1);
-
-    .switch-tab {
-      flex: 1;
-      text-align: center;
-      padding: 20rpx;
-      font-size: 28rpx;
-      color: #666;
-      border-radius: 10rpx;
-      transition: all 0.3s;
-      cursor: pointer;
-
-      &.active {
-        background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
-        color: #fff;
-        font-weight: bold;
-      }
-    }
-  }
-}
 
 .total-count-bar {
   display: flex;
@@ -459,35 +336,7 @@ const setStockFilter = (filter) => {
     }
   }
 
-  .sync-stats {
-    display: flex;
-    gap: 30rpx;
 
-    .sync-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-
-      .sync-number {
-        font-size: 32rpx;
-        font-weight: bold;
-
-        &.success {
-          color: #27ae60;
-        }
-
-        &.warning {
-          color: #f39c12;
-        }
-      }
-
-      .sync-label {
-        font-size: 20rpx;
-        color: #666;
-        margin-top: 5rpx;
-      }
-    }
-  }
 }
 
 .stock-filter {
@@ -659,26 +508,7 @@ const setStockFilter = (filter) => {
             }
           }
 
-          .sync-status {
-            font-size: 22rpx;
-            padding: 4rpx 12rpx;
-            border-radius: 10rpx;
 
-            &.synced {
-              background: #d1ecf1;
-              color: #0c5460;
-            }
-
-            &.unsynced {
-              background: #fff3cd;
-              color: #856404;
-            }
-
-            &.sync-failed {
-              background: #f8d7da;
-              color: #721c24;
-            }
-          }
         }
 
         .actions {

@@ -56,11 +56,14 @@ export const deleteGoods = (goodsId) => {
   })
 }
 
-// 获取商品统计数据
 export const getGoodsStatistics = () => {
-  return request({
-    url: '/backendApi/goods/goods/statistics',
-    method: 'GET'
+  console.warn('getGoodsStatistics 已禁用')
+  return Promise.resolve({
+    code: 200,
+    data: {
+      totalCount: 0,
+      todayCount: 0
+    }
   })
 }
 

@@ -896,15 +896,9 @@ const handleSaveConsumables = async () => {
       description: form.description.trim()
     }
 
-    const localConsumables = goodsStore.saveLocalGoods({
-      ...consumablesData,
-      cateName: form.cateName
-    })
-
     try {
       const response = await saveGoodsApi(consumablesData)
       if (response.code === 200) {
-        goodsStore.updateSyncStatus(localConsumables.id, 1)
         uni.showToast({
           title: '消耗品保存成功',
           icon: 'success'
@@ -914,9 +908,10 @@ const handleSaveConsumables = async () => {
       }
     } catch (error) {
       uni.showToast({
-        title: '已保存到本地，稍后同步',
+        title: error.message || '保存失败，请重试',
         icon: 'none'
       })
+      return
     }
     setTimeout(() => {
       uni.navigateBack()

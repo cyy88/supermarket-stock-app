@@ -7,8 +7,29 @@ const request = (options) => {
     // 获取token
     const token = uni.getStorageSync('token')
 
+    // 调试：记录所有API调用
+    const fullUrl = BASE_URL + options.url
+    console.log('API调用:', {
+      url: fullUrl,
+      method: options.method || 'GET',
+      data: options.data
+    })
+
+    // 如果是统计接口，直接拦截
+    if (options.url.includes('/statistics')) {
+      console.warn('拦截统计接口调用:', options.url)
+      resolve({
+        code: 200,
+        data: {
+          totalCount: 0,
+          todayCount: 0
+        }
+      })
+      return
+    }
+
     uni.request({
-      url: BASE_URL + options.url,
+      url: fullUrl,
       method: options.method || 'GET',
       data: options.data || {},
       header: {

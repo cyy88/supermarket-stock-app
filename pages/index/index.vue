@@ -89,17 +89,10 @@ const checkLoginStatus = async () => {
 
 // 加载统计数据
 const loadStatistics = async () => {
-  try {
-    const stats = await goodsStore.fetchStatistics()
-    statistics.value = stats
-  } catch (error) {
-    console.error('加载统计数据失败:', error)
-    // 使用默认值
-    statistics.value = {
-      todayCount: goodsStore.todayCount,
-      totalCount: goodsStore.localGoods.length,
-      unsyncedCount: goodsStore.unsyncedCount
-    }
+  // 暂时使用默认值，避免调用不存在的统计接口
+  statistics.value = {
+    todayCount: 0,
+    totalCount: 0
   }
 }
 
