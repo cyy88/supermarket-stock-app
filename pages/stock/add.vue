@@ -265,6 +265,10 @@ const closeSelectGoods = () => {
 const doSelectGoods = (selectData) => {
 
   if (!selectData || selectData.length === 0) {
+    uni.showToast({
+      title: '请至少选择一个商品',
+      icon: 'none'
+    })
     return
   }
   
@@ -283,18 +287,17 @@ const doSelectGoods = (selectData) => {
     })
     
     // 使用新数组更新goodsList，确保触发响应式更新
-    goodsList.value = [...processedGoods]
-    
-    console.log('处理后的商品列表长度:', goodsList.value.length)
-    console.log('处理后的商品列表第一项:', goodsList.value.length > 0 ? JSON.stringify(goodsList.value[0]) : 'none')
-    
-    // 确保UI更新
+    goodsList.value = processedGoods
+
     nextTick(() => {
-      console.log('nextTick后的商品列表长度:', goodsList.value.length)
+      uni.showToast({
+        title: `已添加${goodsList.value.length}件商品`,
+        icon: 'success',
+        duration: 1500
+      })
       showSelectGoodsDialog.value = false
     })
   } catch (error) {
-    console.error('处理商品数据错误:', error)
     uni.showToast({
       title: '处理商品数据失败',
       icon: 'none'
@@ -480,7 +483,7 @@ const submitForm = async () => {
   try {
     // 转换商品数量：前端小数转为后端整数（KG -> g）
     const convertedGoodsList = convertGoodsQuantity(goodsList.value, 'toBackend')
-    
+
     const submitData = {
       ...form,
       goodsList: convertedGoodsList

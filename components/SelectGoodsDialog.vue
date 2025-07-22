@@ -26,11 +26,12 @@
             v-for="(item, index) in goodsList" 
             :key="item.id + '_' + item.skuId" 
             class="goods-item"
+            @click="toggleSelect(index, item)"
           >
             <view class="checkbox-wrapper">
               <checkbox 
                 :checked="item.checked" 
-                @change="checkRow($event, index, item)"
+                :value="item.id + '_' + item.skuId"
               />
             </view>
             <image 
@@ -78,14 +79,14 @@
 
       <view class="dialog-footer">
         <button class="cancel-btn" @click="close">取消</button>
-        <button class="confirm-btn" @click="doSave">确定</button>
+        <button class="confirm-btn" @click="doSave">确定({{ selectData.length }})</button>
       </view>
     </view>
   </view>
 </template>
 
 <script setup>
-import { ref, reactive, watch } from 'vue'
+import { ref, reactive, watch, nextTick } from 'vue'
 import { selectGoodsList } from '@/api/stock'
 
 const props = defineProps({
@@ -121,6 +122,7 @@ const total = ref(0)
 // 监听对话框显示状态
 watch(() => props.showDialog, (value) => {
   if (value) {
+    selectData.value = []
     getGoodsList()
   }
 })
@@ -138,14 +140,21 @@ const getGoodsList = async () => {
         checked: false
       }))
       
-      // 回显已选择的商品
-      goodsList.value.forEach((item, key) => {
-        props.dataList.forEach((row) => {
-          if (item.id === row.id && item.skuId === row.skuId) {
-            goodsList.value[key].checked = true
-          }
+      if (props.dataList && props.dataList.length > 0) {
+        goodsList.value.forEach((item, key) => {
+          props.dataList.forEach((row) => {
+            if (item.id === row.id && item.skuId === row.skuId) {
+              goodsList.value[key].checked = true
+              const isExist = selectData.value.some(selected =>
+                selected.id === item.id && selected.skuId === item.skuId
+              )
+              if (!isExist) {
+                selectData.value.push(JSON.parse(JSON.stringify(item)))
+              }
+            }
+          })
         })
-      })
+      }
       
       total.value = response.data.paginationResponse.totalElements
       imagePath.value = response.data.imagePath
@@ -161,31 +170,27 @@ const getGoodsList = async () => {
   }
 }
 
-// 选择商品
-const checkRow = (event, index, row) => {
-  const checked = event.detail.value.length > 0
-  goodsList.value[index].checked = checked
-
-  console.log('商品选择状态改变:', { checked, row: row.name })
-
+const toggleSelect = (index, item) => {
+  goodsList.value[index].checked = !goodsList.value[index].checked
+  const checked = goodsList.value[index].checked
+  
   if (checked) {
-    // 检查是否已存在
-    const isExist = selectData.value.some(item =>
-      item.id === row.id && item.skuId === row.skuId
+    const isExist = selectData.value.some(selected =>
+      selected.id === item.id && selected.skuId === item.skuId
     )
     if (!isExist) {
-      selectData.value.push(row)
-      console.log('添加商品到选择列表:', row.name)
+      const newItem = JSON.parse(JSON.stringify(item))
+      selectData.value.push(newItem)
     }
   } else {
     // 移除选择
-    selectData.value = selectData.value.filter(item =>
-      !(item.id === row.id && item.skuId === row.skuId)
+    selectData.value = selectData.value.filter(selected => 
+      !(selected.id === item.id && selected.skuId === item.skuId)
     )
-    console.log('从选择列表移除商品:', row.name)
   }
+}
 
-  console.log('当前选择的商品数量:', selectData.value.length)
+const checkRow = (event, index, row) => {
 }
 
 // 搜索商品
@@ -222,12 +227,13 @@ const doSave = () => {
     })
     return
   }
-  // 使用深拷贝避免引用问题
   const selectedGoodsData = JSON.parse(JSON.stringify(selectData.value))
   
-  // 发送选中的商品数据
   emit('submit', selectedGoodsData)
-  emit('closeDialog')
+  
+  nextTick(() => {
+    emit('closeDialog')
+  })
 }
 </script>
 
@@ -316,6 +322,11 @@ const doSave = () => {
   align-items: center;
   padding: 12px 0;
   border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+}
+
+.goods-item:active {
+  background-color: #f8f8f8;
 }
 
 .checkbox-wrapper {
