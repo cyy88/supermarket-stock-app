@@ -60,6 +60,12 @@
 			"style": {
 				"navigationBarTitleText": "设置"
 			}
+		},
+		{
+			"path": "pages/stock/add",
+			"style": {
+				"navigationBarTitleText": "库存入库"
+			}
 		}
 	],
 	"globalStyle": {

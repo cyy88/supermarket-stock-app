@@ -63,6 +63,17 @@
           </view>
         </view>
 
+        <view class="setting-item" @click="goToStockAdd">
+          <view class="setting-info">
+            <text class="setting-icon">📦</text>
+            <text class="setting-name">库存入库</text>
+          </view>
+          <view class="setting-action">
+            <text class="setting-desc">添加商品库存</text>
+            <text class="arrow">→</text>
+          </view>
+        </view>
+
         <view class="setting-item" @click="exportData">
           <view class="setting-info">
             <text class="setting-icon">📤</text>
@@ -149,6 +160,12 @@ const loadStatistics = async () => {
 const getAvatarText = () => {
   const name = userInfo.value?.realName || userInfo.value?.accountName || '用户'
   return name.charAt(name.length - 1) // 取最后一个字符作为头像
+}
+
+const goToStockAdd = () => {
+  uni.navigateTo({
+    url: '/pages/stock/add'
+  })
 }
 
 const manualSync = async () => {
