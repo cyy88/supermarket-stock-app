@@ -24,7 +24,7 @@
       </view>
       <view class="inbound-preview">
         <image
-          :src="imagePath + form.stockUrl"
+          :src="fullStockUrl"
           class="preview-image"
           mode="aspectFill"
           @click="previewInboundOrder"
@@ -52,7 +52,7 @@
       <view v-else class="goods-list">
         <view
           v-for="(item, index) in goodsList"
-          :key="item.id + '_' + item.skuId"
+          :key="index + '_' + item.id + '_' + item.skuId"
           class="goods-card"
         >
           <view class="goods-header">
@@ -149,6 +149,7 @@
 
     <!-- 选择商品对话框 -->
     <SelectGoodsDialog
+      ref="selectGoodsDialogRef"
       :show-dialog="showSelectGoodsDialog"
       :store-id="form.storeId"
       :data-list="goodsList"
@@ -158,6 +159,7 @@
 
     <!-- 添加入库单对话框 -->
     <AddInboundOrderDialog
+      ref="addInboundOrderDialogRef"
       :show-dialog="showAddInboundOrderDialog"
       :image-path="imagePath"
       @close-dialog="closeInboundOrder"
@@ -167,7 +169,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed, nextTick } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import userStore from '@/stores/user'
 import { saveStock } from '@/api/stock'
@@ -182,6 +184,10 @@ const goodsList = ref([])
 const showSelectGoodsDialog = ref(false)
 const showAddInboundOrderDialog = ref(false)
 
+// 选择商品对话框组件
+const selectGoodsDialogRef = ref(null)
+const addInboundOrderDialogRef = ref(null)
+
 const form = reactive({
   storeId: 0,
   type: 'increase',
@@ -189,6 +195,21 @@ const form = reactive({
   stockUrl: '',
   status: 'A',
   goodsList: []
+})
+
+const fullStockUrl = computed(() => {
+  if (!form.stockUrl) return ''
+  
+  if (form.stockUrl.startsWith('http')) {
+    return form.stockUrl
+  }
+  
+  const baseUrl = imagePath.value.endsWith('/') ? imagePath.value : imagePath.value + '/'
+  
+  const stockUrl = form.stockUrl.startsWith('/') ? form.stockUrl.substring(1) : form.stockUrl
+  
+  const fullUrl = baseUrl + stockUrl
+  return fullUrl
 })
 
 onMounted(() => {
@@ -212,9 +233,10 @@ const initData = () => {
     { id: 2, name: '分店1' }
   ]
 
-  // 设置默认图片路径
   imagePath.value = 'http://msbs-fuint-ts.qingchunnianhua.com:1880/'
-
+  if (!imagePath.value.endsWith('/')) {
+    imagePath.value += '/'
+  }
 }
 
 // 店铺选择
@@ -241,13 +263,43 @@ const closeSelectGoods = () => {
 
 // 处理商品选择
 const doSelectGoods = (selectData) => {
-  goodsList.value = selectData.map(item => ({
-    ...item,
-    num: item.priceType === 'weight' ? 0.00 : 1,
-    lossUrl: item.lossUrl || null,
-    suggestion: item.suggestion || ''
-  }))
-  showSelectGoodsDialog.value = false
+
+  if (!selectData || selectData.length === 0) {
+    return
+  }
+  
+  try {
+    // 确保选中的商品数据正确处理
+    const processedGoods = selectData.map(item => {
+      // 深拷贝对象，避免引用问题
+      const goodsItem = JSON.parse(JSON.stringify(item))
+      
+      // 设置默认值
+      goodsItem.num = goodsItem.priceType === 'weight' ? 0.00 : 1
+      goodsItem.lossUrl = goodsItem.lossUrl || null
+      goodsItem.suggestion = goodsItem.suggestion || ''
+      
+      return goodsItem
+    })
+    
+    // 使用新数组更新goodsList，确保触发响应式更新
+    goodsList.value = [...processedGoods]
+    
+    console.log('处理后的商品列表长度:', goodsList.value.length)
+    console.log('处理后的商品列表第一项:', goodsList.value.length > 0 ? JSON.stringify(goodsList.value[0]) : 'none')
+    
+    // 确保UI更新
+    nextTick(() => {
+      console.log('nextTick后的商品列表长度:', goodsList.value.length)
+      showSelectGoodsDialog.value = false
+    })
+  } catch (error) {
+    console.error('处理商品数据错误:', error)
+    uni.showToast({
+      title: '处理商品数据失败',
+      icon: 'none'
+    })
+  }
 }
 
 // 添加入库单
@@ -264,18 +316,25 @@ const closeInboundOrder = () => {
 const handleInboundOrderSubmit = (images) => {
   if (images && images.length > 0) {
     const imageData = images[0]
-    // 保存完整的图片信息
-    if (imageData.filePath) {
-      form.stockUrl = imageData.filePath
-    } else if (imageData.fileName) {
-      form.stockUrl = imageData.fileName
+
+    if (typeof imageData === 'object') {
+      if (imageData.domain && imageData.filePath) {
+        form.stockUrl = imageData.filePath
+        imagePath.value = imageData.domain
+        if (!imagePath.value.endsWith('/')) {
+          imagePath.value += '/'
+        }
+      } else if (imageData.filePath) {
+        form.stockUrl = imageData.filePath
+      } else if (imageData.fileName) {
+        form.stockUrl = imageData.fileName
+      } else {
+        form.stockUrl = imageData.url || imageData.path || JSON.stringify(imageData)
+      }
     } else {
       form.stockUrl = imageData
     }
-
-    if (!form.stockUrl.startsWith('http') && !imagePath.value.endsWith('/')) {
-      imagePath.value += '/'
-    }
+    nextTick(() => {})
 
     uni.showToast({
       title: '入库单上传成功',
@@ -289,8 +348,8 @@ const handleInboundOrderSubmit = (images) => {
 // 预览入库单
 const previewInboundOrder = () => {
   uni.previewImage({
-    urls: [imagePath.value + form.stockUrl],
-    current: imagePath.value + form.stockUrl
+    urls: [fullStockUrl.value],
+    current: fullStockUrl.value
   })
 }
 

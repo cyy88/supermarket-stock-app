@@ -215,8 +215,18 @@ const close = () => {
 
 // 保存选择
 const doSave = () => {
-  console.log('提交选择的商品:', selectData.value)
-  emit('submit', selectData.value)
+  if (selectData.value.length === 0) {
+    uni.showToast({
+      title: '请至少选择一个商品',
+      icon: 'none'
+    })
+    return
+  }
+  // 使用深拷贝避免引用问题
+  const selectedGoodsData = JSON.parse(JSON.stringify(selectData.value))
+  
+  // 发送选中的商品数据
+  emit('submit', selectedGoodsData)
   emit('closeDialog')
 }
 </script>
