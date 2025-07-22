@@ -193,7 +193,8 @@ const loadConsumablesList = async () => {
     loading.value = true
     const res = await getGoodsList({
       page: 1,
-      pageSize: 1000
+      pageSize: 1000,
+      isItaconsumableitem: 1
     })
 
     if (res.data && res.data.paginationResponse) {

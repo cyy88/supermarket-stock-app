@@ -30,6 +30,7 @@ export const getGoodsList = (data = {}) => {
     pageSize: 20,
     name: '',
     cateId: '',
+    isItaconsumableitem: 1,
     ...data
   }
 
