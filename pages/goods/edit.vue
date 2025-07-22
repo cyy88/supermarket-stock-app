@@ -456,7 +456,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import goodsStore from '@/stores/goods'
 import userStore from '@/stores/user'
-import { saveGoods as saveGoodsApi, getGoodsCateList, uploadImage, getGoodsDetail } from '@/api/goods'
+import { saveGoods, getGoodsCateList, uploadImage, getGoodsDetail } from '@/api/goods'
 import { recognizeProductImage } from '@/api/ai'
 
 const loading = ref(true)
@@ -532,8 +532,11 @@ const loadGoodsDetail = async () => {
 
     const response = await getGoodsDetail(goodsId.value)
 
-    if (response.code === 200 && response.data && response.data.goodsInfo) {
-      const goodsData = response.data.goodsInfo
+    if (response.code === 200 && response.data && response.data.goods) {
+      const goodsData = {
+        ...response.data.goods,
+        imagePath: response.data.imagePath || ''
+      }
       goods.value = goodsData
       fillForm(goodsData)
     } else {
@@ -560,7 +563,22 @@ const fillForm = (goodsData) => {
   form.goodsNo = goodsData.goodsNo || ''
   form.name = goodsData.name || ''
   form.cateId = goodsData.cateId?.toString() || ''
-  form.cateName = goodsData.cateName || ''
+
+  if (goodsData.cateInfo && goodsData.cateInfo.name) {
+    form.cateName = goodsData.cateInfo.name
+  } else if (goodsData.cateName) {
+    form.cateName = goodsData.cateName
+  } else if (goodsData.cateId) {
+    const categories = goodsStore.categories
+    const category = categories.find(cat => cat.id === goodsData.cateId)
+    if (category) {
+      form.cateName = category.name
+    } else {
+      form.cateName = '未分类'
+    }
+  } else {
+    form.cateName = '未分类'
+  }
   form.price = goodsData.price?.toString() || ''
   form.linePrice = goodsData.linePrice?.toString() || ''
   form.stock = goodsData.stock?.toString() || ''
@@ -594,34 +612,50 @@ const fillForm = (goodsData) => {
     }
   }
 
-  // 处理图片 - 支持多种格式
+  // 处理图片 - 与详情页面保持一致的逻辑
+  const images = []
+
+  // 首先添加logo图片
+  if (goodsData.logo) {
+    images.push(goodsData.logo)
+  }
+
+  // 然后处理images字段
   if (goodsData.images) {
-    if (Array.isArray(goodsData.images)) {
-      imageList.value = goodsData.images.filter(img => img).map(img => ({
-        url: img,
-        tempPath: img
-      }))
-    } else if (typeof goodsData.images === 'string') {
+    if (typeof goodsData.images === 'string') {
       try {
-        // 尝试解析JSON字符串
         const parsedImages = JSON.parse(goodsData.images)
-        imageList.value = Array.isArray(parsedImages) ? parsedImages.filter(img => img).map(img => ({
-          url: img,
-          tempPath: img
-        })) : []
+        if (Array.isArray(parsedImages)) {
+          parsedImages.forEach(img => {
+            if (img && !images.includes(img)) {
+              if (img.startsWith('/') && goodsData.imagePath) {
+                images.push(goodsData.imagePath + img)
+              } else {
+                images.push(img)
+              }
+            }
+          })
+        }
       } catch (e) {
         // 如果不是JSON，当作单个图片URL处理
-        imageList.value = goodsData.images ? [{
-          url: goodsData.images,
-          tempPath: goodsData.images
-        }] : []
+        if (goodsData.images && !images.includes(goodsData.images)) {
+          images.push(goodsData.images)
+        }
       }
-    } else {
-      imageList.value = []
+    } else if (Array.isArray(goodsData.images)) {
+      goodsData.images.forEach(img => {
+        if (img && !images.includes(img)) {
+          images.push(img)
+        }
+      })
     }
-  } else {
-    imageList.value = []
   }
+
+  // 转换为编辑页面需要的格式
+  imageList.value = images.filter(img => img).map(img => ({
+    url: img,
+    tempPath: img
+  }))
 
   // 更新步骤进度
   updateStep()
@@ -1044,7 +1078,7 @@ const handleUpdateGoods = async () => {
     }).filter(url => url)
 
     const updatedData = {
-      goodsId: goods.value.id || goodsId.value,
+      goodsId: String(goods.value.id || goodsId.value),
       // 基础信息
       name: form.name.trim(),
       goodsNo: form.goodsNo.trim(),
@@ -1078,35 +1112,26 @@ const handleUpdateGoods = async () => {
       description: form.description.trim()
     }
 
-    // 先更新本地数据
-    const localUpdatedData = {
-      ...updatedData,
-      cateName: form.cateName
-    }
-    goodsStore.updateLocalGoods(goodsId.value, localUpdatedData)
-
     try {
-      // 调用API更新商品
-      const response = await saveGoodsApi(updatedData)
+
+      const response = await saveGoods(updatedData)
       if (response.code === 200) {
-        goodsStore.updateSyncStatus(goodsId.value, 1)
         uni.showToast({
           title: '更新成功',
           icon: 'success'
         })
+        setTimeout(() => {
+          uni.navigateBack()
+        }, 1500)
       } else {
         throw new Error(response.message || '更新失败')
       }
     } catch (apiError) {
       uni.showToast({
-        title: '已保存到本地，稍后同步',
+        title: apiError.message || '更新失败，请重试',
         icon: 'none'
       })
     }
-
-    setTimeout(() => {
-      uni.navigateBack()
-    }, 1500)
 
   } catch (error) {
     uni.showToast({

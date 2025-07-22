@@ -10,6 +10,18 @@ export const saveGoods = (data) => {
   })
 }
 
+// 更新商品 - 使用POST方法，与新增商品相同接口
+export const updateGoods = (data) => {
+  return request({
+    url: '/backendApi/goods/goods/save',
+    method: 'POST',
+    data,
+    header: {
+      'Content-Type': 'application/json'
+    }
+  })
+}
+
 // 获取商品列表
 export const getGoodsList = (data = {}) => {
   // 默认参数
