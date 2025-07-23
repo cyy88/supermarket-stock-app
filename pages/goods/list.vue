@@ -14,11 +14,23 @@
       </view>
     </view>
 
-    <!-- 商品总数统计 -->
+    <!-- 商品总数统计和库存入口 -->
     <view class="total-count-bar">
       <view class="total-count">
         <text class="count-number">{{ goodsList.length }}</text>
         <text class="count-label">商品总数</text>
+      </view>
+
+      <!-- 库存管理入口 -->
+      <view class="stock-actions">
+        <button class="stock-btn add-stock" @click="goToAddStock">
+          <text class="btn-icon">📦</text>
+          <text class="btn-text">库存入库</text>
+        </button>
+        <button class="stock-btn view-records" @click="goToStockRecords">
+          <text class="btn-icon">📋</text>
+          <text class="btn-text">入库记录</text>
+        </button>
       </view>
     </view>
 
@@ -383,6 +395,20 @@ const goToAdd = () => {
   })
 }
 
+// 跳转到库存入库页面
+const goToAddStock = () => {
+  uni.navigateTo({
+    url: '/pages/stock/add'
+  })
+}
+
+// 跳转到入库记录页面
+const goToStockRecords = () => {
+  uni.navigateTo({
+    url: '/pages/stock/list'
+  })
+}
+
 // 库存筛选方法
 const setStockFilter = (filter) => {
   stockFilter.value = filter
@@ -506,6 +532,52 @@ const getTotalCount = () => {
     .count-label {
       font-size: 24rpx;
       color: #909399;
+    }
+  }
+
+  .stock-actions {
+    display: flex;
+    gap: 16rpx;
+  }
+
+  .stock-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8rpx;
+    padding: 16rpx 20rpx;
+    border: none;
+    border-radius: 12rpx;
+    font-size: 24rpx;
+    transition: all 0.3s ease;
+
+    .btn-icon {
+      font-size: 32rpx;
+    }
+
+    .btn-text {
+      font-size: 22rpx;
+      font-weight: 500;
+    }
+
+    &.add-stock {
+      background: linear-gradient(135deg, #52c41a 0%, #389e0d 100%);
+      color: white;
+
+      &:active {
+        transform: scale(0.95);
+        opacity: 0.8;
+      }
+    }
+
+    &.view-records {
+      background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+      color: white;
+
+      &:active {
+        transform: scale(0.95);
+        opacity: 0.8;
+      }
     }
   }
 

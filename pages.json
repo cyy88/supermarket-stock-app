@@ -66,6 +66,12 @@
 			"style": {
 				"navigationBarTitleText": "库存入库"
 			}
+		},
+		{
+			"path": "pages/stock/list",
+			"style": {
+				"navigationBarTitleText": "入库记录"
+			}
 		}
 	],
 	"globalStyle": {
@@ -87,6 +93,10 @@
 			{
 				"pagePath": "pages/goods/list",
 				"text": "📦 商品"
+			},
+			{
+				"pagePath": "pages/stock/list",
+				"text": "📋 库存"
 			},
 			{
 				"pagePath": "pages/settings/settings",
