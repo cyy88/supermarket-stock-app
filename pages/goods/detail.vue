@@ -149,8 +149,24 @@ import goodsStore from '@/stores/goods'
 import { getGoodsDetail, getGoodsCateList, deleteGoods } from '@/api/goods'
 import { formatTime as formatTimeUtil } from '@/utils/time'
 
-const goods = ref(null)
+// 修复可能包含重复域名的URL
+const fixMalformedUrl = (url) => {
+  if (!url || typeof url !== 'string') return url
+  
+  // 查找URL中是否包含重复的域名
+  const domainPattern = /(https?:\/\/[^\/]+)(https?:\/\/[^\/]+)/
+  const match = url.match(domainPattern)
+  
+  if (match) {
+    // 如果找到重复的域名，只保留第二个域名
+    return url.replace(match[1], '')
+  }
+  
+  return url
+}
+
 const goodsId = ref('')
+const goods = ref(null)
 
 onLoad((options) => {
   if (options.id) {
@@ -245,10 +261,13 @@ const getGoodsImages = (item) => {
 
   const images = []
 
+  // 添加logo
   if (item.logo) {
-    images.push(item.logo)
+    // 修复可能存在的重复域名问题
+    images.push(fixMalformedUrl(item.logo))
   }
 
+  // 处理images字段
   if (item.images) {
     if (typeof item.images === 'string') {
       try {
@@ -256,20 +275,23 @@ const getGoodsImages = (item) => {
         if (Array.isArray(parsedImages)) {
           parsedImages.forEach(img => {
             if (img && !images.includes(img)) {
-              if (img.startsWith('/') && item.imagePath) {
-                images.push(item.imagePath + img)
-              } else {
-                images.push(img)
-              }
+              // 修复可能存在的重复域名问题
+              images.push(fixMalformedUrl(img))
             }
           })
         }
       } catch (e) {
+        // 如果不是JSON，当作单个图片URL处理
+        if (!images.includes(item.images)) {
+          // 修复可能存在的重复域名问题
+          images.push(fixMalformedUrl(item.images))
+        }
       }
     } else if (Array.isArray(item.images)) {
       item.images.forEach(img => {
         if (img && !images.includes(img)) {
-          images.push(img)
+          // 修复可能存在的重复域名问题
+          images.push(fixMalformedUrl(img))
         }
       })
     }

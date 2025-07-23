@@ -205,7 +205,23 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import goodsStore from '@/stores/goods'
-import { getGoodsList, getGoodsCateList } from '@/api/goods'
+import { getGoodsCateList, getGoodsList } from '@/api/goods'
+
+// 修复可能包含重复域名的URL
+const fixMalformedUrl = (url) => {
+  if (!url || typeof url !== 'string') return url
+  
+  // 查找URL中是否包含重复的域名
+  const domainPattern = /(https?:\/\/[^\/]+)(https?:\/\/[^\/]+)/
+  const match = url.match(domainPattern)
+  
+  if (match) {
+    // 如果找到重复的域名，只保留第二个域名
+    return url.replace(match[1], '')
+  }
+  
+  return url
+}
 
 const searchKeyword = ref('')
 const goodsList = ref([])
@@ -325,7 +341,34 @@ const clearSearch = () => {
 
 
 const getGoodsImage = (item) => {
-  return item.logo || (item.images && item.images.length > 0 ? item.images[0] : null)
+  // 优先使用logo
+  if (item.logo) {
+    // 修复可能存在的重复域名问题
+    return fixMalformedUrl(item.logo)
+  }
+
+  // 如果没有logo，尝试使用images数组的第一张图片
+  if (item.images) {
+    // 图片可能是JSON字符串
+    if (typeof item.images === 'string') {
+      try {
+        const parsedImages = JSON.parse(item.images)
+        if (Array.isArray(parsedImages) && parsedImages.length > 0) {
+          // 修复可能存在的重复域名问题
+          return fixMalformedUrl(parsedImages[0])
+        }
+      } catch (e) {
+        // 如果解析失败，则可能是单个URL字符串
+        // 修复可能存在的重复域名问题
+        return fixMalformedUrl(item.images)
+      }
+    } else if (Array.isArray(item.images) && item.images.length > 0) {
+      // 修复可能存在的重复域名问题
+      return fixMalformedUrl(item.images[0])
+    }
+  }
+
+  return null
 }
 
 const getGoodsCategory = (item) => {

@@ -612,7 +612,7 @@ const fillForm = (goodsData) => {
     }
   }
 
-  // 处理图片 - 与详情页面保持一致的逻辑
+  // 处理图片
   const images = []
 
   // 首先添加logo图片
@@ -628,11 +628,7 @@ const fillForm = (goodsData) => {
         if (Array.isArray(parsedImages)) {
           parsedImages.forEach(img => {
             if (img && !images.includes(img)) {
-              if (img.startsWith('/') && goodsData.imagePath) {
-                images.push(goodsData.imagePath + img)
-              } else {
-                images.push(img)
-              }
+              images.push(img)
             }
           })
         }
@@ -794,17 +790,7 @@ const uploadImages = async (filePaths) => {
 
   try {
     for (const filePath of filePaths) {
-      const response = await uploadImage(filePath)
-      let imageUrl = ''
-      if (typeof response === 'string') {
-        imageUrl = response
-      } else if (response.url) {
-        imageUrl = response.url
-      } else if (response.data && response.data.url) {
-        imageUrl = response.data.url
-      } else {
-        throw new Error('图片上传失败：无法获取图片URL')
-      }
+      const imageUrl = await uploadImage(filePath)
       if (imageUrl && imageUrl.trim()) {
         imageList.value.push({
           url: imageUrl,

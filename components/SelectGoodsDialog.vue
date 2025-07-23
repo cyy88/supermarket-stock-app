@@ -29,9 +29,11 @@
             @click="toggleSelect(index, item)"
           >
             <view class="checkbox-wrapper" @click.stop="toggleSelect(index, item)">
+              <!-- 使用自定义选择框，确保跨平台兼容性 -->
               <view class="custom-checkbox" :class="{ 'checked': item.checked }">
                 <text v-if="item.checked" class="check-icon">✓</text>
               </view>
+              <!-- 保留原生checkbox作为备用，但隐藏 -->
               <checkbox
                 :checked="item.checked"
                 :value="item.id + '_' + item.skuId"
@@ -39,8 +41,8 @@
                 style="display: none;"
               />
             </view>
-            <image 
-              :src="imagePath + item.logo" 
+            <image
+              :src="getGoodsImageUrl(item)"
               class="goods-image"
               mode="aspectFill"
             />
@@ -94,6 +96,22 @@
 import { ref, reactive, watch, nextTick } from 'vue'
 import { selectGoodsList } from '@/api/stock'
 
+// 修复可能包含重复域名的URL
+const fixMalformedUrl = (url) => {
+  if (!url || typeof url !== 'string') return url
+  
+  // 查找URL中是否包含重复的域名
+  const domainPattern = /(https?:\/\/[^\/]+)(https?:\/\/[^\/]+)/
+  const match = url.match(domainPattern)
+  
+  if (match) {
+    // 如果找到重复的域名，只保留第二个域名
+    return url.replace(match[1], '')
+  }
+  
+  return url
+}
+
 const props = defineProps({
   showDialog: {
     type: Boolean,
@@ -145,15 +163,20 @@ const getGoodsList = async () => {
         checked: false
       }))
       
+      // 重置选中数据，确保每次打开对话框时都是干净的状态
       selectData.value = []
       
+      // 检查之前已选择的商品，并标记为选中状态
       if (props.dataList && props.dataList.length > 0) {
         goodsList.value.forEach((item, key) => {
           const matchedItem = props.dataList.find(row => 
             row.id === item.id && (row.skuId === item.skuId || (!row.skuId && !item.skuId))
           )
+          
           if (matchedItem) {
+            // 标记为选中
             goodsList.value[key].checked = true
+            // 添加到选中数据中
             selectData.value.push(JSON.parse(JSON.stringify(item)))
           }
         })
@@ -173,12 +196,15 @@ const getGoodsList = async () => {
   }
 }
 
+// 处理checkbox变化事件 - 兼容多平台
 const handleCheckboxChange = (index, item, event) => {
+  console.log('📋 checkbox事件:', item.name, 'platform:', uni.getSystemInfoSync().platform)
 
   let checked = false
 
   // 兼容不同平台的事件对象结构
   if (event && event.detail) {
+    // 微信小程序环境
     if (Array.isArray(event.detail.value)) {
       checked = event.detail.value.length > 0
     } else if (typeof event.detail.value === 'boolean') {
@@ -187,46 +213,64 @@ const handleCheckboxChange = (index, item, event) => {
       checked = event.detail.checked
     }
   } else if (event && event.target) {
+    // H5/App 环境
     checked = event.target.checked
   } else if (event && typeof event === 'boolean') {
+    // 直接传递布尔值
     checked = event
   }
 
+  console.log('📋 checkbox最终状态:', checked, 'for:', item.name)
+
+  // 更新商品的选中状态
   goodsList.value[index].checked = checked
 
   if (checked) {
+    // 添加到选中列表，确保不重复添加
     const isExist = selectData.value.some(selected =>
       selected.id === item.id && (selected.skuId === item.skuId || (!selected.skuId && !item.skuId))
     )
 
     if (!isExist) {
+      // 使用更新后的商品对象
       const newItem = JSON.parse(JSON.stringify(goodsList.value[index]))
       selectData.value.push(newItem)
-    }
-  } else {
-    selectData.value = selectData.value.filter(selected =>
-      !(selected.id === item.id && (selected.skuId === item.skuId || (!selected.skuId && !item.skuId)))
-    )
-  }
-}
-
-const toggleSelect = (index, item) => {
-  goodsList.value[index].checked = !goodsList.value[index].checked
-  const checked = goodsList.value[index].checked
-
-  if (checked) {
-    const isExist = selectData.value.some(selected =>
-      selected.id === item.id && (selected.skuId === item.skuId || (!selected.skuId && !item.skuId))
-    )
-    if (!isExist) {
-      const newItem = JSON.parse(JSON.stringify(goodsList.value[index]))
-      selectData.value.push(newItem)
+      console.log('✅ checkbox添加:', newItem.name, '数量:', selectData.value.length)
     }
   } else {
     // 从选中列表中移除
     selectData.value = selectData.value.filter(selected =>
       !(selected.id === item.id && (selected.skuId === item.skuId || (!selected.skuId && !item.skuId)))
     )
+    console.log('❌ checkbox移除:', item.name, '数量:', selectData.value.length)
+  }
+}
+
+const toggleSelect = (index, item) => {
+  console.log('🔄 toggleSelect:', item.name, '当前状态:', goodsList.value[index].checked)
+
+  // 切换选中状态
+  goodsList.value[index].checked = !goodsList.value[index].checked
+  const checked = goodsList.value[index].checked
+
+  if (checked) {
+    // 添加到选中列表，确保不重复添加
+    const isExist = selectData.value.some(selected =>
+      selected.id === item.id && (selected.skuId === item.skuId || (!selected.skuId && !item.skuId))
+    )
+
+    if (!isExist) {
+      // 使用更新后的商品对象
+      const newItem = JSON.parse(JSON.stringify(goodsList.value[index]))
+      selectData.value.push(newItem)
+      console.log('✅ 添加商品:', newItem.name, '选择数量:', selectData.value.length)
+    }
+  } else {
+    // 从选中列表中移除
+    selectData.value = selectData.value.filter(selected =>
+      !(selected.id === item.id && (selected.skuId === item.skuId || (!selected.skuId && !item.skuId)))
+    )
+    console.log('❌ 移除商品:', item.name, '选择数量:', selectData.value.length)
   }
 }
 
@@ -251,6 +295,14 @@ const nextPage = () => {
     params.page++
     getGoodsList()
   }
+}
+
+// 获取商品图片URL
+const getGoodsImageUrl = (item) => {
+  if (!item.logo) return ''
+
+  // 所有图片URL都应该是完整URL，但可能存在域名重复问题
+  return fixMalformedUrl(item.logo)
 }
 
 // 关闭对话框

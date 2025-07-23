@@ -182,6 +182,23 @@ import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { getStockInfo, saveStock } from '@/api/stock'
 
+// 修复可能包含重复域名的URL
+const fixMalformedUrl = (url) => {
+  if (!url || typeof url !== 'string') return url
+  
+  // 查找URL中是否包含重复的域名
+  const domainPattern = /(https?:\/\/[^\/]+)(https?:\/\/[^\/]+)/
+  const match = url.match(domainPattern)
+  
+  if (match) {
+    // 如果找到重复的域名，只保留第二个域名
+    return url.replace(match[1], '')
+  }
+  
+  return url
+}
+
+// 响应式数据
 const loading = ref(true)
 const saving = ref(false)
 const stockInfo = ref({})
@@ -190,16 +207,21 @@ const storeOptions = ref([])
 const imagePath = ref('')
 const stockId = ref(null)
 
+// 计算属性
 const canEdit = computed(() => {
   return stockInfo.value.reviewStatus === '未通过'
 })
 
+// 页面加载生命周期
 onLoad((options) => {
+  console.log('页面加载，接收参数:', options)
   stockId.value = options.id
 
   if (stockId.value) {
+    console.log('开始加载入库详情, ID:', stockId.value)
     loadStockDetail()
   } else {
+    console.error('未获取到入库记录ID')
     uni.showToast({
       title: '参数错误',
       icon: 'none'
@@ -213,8 +235,11 @@ onLoad((options) => {
 const loadStockDetail = async () => {
   try {
     loading.value = true
+    console.log('调用API获取入库详情, ID:', stockId.value)
     const response = await getStockInfo(stockId.value)
 
+    console.log('API响应数据:', response)
+    
     if (response && response.data) {
       stockInfo.value = response.data.stockInfo || {}
 
@@ -235,13 +260,27 @@ const loadStockDetail = async () => {
 
       storeOptions.value = response.data.storeList || []
       imagePath.value = response.data.imagePath || ''
+
+      console.log('数据加载完成:', {
+        stockInfo: stockInfo.value,
+        goodsList: goodsList.value,
+        imagePath: imagePath.value,
+        rawResponse: response.data
+      })
     } else {
+      console.error('API响应格式错误:', response)
       uni.showToast({
         title: 'API响应格式错误',
         icon: 'none'
       })
     }
   } catch (error) {
+    console.error('获取入库详情失败:', error)
+    console.error('错误详情:', {
+      message: error.message,
+      stack: error.stack,
+      response: error.response
+    })
     uni.showToast({
       title: `获取详情失败: ${error.message || '未知错误'}`,
       icon: 'none',
@@ -254,12 +293,9 @@ const loadStockDetail = async () => {
 
 const getFullImageUrl = (imageUrl) => {
   if (!imageUrl) return ''
-  if (imageUrl.startsWith('http')) return imageUrl
-  
-  const baseUrl = imagePath.value.endsWith('/') ? imagePath.value : imagePath.value + '/'
-  const cleanImageUrl = imageUrl.startsWith('/') ? imageUrl.substring(1) : imageUrl
-  
-  return baseUrl + cleanImageUrl
+
+  // 所有图片URL都应该是完整URL，但可能存在域名重复问题
+  return fixMalformedUrl(imageUrl)
 }
 
 const getStoreName = (storeId) => {
@@ -287,8 +323,8 @@ const previewImage = (imageUrl) => {
   if (!imageUrl) return
   
   uni.previewImage({
-    urls: [getFullImageUrl(imageUrl)],
-    current: getFullImageUrl(imageUrl)
+    urls: [imageUrl],
+    current: imageUrl
   })
 }
 
@@ -327,7 +363,9 @@ const uploadImageToServer = (filePath, index) => {
       try {
         const response = JSON.parse(uploadRes.data)
         if (response.code === 200) {
-          goodsList.value[index].lossUrl = response.data.fileName
+          // 始终使用完整的url字段
+          let fullUrl = response.data.url
+          goodsList.value[index].lossUrl = fullUrl
           uni.showToast({
             title: '上传成功',
             icon: 'success'

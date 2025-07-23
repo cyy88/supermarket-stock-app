@@ -81,6 +81,7 @@
           </view>
 
           <view class="goods-body">
+            <!-- 入库数量和损耗管理在一行 -->
             <view class="quantity-loss-row">
               <view class="quantity-section">
                 <text class="section-label">入库数量</text>
@@ -114,13 +115,13 @@
               </view>
             </view>
 
+            <!-- 损耗说明单独一行，但长度缩小 -->
             <view class="suggestion-row">
               <textarea
                 v-model="item.suggestion"
                 placeholder="损耗建议说明..."
                 class="suggestion-input"
                 maxlength="50"
-                style="height: 20rpx"
               />
             </view>
           </view>
@@ -180,6 +181,22 @@ import { saveStock } from '@/api/stock'
 import SelectGoodsDialog from '@/components/SelectGoodsDialog.vue'
 import AddInboundOrderDialog from '@/components/AddInboundOrderDialog.vue'
 
+// 修复可能包含重复域名的URL
+const fixMalformedUrl = (url) => {
+  if (!url || typeof url !== 'string') return url
+  
+  // 查找URL中是否包含重复的域名
+  const domainPattern = /(https?:\/\/[^\/]+)(https?:\/\/[^\/]+)/
+  const match = url.match(domainPattern)
+  
+  if (match) {
+    // 如果找到重复的域名，只保留第二个域名
+    return url.replace(match[1], '')
+  }
+  
+  return url
+}
+
 const loading = ref(false)
 const imagePath = ref('')
 const storeOptions = ref([])
@@ -203,44 +220,25 @@ const form = reactive({
 
 const fullStockUrl = computed(() => {
   if (!form.stockUrl) return ''
-
-  if (form.stockUrl.startsWith('http')) {
-    return form.stockUrl
-  }
-
-  const baseUrl = imagePath.value.endsWith('/') ? imagePath.value : imagePath.value + '/'
-
-  const stockUrl = form.stockUrl.startsWith('/') ? form.stockUrl.substring(1) : form.stockUrl
-
-  const fullUrl = baseUrl + stockUrl
-  return fullUrl
+  // 所有图片URL现在都是完整的URL，但可能存在域名重复问题
+  return fixMalformedUrl(form.stockUrl)
 })
 
+// 获取完整的图片URL
 const getFullImageUrl = (imageUrl) => {
   if (!imageUrl) {
+    console.log('图片URL为空')
     return ''
   }
 
-  if (imageUrl.startsWith('http')) {
-    return imageUrl
-  }
-
-  const baseUrl = imagePath.value.endsWith('/') ? imagePath.value : imagePath.value + '/'
-
-  const cleanImageUrl = imageUrl.startsWith('/') ? imageUrl.substring(1) : imageUrl
-
-  const fullUrl = baseUrl + cleanImageUrl
-  console.log('拼接图片URL:', {
-    baseUrl: baseUrl,
-    imageUrl: imageUrl,
-    cleanImageUrl: cleanImageUrl,
-    fullUrl: fullUrl
-  })
-
-  return fullUrl
+  // 所有图片URL现在都应该是完整的URL，但可能存在域名重复问题
+  return fixMalformedUrl(imageUrl)
 }
 
+// 处理图片加载错误
 const handleImageError = (e) => {
+  console.log('图片加载失败:', e)
+  console.log('失败的图片src:', e.target?.src || e.detail?.src)
 }
 
 onMounted(() => {
@@ -351,18 +349,11 @@ const handleInboundOrderSubmit = (images) => {
     const imageData = images[0]
 
     if (typeof imageData === 'object') {
-      if (imageData.domain && imageData.filePath) {
-        form.stockUrl = imageData.filePath
-        imagePath.value = imageData.domain
-        if (!imagePath.value.endsWith('/')) {
-          imagePath.value += '/'
-        }
-      } else if (imageData.filePath) {
-        form.stockUrl = imageData.filePath
-      } else if (imageData.fileName) {
-        form.stockUrl = imageData.fileName
+      // 使用完整URL
+      if (imageData.url) {
+        form.stockUrl = imageData.url
       } else {
-        form.stockUrl = imageData.url || imageData.path || JSON.stringify(imageData)
+        form.stockUrl = JSON.stringify(imageData)
       }
     } else {
       form.stockUrl = imageData
@@ -417,7 +408,9 @@ const uploadImage = (filePath, index) => {
       try {
         const response = JSON.parse(uploadRes.data)
         if (response.code === 200) {
-          goodsList.value[index].lossUrl = response.data.fileName
+          // 始终使用完整的url字段
+          let fullUrl = response.data.url
+          goodsList.value[index].lossUrl = fullUrl
           uni.showToast({
             title: '上传成功',
             icon: 'success'

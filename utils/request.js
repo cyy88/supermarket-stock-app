@@ -7,6 +7,7 @@ const request = (options) => {
     // 获取token
     const token = uni.getStorageSync('token')
 
+    // 处理GET请求的params参数
     let fullUrl = BASE_URL + options.url
     if (options.method === 'get' && options.params) {
       const queryString = Object.keys(options.params)
@@ -25,6 +26,7 @@ const request = (options) => {
       params: options.params
     })
 
+    // 如果是统计接口，直接拦截
     if (options.url.includes('/statistics')) {
       console.warn('拦截统计接口调用:', options.url)
       resolve({

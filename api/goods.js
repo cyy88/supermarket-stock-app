@@ -111,8 +111,10 @@ export const uploadImage = (filePath) => {
           console.log('解析后的上传响应:', data);
 
           if (data.code === 200) {
-            console.log('图片上传成功，URL:', data.data.url);
-            resolve(data.data.url)
+            // 始终使用完整的url字段
+            let fullUrl = data.data.url
+            console.log('图片上传成功，完整URL:', fullUrl);
+            resolve(fullUrl)
           } else {
             console.error('图片上传失败:', data.message);
             reject(new Error(data.message || '上传失败'))

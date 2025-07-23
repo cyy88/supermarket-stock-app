@@ -16,11 +16,11 @@
                 :key="index" 
                 class="image-item"
               >
-                <image 
-                  :src="img.domain + img.filePath" 
+                <image
+                  :src="img.url"
                   class="uploaded-image"
                   mode="aspectFill"
-                  @click="previewImage(img.domain + img.filePath)"
+                  @click="previewImage(img.url)"
                 />
                 <view class="delete-btn" @click="removeImage(index)">×</view>
               </view>
@@ -144,10 +144,12 @@ const uploadImage = (filePath) => {
           try {
             const response = JSON.parse(uploadRes.data)
             if (response.code === 200) {
+              // 始终使用完整的url字段
+              let fullUrl = response.data.url
+              
               const fileData = {
-                fileName: response.data.fileName,
-                filePath: response.data.filePath || response.data.fileName,
-                domain: response.data.domain || 'http://msbs-fuint-ts.qingchunnianhua.com:1880/'
+                url: fullUrl,
+                fileName: response.data.fileName
               }
               baseForm.images.push(fileData)
               errorMessage.value = ''
@@ -199,7 +201,7 @@ const removeImage = (index) => {
 
 // 预览图片
 const previewImage = (imageUrl) => {
-  const urls = baseForm.images.map(img => img.domain + img.filePath)
+  const urls = baseForm.images.map(img => img.url)
   uni.previewImage({
     urls: urls,
     current: imageUrl
