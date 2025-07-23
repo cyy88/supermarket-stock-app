@@ -72,6 +72,12 @@
 			"style": {
 				"navigationBarTitleText": "入库记录"
 			}
+		},
+		{
+			"path": "pages/stock/detail",
+			"style": {
+				"navigationBarTitleText": "入库详情"
+			}
 		}
 	],
 	"globalStyle": {

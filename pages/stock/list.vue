@@ -75,11 +75,12 @@
       </view>
       
       <view v-else>
-        <view 
-          v-for="(item, index) in filteredList" 
-          :key="item.id" 
+        <view
+          v-for="(item, index) in filteredList"
+          :key="item.id"
           class="stock-item"
-          @click="viewDetail(item)"
+          @click.stop="viewDetail(item)"
+          @touchstart="handleTouchStart"
         >
           <view class="item-header">
             <view class="item-info">
@@ -187,7 +188,7 @@ const loadStockList = async (isLoadMore = false) => {
     
     if (response.data) {
       const newList = response.data.paginationResponse.content || []
-      
+
       if (isLoadMore) {
         stockList.value = [...stockList.value, ...newList]
         pagination.page++
@@ -195,7 +196,7 @@ const loadStockList = async (isLoadMore = false) => {
         stockList.value = newList
         pagination.page = 1
       }
-      
+
       pagination.total = response.data.paginationResponse.totalElements || 0
       storeOptions.value = response.data.storeList || []
       imagePath.value = response.data.imagePath || ''
@@ -252,26 +253,38 @@ const formatTime = (timeStr) => {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
 }
 
+// 查看详情
 const viewDetail = (item) => {
-  const content = [
-    `记录ID: ${item.id}`,
-    `类型: ${item.type === 'increase' ? '入库' : '出库'}`,
-    `店铺: ${getStoreName(item.storeId)}`,
-    `状态: ${item.reviewStatus || '待审核'}`,
-    `说明: ${item.description || '无'}`,
-    `创建时间: ${formatTime(item.createTime)}`,
-    item.updateTime !== item.createTime ? `更新时间: ${formatTime(item.updateTime)}` : '',
-    item.reviewDesc ? `审核说明: ${item.reviewDesc}` : ''
-  ].filter(Boolean).join('\n')
+  uni.showToast({
+    title: `点击了记录 ${item.id}`,
+    icon: 'none'
+  })
 
-  uni.showModal({
-    title: '入库记录详情',
-    content: content,
-    showCancel: false,
-    confirmText: '知道了'
+  if (!item || !item.id) {
+    uni.showToast({
+      title: '记录ID不存在',
+      icon: 'none'
+    })
+    return
+  }
+
+  uni.navigateTo({
+    url: `/pages/stock/add?mode=edit&id=${item.id}`,
+    success: () => {
+    },
+    fail: (error) => {
+      uni.showToast({
+        title: '页面跳转失败',
+        icon: 'none'
+      })
+    }
   })
 }
 
+const handleTouchStart = () => {
+}
+
+// 跳转到新增入库页面
 const goToAddStock = () => {
   uni.navigateTo({
     url: '/pages/stock/add'
@@ -390,6 +403,13 @@ const goToAddStock = () => {
   padding: 24rpx;
   margin-bottom: 16rpx;
   box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.stock-item:active {
+  background-color: #f8f8f8;
+  transform: scale(0.98);
 }
 
 .item-header {
