@@ -57,24 +57,22 @@
         >
           <view class="goods-header">
             <image
-              :src="imagePath + item.logo"
+              :src="getFullImageUrl(item.logo)"
               class="goods-image"
               mode="aspectFill"
+              @error="handleImageError"
             />
             <view class="goods-info">
               <text class="goods-name">{{ item.name }}</text>
-              <text class="goods-no">{{ item.goodsNo }}</text>
-              <view class="goods-spec">
-                <text v-if="item.specList && item.specList.length > 0">
+              <view class="goods-spec-type">
+                <text v-if="item.specList && item.specList.length > 0" class="spec-text">
                   <text v-for="spec in item.specList" :key="spec.id" class="spec-item">
                     {{ spec.value }}
                   </text>
                 </text>
-                <text v-else class="spec-empty">标准规格</text>
-              </view>
-              <view class="price-type">
-                <text v-if="item.priceType === 'weight'" class="type-tag weight">称重商品</text>
-                <text v-else class="type-tag piece">计件商品</text>
+                <text v-else class="spec-text">标准规格</text>
+                <text v-if="item.priceType === 'weight'" class="type-tag weight">称重</text>
+                <text v-else class="type-tag piece">计件</text>
               </view>
             </view>
             <view class="delete-btn" @click="deleteGoods(item)">
@@ -83,41 +81,47 @@
           </view>
 
           <view class="goods-body">
-            <view class="quantity-section">
-              <text class="section-label">入库数量</text>
-              <view class="quantity-input-wrapper">
-                <input
-                  v-model.number="item.num"
-                  type="digit"
-                  class="quantity-input"
-                  :placeholder="item.priceType === 'weight' ? '0.00' : '1'"
-                />
-                <text class="unit">{{ item.priceType === 'weight' ? 'KG' : '件' }}</text>
+            <view class="quantity-loss-row">
+              <view class="quantity-section">
+                <text class="section-label">入库数量</text>
+                <view class="quantity-input-wrapper">
+                  <input
+                    v-model.number="item.num"
+                    type="digit"
+                    class="quantity-input"
+                    :placeholder="item.priceType === 'weight' ? '0.00' : '1'"
+                  />
+                  <text class="unit">{{ item.priceType === 'weight' ? 'KG' : '件' }}</text>
+                </view>
+              </view>
+
+              <view class="loss-section">
+                <text class="section-label">损耗管理</text>
+                <view class="loss-content">
+                  <view class="loss-upload" @click="uploadLossImage(index)">
+                    <image
+                      v-if="item.lossUrl"
+                      :src="getFullImageUrl(item.lossUrl)"
+                      class="loss-image"
+                      mode="aspectFill"
+                    />
+                    <view v-else class="upload-placeholder">
+                      <text class="upload-icon">📷</text>
+                      <text class="upload-text">损耗证明</text>
+                    </view>
+                  </view>
+                </view>
               </view>
             </view>
 
-            <view class="loss-section">
-              <text class="section-label">损耗管理</text>
-              <view class="loss-content">
-                <view class="loss-upload" @click="uploadLossImage(index)">
-                  <image
-                    v-if="item.lossUrl"
-                    :src="imagePath + item.lossUrl"
-                    class="loss-image"
-                    mode="aspectFill"
-                  />
-                  <view v-else class="upload-placeholder">
-                    <text class="upload-icon">📷</text>
-                    <text class="upload-text">损耗证明</text>
-                  </view>
-                </view>
-                <textarea
-                  v-model="item.suggestion"
-                  placeholder="损耗建议说明..."
-                  class="suggestion-input"
-                  maxlength="100"
-                />
-              </view>
+            <view class="suggestion-row">
+              <textarea
+                v-model="item.suggestion"
+                placeholder="损耗建议说明..."
+                class="suggestion-input"
+                maxlength="50"
+                style="height: 20rpx"
+              />
             </view>
           </view>
         </view>
@@ -199,18 +203,45 @@ const form = reactive({
 
 const fullStockUrl = computed(() => {
   if (!form.stockUrl) return ''
-  
+
   if (form.stockUrl.startsWith('http')) {
     return form.stockUrl
   }
-  
+
   const baseUrl = imagePath.value.endsWith('/') ? imagePath.value : imagePath.value + '/'
-  
+
   const stockUrl = form.stockUrl.startsWith('/') ? form.stockUrl.substring(1) : form.stockUrl
-  
+
   const fullUrl = baseUrl + stockUrl
   return fullUrl
 })
+
+const getFullImageUrl = (imageUrl) => {
+  if (!imageUrl) {
+    return ''
+  }
+
+  if (imageUrl.startsWith('http')) {
+    return imageUrl
+  }
+
+  const baseUrl = imagePath.value.endsWith('/') ? imagePath.value : imagePath.value + '/'
+
+  const cleanImageUrl = imageUrl.startsWith('/') ? imageUrl.substring(1) : imageUrl
+
+  const fullUrl = baseUrl + cleanImageUrl
+  console.log('拼接图片URL:', {
+    baseUrl: baseUrl,
+    imageUrl: imageUrl,
+    cleanImageUrl: cleanImageUrl,
+    fullUrl: fullUrl
+  })
+
+  return fullUrl
+}
+
+const handleImageError = (e) => {
+}
 
 onMounted(() => {
   initData()
@@ -696,37 +727,32 @@ const submitForm = async () => {
   line-height: 1.4;
 }
 
-.goods-no {
-  font-size: 24rpx;
-  color: #666;
-  margin-bottom: 16rpx;
-}
-
-.goods-spec {
-  margin-bottom: 16rpx;
-}
-
-.spec-item {
-  font-size: 22rpx;
-  color: #999;
-  margin-right: 16rpx;
-}
-
-.spec-empty {
-  font-size: 22rpx;
-  color: #ccc;
-}
-
-.price-type {
+.goods-spec-type {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16rpx;
   margin-bottom: 8rpx;
 }
 
+.spec-text {
+  font-size: 24rpx;
+  color: #666;
+}
+
+.spec-item {
+  font-size: 24rpx;
+  color: #666;
+  margin-right: 8rpx;
+}
+
 .type-tag {
-  padding: 8rpx 16rpx;
-  border-radius: 20rpx;
-  font-size: 22rpx;
+  padding: 4rpx 12rpx;
+  border-radius: 16rpx;
+  font-size: 20rpx;
   color: white;
   font-weight: bold;
+  white-space: nowrap;
 }
 
 .type-tag.weight {
@@ -761,7 +787,19 @@ const submitForm = async () => {
 .goods-body {
   display: flex;
   flex-direction: column;
-  gap: 32rpx;
+  gap: 24rpx;
+}
+
+/* 数量和损耗管理在一行 */
+.quantity-loss-row {
+  display: flex;
+  gap: 24rpx;
+  align-items: flex-start;
+}
+
+/* 损耗说明单独一行 */
+.suggestion-row {
+  width: 100%;
 }
 
 .section-label {
@@ -772,9 +810,10 @@ const submitForm = async () => {
 }
 
 .quantity-section {
+  flex: 1;
   background: #f8f9fa;
   border-radius: 16rpx;
-  padding: 24rpx;
+  padding: 20rpx;
 }
 
 .quantity-input-wrapper {
@@ -805,21 +844,22 @@ const submitForm = async () => {
 
 /* 损耗管理区域 */
 .loss-section {
+  flex: 1;
   background: #f8f9fa;
   border-radius: 16rpx;
-  padding: 24rpx;
+  padding: 20rpx;
 }
 
 .loss-content {
   display: flex;
-  gap: 24rpx;
+  justify-content: center;
 }
 
 .loss-upload {
-  width: 120rpx;
-  height: 120rpx;
-  border: 3rpx dashed #d9d9d9;
-  border-radius: 16rpx;
+  width: 80rpx;
+  height: 80rpx;
+  border: 2rpx dashed #d9d9d9;
+  border-radius: 12rpx;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -849,25 +889,26 @@ const submitForm = async () => {
 }
 
 .upload-icon {
-  font-size: 32rpx;
+  font-size: 24rpx;
   color: #999;
-  margin-bottom: 8rpx;
+  margin-bottom: 4rpx;
 }
 
 .upload-text {
-  font-size: 20rpx;
+  font-size: 16rpx;
   color: #999;
 }
 
 .suggestion-input {
-  flex: 1;
-  min-height: 120rpx;
+  width: 100%;
+  min-height: 80rpx;
   padding: 16rpx;
   border: 2rpx solid #e9ecef;
   border-radius: 12rpx;
   font-size: 24rpx;
   background: white;
   line-height: 1.5;
+  box-sizing: border-box;
 }
 
 /* 备注区域 */
