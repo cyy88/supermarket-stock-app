@@ -28,10 +28,15 @@
             class="goods-item"
             @click="toggleSelect(index, item)"
           >
-            <view class="checkbox-wrapper">
-              <checkbox 
-                :checked="item.checked" 
+            <view class="checkbox-wrapper" @click.stop="toggleSelect(index, item)">
+              <view class="custom-checkbox" :class="{ 'checked': item.checked }">
+                <text v-if="item.checked" class="check-icon">✓</text>
+              </view>
+              <checkbox
+                :checked="item.checked"
                 :value="item.id + '_' + item.skuId"
+                @change="handleCheckboxChange(index, item, $event)"
+                style="display: none;"
               />
             </view>
             <image 
@@ -140,19 +145,17 @@ const getGoodsList = async () => {
         checked: false
       }))
       
+      selectData.value = []
+      
       if (props.dataList && props.dataList.length > 0) {
         goodsList.value.forEach((item, key) => {
-          props.dataList.forEach((row) => {
-            if (item.id === row.id && item.skuId === row.skuId) {
-              goodsList.value[key].checked = true
-              const isExist = selectData.value.some(selected =>
-                selected.id === item.id && selected.skuId === item.skuId
-              )
-              if (!isExist) {
-                selectData.value.push(JSON.parse(JSON.stringify(item)))
-              }
-            }
-          })
+          const matchedItem = props.dataList.find(row => 
+            row.id === item.id && (row.skuId === item.skuId || (!row.skuId && !item.skuId))
+          )
+          if (matchedItem) {
+            goodsList.value[key].checked = true
+            selectData.value.push(JSON.parse(JSON.stringify(item)))
+          }
         })
       }
       
@@ -170,22 +173,59 @@ const getGoodsList = async () => {
   }
 }
 
-const toggleSelect = (index, item) => {
-  goodsList.value[index].checked = !goodsList.value[index].checked
-  const checked = goodsList.value[index].checked
-  
+const handleCheckboxChange = (index, item, event) => {
+
+  let checked = false
+
+  // 兼容不同平台的事件对象结构
+  if (event && event.detail) {
+    if (Array.isArray(event.detail.value)) {
+      checked = event.detail.value.length > 0
+    } else if (typeof event.detail.value === 'boolean') {
+      checked = event.detail.value
+    } else if (event.detail.checked !== undefined) {
+      checked = event.detail.checked
+    }
+  } else if (event && event.target) {
+    checked = event.target.checked
+  } else if (event && typeof event === 'boolean') {
+    checked = event
+  }
+
+  goodsList.value[index].checked = checked
+
   if (checked) {
     const isExist = selectData.value.some(selected =>
-      selected.id === item.id && selected.skuId === item.skuId
+      selected.id === item.id && (selected.skuId === item.skuId || (!selected.skuId && !item.skuId))
     )
+
     if (!isExist) {
-      const newItem = JSON.parse(JSON.stringify(item))
+      const newItem = JSON.parse(JSON.stringify(goodsList.value[index]))
       selectData.value.push(newItem)
     }
   } else {
-    // 移除选择
-    selectData.value = selectData.value.filter(selected => 
-      !(selected.id === item.id && selected.skuId === item.skuId)
+    selectData.value = selectData.value.filter(selected =>
+      !(selected.id === item.id && (selected.skuId === item.skuId || (!selected.skuId && !item.skuId)))
+    )
+  }
+}
+
+const toggleSelect = (index, item) => {
+  goodsList.value[index].checked = !goodsList.value[index].checked
+  const checked = goodsList.value[index].checked
+
+  if (checked) {
+    const isExist = selectData.value.some(selected =>
+      selected.id === item.id && (selected.skuId === item.skuId || (!selected.skuId && !item.skuId))
+    )
+    if (!isExist) {
+      const newItem = JSON.parse(JSON.stringify(goodsList.value[index]))
+      selectData.value.push(newItem)
+    }
+  } else {
+    // 从选中列表中移除
+    selectData.value = selectData.value.filter(selected =>
+      !(selected.id === item.id && (selected.skuId === item.skuId || (!selected.skuId && !item.skuId)))
     )
   }
 }
@@ -331,6 +371,30 @@ const doSave = () => {
 
 .checkbox-wrapper {
   margin-right: 12px;
+  cursor: pointer;
+}
+
+.custom-checkbox {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #ddd;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: white;
+  transition: all 0.3s ease;
+}
+
+.custom-checkbox.checked {
+  background-color: #007aff;
+  border-color: #007aff;
+}
+
+.check-icon {
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
 }
 
 .goods-image {

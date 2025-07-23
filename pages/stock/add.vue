@@ -263,7 +263,6 @@ const closeSelectGoods = () => {
 
 // 处理商品选择
 const doSelectGoods = (selectData) => {
-
   if (!selectData || selectData.length === 0) {
     uni.showToast({
       title: '请至少选择一个商品',
@@ -285,7 +284,7 @@ const doSelectGoods = (selectData) => {
       
       return goodsItem
     })
-    
+
     // 使用新数组更新goodsList，确保触发响应式更新
     goodsList.value = processedGoods
 
