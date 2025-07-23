@@ -269,7 +269,7 @@ const viewDetail = (item) => {
   }
 
   uni.navigateTo({
-    url: `/pages/stock/add?mode=edit&id=${item.id}`,
+    url: `/pages/stock/detail?id=${item.id}`,
     success: () => {
     },
     fail: (error) => {

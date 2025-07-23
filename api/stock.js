@@ -41,9 +41,9 @@ export function audit(data) {
 }
 
 // 获取库存管理记录详情
-export function getStockInfo(cateId) {
+export function getStockInfo(stockId) {
   return request({
-    url: '/backendApi/stock/info/' + cateId,
+    url: '/backendApi/stock/info/' + stockId,
     method: 'get'
   })
 }

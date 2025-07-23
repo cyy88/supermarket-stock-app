@@ -178,7 +178,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
 import { getStockInfo, saveStock } from '@/api/stock'
 
 const loading = ref(true)
@@ -187,17 +188,16 @@ const stockInfo = ref({})
 const goodsList = ref([])
 const storeOptions = ref([])
 const imagePath = ref('')
-
-const pages = getCurrentPages()
-const currentPage = pages[pages.length - 1]
-const stockId = currentPage.options.id
+const stockId = ref(null)
 
 const canEdit = computed(() => {
   return stockInfo.value.reviewStatus === '未通过'
 })
 
-onMounted(() => {
-  if (stockId) {
+onLoad((options) => {
+  stockId.value = options.id
+
+  if (stockId.value) {
     loadStockDetail()
   } else {
     uni.showToast({
@@ -213,29 +213,39 @@ onMounted(() => {
 const loadStockDetail = async () => {
   try {
     loading.value = true
-    const response = await getStockInfo(stockId)
-    
-    if (response.data) {
+    const response = await getStockInfo(stockId.value)
+
+    if (response && response.data) {
       stockInfo.value = response.data.stockInfo || {}
-      
+
       // 转换商品数量：后端g转前端KG
-      goodsList.value = (response.data.goodsList || []).map(item => {
-        if (item.priceType === 'weight') {
+      const rawGoodsList = response.data.goodsList || []
+      goodsList.value = rawGoodsList.map(item => {
+        if (item.priceType === 'weight' && typeof item.num === 'number') {
           return {
             ...item,
             num: parseFloat((item.num / 1000).toFixed(2))
           }
         }
-        return item
+        return {
+          ...item,
+          num: item.num || 0
+        }
       })
-      
+
       storeOptions.value = response.data.storeList || []
       imagePath.value = response.data.imagePath || ''
+    } else {
+      uni.showToast({
+        title: 'API响应格式错误',
+        icon: 'none'
+      })
     }
   } catch (error) {
     uni.showToast({
-      title: '获取详情失败',
-      icon: 'none'
+      title: `获取详情失败: ${error.message || '未知错误'}`,
+      icon: 'none',
+      duration: 3000
     })
   } finally {
     loading.value = false
