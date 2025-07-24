@@ -11,8 +11,13 @@
       <view class="status-header">
         <view class="status-info">
           <text class="record-id">入库记录 #{{ stockInfo.id }}</text>
-          <view class="status-badge" :class="getStatusClass(stockInfo.reviewStatus)">
-            {{ stockInfo.reviewStatus || '待审核' }}
+          <view class="status-actions">
+            <view class="status-badge" :class="getStatusClass(stockInfo.reviewStatus)">
+              {{ stockInfo.reviewStatus || '待审核' }}
+            </view>
+            <button v-if="canEdit" class="save-btn-header" @click="saveChanges" :disabled="saving">
+              {{ saving ? '保存中...' : '保存修改' }}
+            </button>
           </view>
         </view>
         
@@ -166,13 +171,7 @@
         </view>
       </view>
 
-      <!-- 操作按钮 -->
-      <view class="action-buttons">
-        <button v-if="canEdit" class="save-btn" @click="saveChanges" :disabled="saving">
-          {{ saving ? '保存中...' : '保存修改' }}
-        </button>
-        <button class="back-btn" @click="goBack">返回</button>
-      </view>
+
     </view>
   </view>
 </template>
@@ -181,17 +180,15 @@
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { getStockInfo, saveStock } from '@/api/stock'
+import userStore from '@/stores/user'
 
-// 修复可能包含重复域名的URL
 const fixMalformedUrl = (url) => {
   if (!url || typeof url !== 'string') return url
   
-  // 查找URL中是否包含重复的域名
   const domainPattern = /(https?:\/\/[^\/]+)(https?:\/\/[^\/]+)/
   const match = url.match(domainPattern)
   
   if (match) {
-    // 如果找到重复的域名，只保留第二个域名
     return url.replace(match[1], '')
   }
   
@@ -261,21 +258,13 @@ const loadStockDetail = async () => {
       storeOptions.value = response.data.storeList || []
       imagePath.value = response.data.imagePath || ''
 
-      console.log('数据加载完成:', {
-        stockInfo: stockInfo.value,
-        goodsList: goodsList.value,
-        imagePath: imagePath.value,
-        rawResponse: response.data
-      })
     } else {
-      console.error('API响应格式错误:', response)
       uni.showToast({
         title: 'API响应格式错误',
         icon: 'none'
       })
     }
   } catch (error) {
-    console.error('获取入库详情失败:', error)
     console.error('错误详情:', {
       message: error.message,
       stack: error.stack,
@@ -294,12 +283,17 @@ const loadStockDetail = async () => {
 const getFullImageUrl = (imageUrl) => {
   if (!imageUrl) return ''
 
-  // 所有图片URL都应该是完整URL，但可能存在域名重复问题
   return fixMalformedUrl(imageUrl)
 }
 
 const getStoreName = (storeId) => {
   if (!storeId || storeId === 0) return '公共所有'
+
+  const userInfo = userStore.userInfo
+  if (userInfo && userInfo.storeId === storeId && userInfo.storeName) {
+    return userInfo.storeName
+  }
+
   const store = storeOptions.value.find(s => s.id === storeId)
   return store ? store.name : '未知店铺'
 }
@@ -464,16 +458,14 @@ const saveChanges = async () => {
   }
 }
 
-const goBack = () => {
-  uni.navigateBack()
-}
+
 </script>
 
 <style scoped>
 .stock-detail-container {
   min-height: 100vh;
   background-color: #f5f5f5;
-  padding-bottom: 120rpx;
+  padding-bottom: 40rpx;
 }
 
 .loading {
@@ -498,6 +490,12 @@ const goBack = () => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16rpx;
+}
+
+.status-actions {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
 }
 
 .record-id {
@@ -531,6 +529,26 @@ const goBack = () => {
 .status-default {
   background: #f0f0f0;
   color: #666;
+}
+
+.save-btn-header {
+  padding: 8rpx 16rpx;
+  border: none;
+  border-radius: 16rpx;
+  font-size: 24rpx;
+  font-weight: bold;
+  background: linear-gradient(135deg, #52c41a 0%, #389e0d 100%);
+  color: white;
+  min-width: 120rpx;
+  height: 48rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.save-btn-header:disabled {
+  background: #d9d9d9;
+  color: #999;
 }
 
 .reject-notice {
@@ -583,6 +601,7 @@ const goBack = () => {
   display: flex;
   margin-bottom: 16rpx;
   align-items: flex-start;
+  min-height: 48rpx;
 }
 
 .label {
@@ -600,11 +619,13 @@ const goBack = () => {
 .description-input {
   flex: 1;
   min-height: 80rpx;
+  max-height: 120rpx;
   padding: 12rpx;
   border: 2rpx solid #e0e0e0;
   border-radius: 8rpx;
   font-size: 26rpx;
-  background: #fafafa;
+  background: white;
+  line-height: 1.4;
 }
 
 .image-container {
@@ -613,7 +634,7 @@ const goBack = () => {
 
 .stock-image {
   max-width: 100%;
-  max-height: 400rpx;
+  max-height: 250rpx;
   border-radius: 12rpx;
 }
 
@@ -819,12 +840,14 @@ const goBack = () => {
 .suggestion-input {
   width: 100%;
   min-height: 60rpx;
+  max-height: 100rpx;
   padding: 12rpx;
   border: 2rpx solid #e0e0e0;
   border-radius: 8rpx;
   font-size: 24rpx;
   background: white;
   box-sizing: border-box;
+  line-height: 1.4;
 }
 
 .suggestion-display {
@@ -833,39 +856,5 @@ const goBack = () => {
   line-height: 1.5;
 }
 
-.action-buttons {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: white;
-  padding: 16rpx;
-  display: flex;
-  gap: 16rpx;
-  box-shadow: 0 -2rpx 8rpx rgba(0, 0, 0, 0.1);
-}
 
-.save-btn, .back-btn {
-  flex: 1;
-  padding: 16rpx;
-  border: none;
-  border-radius: 8rpx;
-  font-size: 28rpx;
-  font-weight: bold;
-}
-
-.save-btn {
-  background: linear-gradient(135deg, #52c41a 0%, #389e0d 100%);
-  color: white;
-}
-
-.save-btn:disabled {
-  background: #d9d9d9;
-  color: #999;
-}
-
-.back-btn {
-  background: #f0f0f0;
-  color: #666;
-}
 </style>

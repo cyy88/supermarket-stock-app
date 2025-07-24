@@ -255,11 +255,6 @@ const formatTime = (timeStr) => {
 
 // 查看详情
 const viewDetail = (item) => {
-  uni.showToast({
-    title: `点击了记录 ${item.id}`,
-    icon: 'none'
-  })
-
   if (!item || !item.id) {
     uni.showToast({
       title: '记录ID不存在',
@@ -271,10 +266,8 @@ const viewDetail = (item) => {
   uni.navigateTo({
     url: `/pages/stock/detail?id=${item.id}`,
     success: () => {
-      console.log('跳转成功')
     },
     fail: (error) => {
-      console.error('跳转失败:', error)
       uni.showToast({
         title: '页面跳转失败',
         icon: 'none'
