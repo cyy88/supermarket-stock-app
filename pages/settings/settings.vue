@@ -14,55 +14,10 @@
       </view>
     </view>
 
-    <!-- 数据统计卡片 -->
-    <view class="card stats-card">
-      <view class="card-title">📊 数据统计</view>
-      <view class="stats-grid">
-        <view class="stat-item">
-          <text class="stat-number">{{ statistics.totalCount }}</text>
-          <text class="stat-label">总商品数</text>
-        </view>
-        <view class="stat-item">
-          <text class="stat-number">{{ statistics.todayCount }}</text>
-          <text class="stat-label">今日添加</text>
-        </view>
-        <view class="stat-item">
-          <text class="stat-number">{{ statistics.unsyncedCount }}</text>
-          <text class="stat-label">待同步</text>
-        </view>
-        <view class="stat-item">
-          <text class="stat-number">{{ syncedCount }}</text>
-          <text class="stat-label">已同步</text>
-        </view>
-      </view>
-    </view>
-
     <!-- 功能设置 -->
     <view class="card">
       <view class="card-title">⚙️ 功能设置</view>
       <view class="setting-list">
-        <view class="setting-item" @click="manualSync">
-          <view class="setting-info">
-            <text class="setting-icon">🔄</text>
-            <text class="setting-name">数据同步</text>
-          </view>
-          <view class="setting-action">
-            <text class="setting-desc">同步本地数据到服务器</text>
-            <text class="arrow">→</text>
-          </view>
-        </view>
-
-        <view class="setting-item" @click="clearCache">
-          <view class="setting-info">
-            <text class="setting-icon">🗑️</text>
-            <text class="setting-name">清除缓存</text>
-          </view>
-          <view class="setting-action">
-            <text class="setting-desc">清除本地缓存数据</text>
-            <text class="arrow">→</text>
-          </view>
-        </view>
-
         <view class="setting-item" @click="goToStockAdd">
           <view class="setting-info">
             <text class="setting-icon">📦</text>
@@ -74,13 +29,13 @@
           </view>
         </view>
 
-        <view class="setting-item" @click="exportData">
+        <view class="setting-item" @click="goToStockList">
           <view class="setting-info">
-            <text class="setting-icon">📤</text>
-            <text class="setting-name">导出数据</text>
+            <text class="setting-icon">📋</text>
+            <text class="setting-name">入库记录</text>
           </view>
           <view class="setting-action">
-            <text class="setting-desc">导出商品数据</text>
+            <text class="setting-desc">查看入库记录</text>
             <text class="arrow">→</text>
           </view>
         </view>
@@ -116,25 +71,14 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import userStore from '@/stores/user'
-import goodsStore from '@/stores/goods'
 
 const userInfo = ref(null)
 const serverUrl = ref('http://msbs-fuint-ts.qingchunnianhua.com:1880')
-const statistics = ref({
-  todayCount: 0,
-  totalCount: 0,
-  unsyncedCount: 0
-})
-
-const syncedCount = computed(() => {
-  return 0
-})
 
 onMounted(async () => {
   userInfo.value = userStore.userInfo
-  goodsStore.init()
 
   if (!userInfo.value) {
     try {
@@ -144,18 +88,7 @@ onMounted(async () => {
       console.error('获取用户信息失败:', error)
     }
   }
-
-  await loadStatistics()
 })
-
-const loadStatistics = async () => {
-  // 暂时使用默认值，避免调用不存在的统计接口
-  statistics.value = {
-    todayCount: 0,
-    totalCount: 0,
-    unsyncedCount: 0
-  }
-}
 
 const getAvatarText = () => {
   const name = userInfo.value?.realName || userInfo.value?.accountName || '用户'
@@ -168,74 +101,13 @@ const goToStockAdd = () => {
   })
 }
 
-const manualSync = async () => {
-  uni.showToast({
-    title: '没有待同步数据',
-    icon: 'none'
+const goToStockList = () => {
+  uni.navigateTo({
+    url: '/pages/stock/list'
   })
 }
 
-const clearCache = () => {
-  uni.showModal({
-    title: '清除缓存',
-    content: '确定要清除分类缓存数据吗？',
-    success: (res) => {
-      if (res.confirm) {
-        uni.removeStorageSync('categories')
-        uni.removeStorageSync('recentScans')
 
-        goodsStore.init()
-
-        uni.showToast({
-          title: '缓存已清除',
-          icon: 'success'
-        })
-      }
-    }
-  })
-}
-
-// 导出数据
-const exportData = () => {
-  uni.showToast({
-    title: '数据导出功能已移除',
-    icon: 'none'
-  })
-  return
-  
-  uni.showModal({
-    title: '导出数据',
-    content: `共 ${goods.length} 条商品数据，是否复制到剪贴板？`,
-    success: (res) => {
-      if (res.confirm) {
-        uni.setClipboardData({
-          data: csvData,
-          success: () => {
-            uni.showToast({
-              title: '已复制到剪贴板',
-              icon: 'success'
-            })
-          }
-        })
-      }
-    }
-  })
-}
-
-const generateCSV = (goods) => {
-  const headers = ['商品名称', '条码', '分类', '价格', '库存', '状态', '创建时间']
-  const rows = goods.map(item => [
-    item.name,
-    item.goodsNo,
-    item.cateName || '未分类',
-    item.price,
-    item.stock,
-    item.syncStatus === 1 ? '已同步' : '待同步',
-    new Date(item.createTime).toLocaleString()
-  ])
-  
-  return [headers, ...rows].map(row => row.join(',')).join('\n')
-}
 
 const handleLogout = () => {
   uni.showModal({
@@ -323,33 +195,7 @@ const handleLogout = () => {
   }
 }
 
-.stats-card {
-  .stats-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 30rpx;
-  }
 
-  .stat-item {
-    text-align: center;
-    padding: 20rpx;
-    background: #f8f9fa;
-    border-radius: 15rpx;
-
-    .stat-number {
-      display: block;
-      font-size: 48rpx;
-      font-weight: bold;
-      color: #3c9cff;
-      margin-bottom: 10rpx;
-    }
-
-    .stat-label {
-      font-size: 24rpx;
-      color: #909399;
-    }
-  }
-}
 
 .setting-list {
   display: flex;
