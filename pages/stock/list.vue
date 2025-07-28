@@ -47,13 +47,7 @@
         </view>
       </view>
       
-      <!-- 新增入库按钮 -->
-      <view class="add-button-section">
-        <button class="add-btn" @click="goToAddStock">
-          <text class="add-icon">+</text>
-          <text>新增入库</text>
-        </button>
-      </view>
+
     </view>
 
     <!-- 入库记录列表 -->
@@ -125,6 +119,10 @@
     <!-- 分页加载 -->
     <view v-if="hasMore && !loading" class="load-more" @click="loadMore">
       <text>加载更多</text>
+    </view>
+
+    <view class="fab" @click="goToAddStock">
+      <text class="fab-icon">+</text>
     </view>
   </view>
 </template>
@@ -291,12 +289,15 @@ const goToAddStock = () => {
 .stock-list-container {
   min-height: 100vh;
   background-color: #f5f5f5;
+  padding-bottom: 120rpx;
 }
 
 .header-actions {
   background: white;
-  padding: 16rpx;
-  margin-bottom: 16rpx;
+  padding: 20rpx;
+  margin: 0 20rpx 20rpx 20rpx;
+  border-radius: 15rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
 }
 
 .search-section {
@@ -348,32 +349,12 @@ const goToAddStock = () => {
   color: white;
 }
 
-.add-button-section {
-  display: flex;
-  justify-content: center;
-}
 
-.add-btn {
-  display: flex;
-  align-items: center;
-  gap: 8rpx;
-  padding: 16rpx 32rpx;
-  background: linear-gradient(135deg, #52c41a 0%, #389e0d 100%);
-  color: white;
-  border: none;
-  border-radius: 24rpx;
-  font-size: 28rpx;
-  font-weight: bold;
-}
-
-.add-icon {
-  font-size: 32rpx;
-  font-weight: bold;
-}
 
 .stock-list {
-  padding: 0 16rpx;
-  height: calc(100vh - 300rpx);
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
 }
 
 .loading, .empty {
@@ -394,10 +375,10 @@ const goToAddStock = () => {
 
 .stock-item {
   background: white;
-  border-radius: 16rpx;
-  padding: 24rpx;
-  margin-bottom: 16rpx;
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
+  border-radius: 20rpx;
+  padding: 30rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
   cursor: pointer;
   transition: all 0.3s ease;
 }
@@ -486,5 +467,30 @@ const goToAddStock = () => {
   padding: 32rpx;
   color: #007aff;
   font-size: 28rpx;
+}
+
+.fab {
+  position: fixed;
+  right: 40rpx;
+  bottom: 40rpx;
+  width: 100rpx;
+  height: 100rpx;
+  background: linear-gradient(135deg, #52c41a 0%, #389e0d 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8rpx 20rpx rgba(82, 196, 26, 0.3);
+  z-index: 100;
+}
+
+.fab-icon {
+  font-size: 48rpx;
+  color: #fff;
+  font-weight: bold;
+}
+
+.fab:active {
+  transform: scale(0.9);
 }
 </style>
