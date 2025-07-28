@@ -261,13 +261,10 @@ const getGoodsImages = (item) => {
 
   const images = []
 
-  // 添加logo
   if (item.logo) {
-    // 修复可能存在的重复域名问题
     images.push(fixMalformedUrl(item.logo))
   }
 
-  // 处理images字段
   if (item.images) {
     if (typeof item.images === 'string') {
       try {
@@ -275,22 +272,18 @@ const getGoodsImages = (item) => {
         if (Array.isArray(parsedImages)) {
           parsedImages.forEach(img => {
             if (img && !images.includes(img)) {
-              // 修复可能存在的重复域名问题
               images.push(fixMalformedUrl(img))
             }
           })
         }
       } catch (e) {
-        // 如果不是JSON，当作单个图片URL处理
         if (!images.includes(item.images)) {
-          // 修复可能存在的重复域名问题
           images.push(fixMalformedUrl(item.images))
         }
       }
     } else if (Array.isArray(item.images)) {
       item.images.forEach(img => {
         if (img && !images.includes(img)) {
-          // 修复可能存在的重复域名问题
           images.push(fixMalformedUrl(img))
         }
       })

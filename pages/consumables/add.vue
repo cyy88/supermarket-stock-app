@@ -710,21 +710,16 @@ const chooseImageForAI = () => {
 
 const uploadImageForAI = async (filePath) => {
   try {
-    console.log('开始上传图片用于AI识别:', filePath);
-
     uni.showLoading({
       title: '上传图片中...'
     })
 
     const imageUrl = await uploadImage(filePath)
-    console.log('图片上传成功，URL:', imageUrl);
 
     aiImageUrl.value = imageUrl
 
     uni.hideLoading()
 
-    // 开始AI识别
-    console.log('开始调用AI识别...');
     startAIRecognition(imageUrl)
   } catch (error) {
     console.error('图片上传失败:', error);
@@ -743,17 +738,12 @@ const startAIRecognition = async (imageUrl) => {
     aiRecognizing.value = true
     aiProgress.value = 0
 
-    // 启动进度条动画
     startProgressAnimation()
 
-    console.log('开始调用 recognizeProductImage...');
 
-    // 调用AI识别
     const result = await recognizeProductImage(imageUrl)
 
-    console.log('AI识别完成，结果:', result);
 
-    // 停止进度条动画
     stopProgressAnimation()
 
     aiRecognizing.value = false

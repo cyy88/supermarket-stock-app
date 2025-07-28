@@ -277,7 +277,6 @@ const viewDetail = (item) => {
 const handleTouchStart = () => {
 }
 
-// 跳转到新增入库页面
 const goToAddStock = () => {
   uni.navigateTo({
     url: '/pages/stock/add'

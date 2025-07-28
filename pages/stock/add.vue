@@ -181,16 +181,13 @@ import { saveStock } from '@/api/stock'
 import SelectGoodsDialog from '@/components/SelectGoodsDialog.vue'
 import AddInboundOrderDialog from '@/components/AddInboundOrderDialog.vue'
 
-// 修复可能包含重复域名的URL
 const fixMalformedUrl = (url) => {
   if (!url || typeof url !== 'string') return url
   
-  // 查找URL中是否包含重复的域名
   const domainPattern = /(https?:\/\/[^\/]+)(https?:\/\/[^\/]+)/
   const match = url.match(domainPattern)
   
   if (match) {
-    // 如果找到重复的域名，只保留第二个域名
     return url.replace(match[1], '')
   }
   
@@ -205,7 +202,6 @@ const goodsList = ref([])
 const showSelectGoodsDialog = ref(false)
 const showAddInboundOrderDialog = ref(false)
 
-// 选择商品对话框组件
 const selectGoodsDialogRef = ref(null)
 const addInboundOrderDialogRef = ref(null)
 
@@ -220,18 +216,15 @@ const form = reactive({
 
 const fullStockUrl = computed(() => {
   if (!form.stockUrl) return ''
-  // 所有图片URL现在都是完整的URL，但可能存在域名重复问题
   return fixMalformedUrl(form.stockUrl)
 })
 
-// 获取完整的图片URL
 const getFullImageUrl = (imageUrl) => {
   if (!imageUrl) {
     console.log('图片URL为空')
     return ''
   }
 
-  // 所有图片URL现在都应该是完整的URL，但可能存在域名重复问题
   return fixMalformedUrl(imageUrl)
 }
 
@@ -246,7 +239,6 @@ onMounted(() => {
 })
 
 const initData = () => {
-  // 获取用户信息并设置默认店铺
   const userInfo = userStore.userInfo
   if (userInfo && userInfo.storeId) {
     form.storeId = userInfo.storeId
@@ -268,14 +260,12 @@ const initData = () => {
   }
 }
 
-// 店铺选择
 const onStoreChange = (event) => {
   const index = event.detail.value
   selectedStoreIndex.value = index
   form.storeId = storeOptions.value[index].id
 }
 
-// 获取店铺名称
 const getStoreName = (storeId) => {
   const store = storeOptions.value.find(item => item.id === storeId)
   return store ? store.name : '未知店铺'
@@ -285,12 +275,10 @@ const selectGoods = () => {
   showSelectGoodsDialog.value = true
 }
 
-// 关闭选择商品对话框
 const closeSelectGoods = () => {
   showSelectGoodsDialog.value = false
 }
 
-// 处理商品选择
 const doSelectGoods = (selectData) => {
   if (!selectData || selectData.length === 0) {
     uni.showToast({
@@ -301,12 +289,9 @@ const doSelectGoods = (selectData) => {
   }
   
   try {
-    // 确保选中的商品数据正确处理
     const processedGoods = selectData.map(item => {
-      // 深拷贝对象，避免引用问题
       const goodsItem = JSON.parse(JSON.stringify(item))
       
-      // 设置默认值
       goodsItem.num = goodsItem.priceType === 'weight' ? 0.00 : 1
       goodsItem.lossUrl = goodsItem.lossUrl || null
       goodsItem.suggestion = goodsItem.suggestion || ''
@@ -314,7 +299,6 @@ const doSelectGoods = (selectData) => {
       return goodsItem
     })
 
-    // 使用新数组更新goodsList，确保触发响应式更新
     goodsList.value = processedGoods
 
     nextTick(() => {

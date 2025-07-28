@@ -179,15 +179,12 @@ const validateForm = () => {
   return true
 }
 
-// 登录处理
 const handleLogin = async () => {
   try {
-    // 表单验证
     if (!validateForm()) return
 
     loading.value = true
 
-    // 调用登录
     await userStore.login({
       username: form.username,
       password: form.password,
@@ -195,7 +192,6 @@ const handleLogin = async () => {
       uuid: form.uuid
     })
 
-    // 保存登录信息
     saveCredentials()
 
     uni.showToast({
@@ -203,7 +199,6 @@ const handleLogin = async () => {
       icon: 'success'
     })
 
-    // 跳转到首页
     setTimeout(() => {
       uni.reLaunch({
         url: '/pages/index/index'
@@ -211,9 +206,7 @@ const handleLogin = async () => {
     }, 1500)
 
   } catch (error) {
-    console.error('登录失败:', error)
 
-    // 登录失败后刷新验证码
     refreshCaptcha()
 
     uni.showToast({

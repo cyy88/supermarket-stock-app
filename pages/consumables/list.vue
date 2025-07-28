@@ -238,27 +238,20 @@ const clearSearch = () => {
 const getConsumablesImage = (item) => {
   // 优先使用logo
   if (item.logo) {
-    // 修复可能存在的重复域名问题
     return fixMalformedUrl(item.logo)
   }
 
-  // 如果没有logo，尝试使用images数组的第一张图片
   if (item.images) {
-    // 图片可能是JSON字符串
     if (typeof item.images === 'string') {
       try {
         const parsedImages = JSON.parse(item.images)
         if (Array.isArray(parsedImages) && parsedImages.length > 0) {
-          // 修复可能存在的重复域名问题
           return fixMalformedUrl(parsedImages[0])
         }
       } catch (e) {
-        // 如果解析失败，则可能是单个URL字符串
-        // 修复可能存在的重复域名问题
         return fixMalformedUrl(item.images)
       }
     } else if (Array.isArray(item.images) && item.images.length > 0) {
-      // 修复可能存在的重复域名问题
       return fixMalformedUrl(item.images[0])
     }
   }

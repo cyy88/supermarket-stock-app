@@ -195,7 +195,6 @@ const fixMalformedUrl = (url) => {
   return url
 }
 
-// 响应式数据
 const loading = ref(true)
 const saving = ref(false)
 const stockInfo = ref({})
@@ -204,21 +203,16 @@ const storeOptions = ref([])
 const imagePath = ref('')
 const stockId = ref(null)
 
-// 计算属性
 const canEdit = computed(() => {
   return stockInfo.value.reviewStatus === '未通过'
 })
 
-// 页面加载生命周期
 onLoad((options) => {
-  console.log('页面加载，接收参数:', options)
   stockId.value = options.id
 
   if (stockId.value) {
-    console.log('开始加载入库详情, ID:', stockId.value)
     loadStockDetail()
   } else {
-    console.error('未获取到入库记录ID')
     uni.showToast({
       title: '参数错误',
       icon: 'none'
@@ -232,15 +226,12 @@ onLoad((options) => {
 const loadStockDetail = async () => {
   try {
     loading.value = true
-    console.log('调用API获取入库详情, ID:', stockId.value)
     const response = await getStockInfo(stockId.value)
 
-    console.log('API响应数据:', response)
-    
+
     if (response && response.data) {
       stockInfo.value = response.data.stockInfo || {}
 
-      // 转换商品数量：后端g转前端KG
       const rawGoodsList = response.data.goodsList || []
       goodsList.value = rawGoodsList.map(item => {
         if (item.priceType === 'weight' && typeof item.num === 'number') {
@@ -420,7 +411,6 @@ const saveChanges = async () => {
       return
     }
     
-    // 转换商品数量：前端KG转后端g
     const convertedGoodsList = goodsList.value.map(item => {
       if (item.priceType === 'weight') {
         return {

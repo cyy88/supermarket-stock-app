@@ -461,7 +461,6 @@ const currentStep = ref(1)
 const selectedCategoryIndex = ref(0)
 const selectedTypeIndex = ref(0)
 
-// AI识别相关状态
 const showAIModal = ref(false)
 const aiRecognizing = ref(false)
 const aiResult = ref(null)
@@ -470,7 +469,6 @@ const aiImageUrl = ref('')
 const aiProgressTimer = ref(null)
 
 const form = reactive({
-  // 基础信息
   type: 'goods',
   typeName: '实物商品',
   priceType: 'piece',
@@ -487,13 +485,11 @@ const form = reactive({
   sort: 0,
   status: 'A',
 
-  // 扩展信息
   canUsePoint: 'Y',
   isMemberDiscount: 'Y',
   isSingleSpec: 'Y',
   serviceTime: 0,
 
-  // 商品描述
   description: ''
 })
 
@@ -597,7 +593,6 @@ const onTypeChange = (e) => {
 // 设置计价方式
 const setPriceType = (type) => {
   form.priceType = type
-  // 如果切换计价方式，清空条码让用户重新生成
   if (form.goodsNo) {
     form.goodsNo = ''
   }

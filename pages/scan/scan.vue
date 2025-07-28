@@ -91,19 +91,16 @@ const modalForm = reactive({
   barcode: ''
 })
 
-// 页面加载
 onMounted(() => {
   loadRecentScans()
 })
 
-// 开始扫码
 const startScan = () => {
   uni.scanCode({
     // 只扫描条形码和二维码
     scanType: ['barCode', 'qrCode'],
     // 是否只能从相机扫码，不允许从相册选择图片
     onlyFromCamera: true,
-    // 扫码提示文字
     prompt: '将条码对准扫描框',
     // 是否显示相册按钮
     albumButton: false,
@@ -126,7 +123,6 @@ const handleScanResult = (barcode) => {
   goToAddGoods(barcode)
 }
 
-// 保存扫码记录
 const saveRecentScan = (barcode) => {
   const scanRecord = {
     barcode,

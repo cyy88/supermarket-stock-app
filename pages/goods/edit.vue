@@ -483,7 +483,6 @@ const aiImageUrl = ref('')
 const aiProgressTimer = ref(null)
 
 const form = reactive({
-  // 基础信息
   type: 'goods',
   typeName: '实物商品',
   priceType: 'piece',
@@ -500,13 +499,11 @@ const form = reactive({
   sort: 0,
   status: 'A',
 
-  // 扩展信息
   canUsePoint: 'Y',
   isMemberDiscount: 'Y',
   isSingleSpec: 'Y',
   serviceTime: 0,
 
-  // 商品描述
   description: ''
 })
 
@@ -556,7 +553,6 @@ const loadGoodsDetail = async () => {
 }
 
 const fillForm = (goodsData) => {
-  // 基础信息
   form.type = goodsData.type || 'goods'
   form.typeName = form.type === 'goods' ? '实物商品' : '服务商品'
   form.priceType = goodsData.priceType || 'piece'
@@ -603,7 +599,6 @@ const fillForm = (goodsData) => {
     selectedTypeIndex.value = typeIndex
   }
 
-  // 设置分类选择器索引
   if (form.cateId && categoryList.value.length > 0) {
     const categoryIndex = categoryList.value.findIndex(cat => cat.id.toString() === form.cateId)
     if (categoryIndex !== -1) {
@@ -612,15 +607,12 @@ const fillForm = (goodsData) => {
     }
   }
 
-  // 处理图片
   const images = []
 
-  // 首先添加logo图片
   if (goodsData.logo) {
     images.push(goodsData.logo)
   }
 
-  // 然后处理images字段
   if (goodsData.images) {
     if (typeof goodsData.images === 'string') {
       try {
@@ -633,7 +625,6 @@ const fillForm = (goodsData) => {
           })
         }
       } catch (e) {
-        // 如果不是JSON，当作单个图片URL处理
         if (goodsData.images && !images.includes(goodsData.images)) {
           images.push(goodsData.images)
         }
@@ -647,13 +638,11 @@ const fillForm = (goodsData) => {
     }
   }
 
-  // 转换为编辑页面需要的格式
   imageList.value = images.filter(img => img).map(img => ({
     url: img,
     tempPath: img
   }))
 
-  // 更新步骤进度
   updateStep()
 }
 
@@ -685,7 +674,6 @@ const onCategoryChange = (e) => {
   showCategoryPicker.value = false
 }
 
-// 商品类型选择
 const onTypeChange = (e) => {
   const selectedType = typeOptions.value[e.detail.value]
   if (selectedType) {
@@ -693,45 +681,37 @@ const onTypeChange = (e) => {
     form.typeName = selectedType.name
     selectedTypeIndex.value = e.detail.value
 
-    // 如果选择服务商品，默认设置为计件
     if (form.type === 'service') {
       form.priceType = 'piece'
     }
   }
 }
 
-// 设置计价方式
 const setPriceType = (type) => {
   form.priceType = type
-  // 如果切换计价方式，清空条码让用户重新生成
   if (form.goodsNo) {
     form.goodsNo = ''
   }
   updateStep()
 }
 
-// 计价方式改变事件
 const onPriceTypeChange = (e) => {
   const newPriceType = e.detail.value
   setPriceType(newPriceType)
 }
 
-// 商品状态改变事件
 const onStatusChange = (e) => {
   form.status = e.detail.value
 }
 
-// 积分抵扣改变事件
 const onCanUsePointChange = (e) => {
   form.canUsePoint = e.detail.value
 }
 
-// 会员折扣改变事件
 const onMemberDiscountChange = (e) => {
   form.isMemberDiscount = e.detail.value
 }
 
-// 规格类型改变事件
 const onSingleSpecChange = (e) => {
   form.isSingleSpec = e.detail.value
 }
