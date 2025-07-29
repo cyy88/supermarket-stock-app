@@ -1,155 +1,187 @@
 <template>
   <view class="goods-list-container">
-    <!-- 搜索栏 -->
-    <view class="search-bar">
-      <view class="search-input-wrapper">
-        <text class="search-icon">🔍</text>
-        <input
-          v-model="searchKeyword"
-          placeholder="搜索商品名称或条码（不含消耗品）"
-          class="search-input"
-          @input="onSearchInput"
-        />
-        <text v-if="searchKeyword" class="clear-icon" @click="clearSearch">✕</text>
-      </view>
-    </view>
-
-    <!-- 商品总数统计和库存入口 -->
-    <view class="total-count-bar">
-      <view class="total-count">
-        <text class="count-number">{{ goodsList.length }}</text>
-        <text class="count-label">商品总数</text>
+    <!-- 固定的顶部区域 -->
+    <view class="fixed-header">
+      <!-- 顶部装饰背景 -->
+      <view class="header-bg">
+        <view class="bg-decoration"></view>
+        <view class="bg-decoration-2"></view>
       </view>
 
-      <!-- 库存管理入口 -->
-      <view class="stock-actions">
-        <button class="stock-btn add-stock" @click="goToAddStock">
-          <text class="btn-icon">📦</text>
-          <text class="btn-text">库存入库</text>
-        </button>
-        <button class="stock-btn view-records" @click="goToStockRecords">
-          <text class="btn-icon">📋</text>
-          <text class="btn-text">入库记录</text>
-        </button>
-      </view>
-    </view>
-
-    <!-- 库存状态筛选 -->
-    <view class="stock-filter">
-      <view class="filter-tabs">
-        <view
-          class="filter-tab"
-          :class="{ active: stockFilter === 'all' }"
-          @click="setStockFilter('all')"
-        >
-          全部
-        </view>
-        <view
-          class="filter-tab"
-          :class="{ active: stockFilter === 'safe' }"
-          @click="setStockFilter('safe')"
-        >
-          安全库存
-        </view>
-        <view
-          class="filter-tab"
-          :class="{ active: stockFilter === 'low' }"
-          @click="setStockFilter('low')"
-        >
-          库存不足
-        </view>
-        <view
-          class="filter-tab"
-          :class="{ active: stockFilter === 'out' }"
-          @click="setStockFilter('out')"
-        >
-          缺货
+      <!-- 顶部标题区域 -->
+      <view class="header-title">
+        <view class="title-content">
+          <text class="page-title">📦 商品管理</text>
+          <text class="page-subtitle">轻松管理您的商品库存</text>
         </view>
       </view>
-    </view>
 
-    <!-- 筛选结果统计 -->
-    <view v-if="hasActiveFilters" class="filter-result-bar">
-      <text class="filter-result-text">筛选结果：{{ filteredGoods.length }} 件商品</text>
-    </view>
-
-    <!-- 商品列表 -->
-    <view class="goods-list">
-      <view 
-        v-for="item in filteredGoods" 
-        :key="item.id"
-        class="goods-item"
-        @click="goToDetail(item)"
-      >
-        <view class="goods-image">
-          <image
-            v-if="getGoodsImage(item)"
-            :src="getGoodsImage(item)"
-            mode="aspectFill"
-            class="image"
+      <!-- 搜索栏 -->
+      <view class="search-bar">
+        <view class="search-input-wrapper">
+          <text class="search-icon">🔍</text>
+          <input
+            v-model="searchKeyword"
+            placeholder="搜索商品名称或条码（不含消耗品）"
+            class="search-input"
+            @input="onSearchInput"
           />
-          <view v-else class="no-image">
-            <text>📦</text>
-          </view>
+          <text v-if="searchKeyword" class="clear-icon" @click="clearSearch">✕</text>
         </view>
+      </view>
 
-        <view class="goods-info">
-          <view class="goods-header">
-            <view class="goods-name">{{ item.name }}</view>
-            <text class="price">¥{{ item.price }}</text>
+<!--      &lt;!&ndash; 商品总数统计 &ndash;&gt;-->
+<!--      <view class="total-count-bar">-->
+<!--        <view class="total-count">-->
+<!--          <text class="count-number">{{ goodsList.length }}</text>-->
+<!--          <text class="count-label">商品总数</text>-->
+<!--        </view>-->
+<!--      </view>-->
+
+      <!-- 库存状态筛选 -->
+      <view class="filter-container">
+        <view class="filter-tabs">
+          <view
+            class="filter-tab"
+            :class="{ active: stockFilter === 'all' }"
+            @click="setStockFilter('all')"
+          >
+            <text class="filter-icon">📋</text>
+            <text class="filter-text">全部</text>
           </view>
-
-          <view class="goods-details">
-            <view class="detail-left">
-              <view class="detail-item">
-                <text class="label">条码:</text>
-                <text class="value">{{ item.goodsNo }}</text>
-              </view>
-              <view class="detail-item">
-                <text class="label">分类:</text>
-                <text class="value">{{ getGoodsCategory(item) }}</text>
-              </view>
-            </view>
-
-            <view class="detail-right">
-              <view class="detail-item">
-                <text class="label">剩余:</text>
-                <text class="value stock-value" :class="getStockStatusClass(item)">{{ item.stock }}</text>
-              </view>
-              <view class="detail-item">
-                <text class="label">安全:</text>
-                <text class="value">{{ item.safetyStock || 0 }}</text>
-              </view>
-            </view>
+          <view
+            class="filter-tab"
+            :class="{ active: stockFilter === 'safe' }"
+            @click="setStockFilter('safe')"
+          >
+            <text class="filter-icon">✅</text>
+            <text class="filter-text">安全库存</text>
           </view>
-
-          <view class="goods-status">
-            <text class="status-badge" :class="getStockStatusClass(item)">
-              {{ getStockStatusText(item) }}
-            </text>
+          <view
+            class="filter-tab"
+            :class="{ active: stockFilter === 'low' }"
+            @click="setStockFilter('low')"
+          >
+            <text class="filter-icon">⚠️</text>
+            <text class="filter-text">库存不足</text>
           </view>
-        </view>
-
-        <view class="goods-actions">
-          <text class="arrow">→</text>
+          <view
+            class="filter-tab"
+            :class="{ active: stockFilter === 'out' }"
+            @click="setStockFilter('out')"
+          >
+            <text class="filter-icon">❌</text>
+            <text class="filter-text">缺货</text>
+          </view>
         </view>
       </view>
     </view>
 
-    <!-- 加载状态 -->
-    <view v-if="loading" class="loading-state">
-      <text class="loading-text">加载中...</text>
-    </view>
+    <!-- 商品列表内容区域 -->
+    <view class="content-area">
+      <scroll-view
+        class="goods-list"
+        scroll-y
+        refresher-enabled
+        :refresher-triggered="refreshing"
+        @refresherrefresh="onRefresh"
+        @scrolltolower="loadMore"
+        :refresher-threshold="80"
+        refresher-default-style="none"
+        :lower-threshold="100"
+      >
+        <!-- 筛选结果统计 -->
+        <view v-if="hasActiveFilters" class="filter-result-bar">
+          <text class="filter-result-text">筛选结果：{{ filteredGoods.length }} 件商品</text>
+        </view>
 
-    <!-- 空状态 -->
-    <view v-else-if="filteredGoods.length === 0" class="empty-state">
-      <text class="empty-icon">📦</text>
-      <text class="empty-text">
-        {{ searchKeyword ? '没有找到相关商品' : '暂无商品数据' }}
-      </text>
-      <button v-if="!searchKeyword" class="add-btn" @click="goToAdd">
-        ➕ 添加第一个商品
-      </button>
+        <!-- 加载状态 -->
+        <view v-if="!refreshing && loading && goodsList.length === 0" class="loading-container">
+          <view class="loading-animation">
+            <view class="loading-dot"></view>
+            <view class="loading-dot"></view>
+            <view class="loading-dot"></view>
+          </view>
+          <text class="loading-text">加载中...</text>
+        </view>
+
+        <!-- 空状态 -->
+        <view v-else-if="!loading && !refreshing && filteredGoods.length === 0" class="empty-container">
+          <view class="empty-animation">
+            <text class="empty-icon">📦</text>
+            <view class="empty-circle"></view>
+          </view>
+          <text class="empty-title">暂无商品数据</text>
+          <text class="empty-subtitle">{{ searchKeyword ? '没有找到相关商品' : '点击右下角按钮添加新商品' }}</text>
+        </view>
+
+        <!-- 商品列表 -->
+        <view v-else class="list-content">
+          <view
+            v-for="(item, index) in filteredGoods"
+            :key="item.id"
+            class="goods-item"
+            :style="{ animationDelay: index * 0.1 + 's' }"
+            @click="goToDetail(item)"
+          >
+            <!-- 卡片装饰 -->
+            <view class="card-decoration" :class="getCardDecorationClass(item)"></view>
+
+            <view class="goods-image">
+              <image
+                v-if="getGoodsImage(item)"
+                :src="getGoodsImage(item)"
+                mode="aspectFill"
+                class="image"
+              />
+              <view v-else class="no-image">
+                <text>📦</text>
+              </view>
+            </view>
+
+            <view class="goods-info">
+              <view class="goods-header">
+                <view class="goods-name">{{ item.name }}</view>
+                <text class="price">¥{{ item.price }}</text>
+              </view>
+
+              <view class="goods-details">
+                <view class="detail-left">
+                  <view class="detail-item">
+                    <text class="label">条码:</text>
+                    <text class="value">{{ item.goodsNo }}</text>
+                  </view>
+                  <view class="detail-item">
+                    <text class="label">分类:</text>
+                    <text class="value">{{ getGoodsCategory(item) }}</text>
+                  </view>
+                </view>
+
+                <view class="detail-right">
+                  <view class="detail-item">
+                    <text class="label">剩余:</text>
+                    <text class="value stock-value" :class="getStockStatusClass(item)">{{ item.stock }}</text>
+                  </view>
+                  <view class="detail-item">
+                    <text class="label">安全:</text>
+                    <text class="value">{{ item.safetyStock || 0 }}</text>
+                  </view>
+                </view>
+              </view>
+
+              <view class="goods-status">
+                <text class="status-badge" :class="getStockStatusClass(item)">
+                  {{ getStockStatusText(item) }}
+                </text>
+              </view>
+            </view>
+
+            <view class="goods-actions">
+              <text class="arrow">→</text>
+            </view>
+          </view>
+        </view>
+      </scroll-view>
     </view>
 
     <!-- 分类筛选悬浮按钮 -->
@@ -159,7 +191,9 @@
 
     <!-- 浮动添加按钮 -->
     <view class="fab" @click="goToAdd">
-      <text class="fab-icon">➕</text>
+      <view class="fab-bg"></view>
+      <text class="fab-icon">+</text>
+      <view class="fab-ripple"></view>
     </view>
 
     <!-- 分类筛选弹窗 -->
@@ -226,10 +260,12 @@ const fixMalformedUrl = (url) => {
 const searchKeyword = ref('')
 const goodsList = ref([])
 const loading = ref(false)
+const refreshing = ref(false)
 const stockFilter = ref('all')
 const showCategoryFilter = ref(false)
 const selectedCategory = ref(null)
 const categories = ref([])
+const hasMore = ref(false)
 
 const filteredGoods = computed(() => {
   let dataSource = goodsList.value
@@ -330,6 +366,24 @@ const loadGoodsList = async () => {
   }
 }
 
+// 下拉刷新
+const onRefresh = async () => {
+  refreshing.value = true
+  try {
+    await loadGoodsList()
+    await loadCategoriesIfNeeded()
+  } catch (error) {
+    console.error('刷新失败:', error)
+  } finally {
+    refreshing.value = false
+  }
+}
+
+// 加载更多（暂时不实现分页，保持原有逻辑）
+const loadMore = () => {
+  // 暂时不实现分页加载
+}
+
 
 const onSearchInput = () => {
 }
@@ -410,6 +464,20 @@ const getStockStatusText = (item) => {
   }
 }
 
+// 获取卡片装饰样式
+const getCardDecorationClass = (item) => {
+  const safetyStock = item.safetyStock || 0
+  const currentStock = item.stock || 0
+
+  if (currentStock <= 0) {
+    return 'decoration-danger'
+  } else if (currentStock <= safetyStock) {
+    return 'decoration-warning'
+  } else {
+    return 'decoration-success'
+  }
+}
+
 
 
 const goToDetail = (item) => {
@@ -478,23 +546,100 @@ const getTotalCount = () => {
 
 <style lang="scss" scoped>
 .goods-list-container {
-  padding: 20rpx;
-  background: #f8f9fa;
   min-height: 100vh;
-  padding-bottom: 120rpx;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+/* 顶部装饰背景 */
+.header-bg {
+  position: relative;
+  height: 200rpx;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.bg-decoration {
+  position: absolute;
+  top: -100rpx;
+  right: -100rpx;
+  width: 300rpx;
+  height: 300rpx;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  animation: float 6s ease-in-out infinite;
+}
+
+.bg-decoration-2 {
+  position: absolute;
+  top: 200rpx;
+  left: -50rpx;
+  width: 200rpx;
+  height: 200rpx;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 50%;
+  animation: float 8s ease-in-out infinite reverse;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-20px) rotate(180deg); }
+}
+
+/* 顶部标题区域 */
+.header-title {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  padding: 80rpx 40rpx 20rpx;
+  text-align: center;
+}
+
+.title-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.page-title {
+  font-size: 48rpx;
+  font-weight: bold;
+  color: #fff;
+  margin-bottom: 16rpx;
+  text-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.3);
+}
+
+.page-subtitle {
+  font-size: 28rpx;
+  color: rgba(255, 255, 255, 0.8);
+  text-shadow: 0 1rpx 2rpx rgba(0, 0, 0, 0.2);
+}
+
+/* 固定头部区域 */
+.fixed-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
 .search-bar {
-  margin-bottom: 20rpx;
+  padding: 0 20rpx 15rpx;
 
   .search-input-wrapper {
     display: flex;
     align-items: center;
-    background: #fff;
+    background: rgba(255, 255, 255, 0.9);
     border-radius: 50rpx;
     padding: 0 30rpx;
     height: 80rpx;
     box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
 
     .search-icon {
       font-size: 32rpx;
@@ -546,13 +691,14 @@ const getTotalCount = () => {
 
 .total-count-bar {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.9);
   border-radius: 15rpx;
   padding: 20rpx 30rpx;
-  margin-bottom: 15rpx;
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+  margin: 0 20rpx 15rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
 
   .total-count {
     display: flex;
@@ -570,52 +716,7 @@ const getTotalCount = () => {
       color: #909399;
     }
   }
-
-  .stock-actions {
-    display: flex;
-    gap: 16rpx;
-  }
-
-  .stock-btn {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8rpx;
-    padding: 16rpx 20rpx;
-    border: none;
-    border-radius: 12rpx;
-    font-size: 24rpx;
-    transition: all 0.3s ease;
-
-    .btn-icon {
-      font-size: 32rpx;
-    }
-
-    .btn-text {
-      font-size: 22rpx;
-      font-weight: 500;
-    }
-
-    &.add-stock {
-      background: linear-gradient(135deg, #52c41a 0%, #389e0d 100%);
-      color: white;
-
-      &:active {
-        transform: scale(0.95);
-        opacity: 0.8;
-      }
-    }
-
-    &.view-records {
-      background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
-      color: white;
-
-      &:active {
-        transform: scale(0.95);
-        opacity: 0.8;
-      }
-    }
-  }
+}
 
   .sync-stats {
     display: flex;
@@ -646,42 +747,82 @@ const getTotalCount = () => {
       }
     }
   }
+
+
+/* 筛选容器 */
+.filter-container {
+  padding: 0 20rpx 20rpx;
 }
 
-.stock-filter {
-  margin-bottom: 15rpx;
+.filter-tabs {
+  display: flex;
+  justify-content: space-between;
+  gap: 10rpx;
+  padding: 0 10rpx;
+}
 
-  .filter-tabs {
-    display: flex;
-    background: #fff;
-    border-radius: 20rpx;
-    padding: 8rpx;
-    box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+.filter-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16rpx 20rpx;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 25rpx;
+  flex: 1;
+  min-width: 0;
+  backdrop-filter: blur(10px);
+  border: 2rpx solid rgba(255, 255, 255, 0.3);
+  transition: all 0.3s ease;
+}
 
-    .filter-tab {
-      flex: 1;
-      text-align: center;
-      padding: 16rpx 8rpx;
-      border-radius: 12rpx;
-      font-size: 24rpx;
-      color: #606266;
-      transition: all 0.3s;
+.filter-tab.active {
+  background: rgba(255, 255, 255, 0.9);
+  transform: translateY(-4rpx);
+  box-shadow: 0 8rpx 25rpx rgba(0, 0, 0, 0.15);
+}
 
-      &.active {
-        background: linear-gradient(135deg, #19be6b 0%, #52c41a 100%);
-        color: #fff;
-        font-weight: bold;
-      }
-    }
-  }
+.filter-icon {
+  font-size: 26rpx;
+  margin-bottom: 6rpx;
+}
+
+.filter-text {
+  font-size: 22rpx;
+  color: #fff;
+  font-weight: 500;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.filter-tab.active .filter-text {
+  color: #333;
+}
+
+/* 内容区域 */
+.content-area {
+  position: relative;
+  z-index: 1;
+  margin-top: 300rpx;
+}
+
+/* 列表容器 */
+.goods-list {
+  padding: 20rpx 30rpx 200rpx;
+}
+
+.list-content {
+  display: flex;
+  flex-direction: column;
+  gap: 25rpx;
 }
 
 .filter-result-bar {
-  background: #f8f9fa;
-  border-radius: 10rpx;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 15rpx;
   padding: 15rpx 20rpx;
   margin-bottom: 20rpx;
   border-left: 6rpx solid #3c9cff;
+  backdrop-filter: blur(10px);
 
   .filter-result-text {
     font-size: 24rpx;
@@ -728,24 +869,135 @@ const getTotalCount = () => {
   }
 }
 
-.goods-list {
+/* 加载和空状态 */
+.loading-container {
   display: flex;
   flex-direction: column;
-  gap: 20rpx;
+  align-items: center;
+  padding: 100rpx 40rpx;
 }
 
-.goods-item {
+.loading-animation {
   display: flex;
-  background: #fff;
-  border-radius: 20rpx;
+  gap: 10rpx;
+  margin-bottom: 30rpx;
+}
+
+.loading-dot {
+  width: 12rpx;
+  height: 12rpx;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  animation: loading-bounce 1.4s ease-in-out infinite both;
+}
+
+.loading-dot:nth-child(1) { animation-delay: -0.32s; }
+.loading-dot:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes loading-bounce {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1); }
+}
+
+.loading-text {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 28rpx;
+}
+
+.empty-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 100rpx 40rpx;
+}
+
+.empty-animation {
+  position: relative;
+  margin-bottom: 40rpx;
+}
+
+.empty-icon {
+  font-size: 120rpx;
+  position: relative;
+  z-index: 2;
+}
+
+.empty-circle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 200rpx;
+  height: 200rpx;
+  border: 4rpx solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  animation: empty-rotate 3s linear infinite;
+}
+
+@keyframes empty-rotate {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+.empty-title {
+  color: #fff;
+  font-size: 32rpx;
+  font-weight: bold;
+  margin-bottom: 16rpx;
+}
+
+.empty-subtitle {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 26rpx;
+}
+
+/* 商品项目卡片 */
+.goods-item {
+  position: relative;
+  display: flex;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 25rpx;
   padding: 30rpx;
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
-  transition: all 0.3s;
+  box-shadow: 0 8rpx 30rpx rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1rpx solid rgba(255, 255, 255, 0.2);
+  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  animation: slideInUp 0.6s ease-out forwards;
+  opacity: 0;
+  transform: translateY(30rpx);
 
   &:active {
-    transform: scale(0.98);
-    box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.1);
+    transform: translateY(-8rpx) scale(0.98);
+    box-shadow: 0 20rpx 60rpx rgba(0, 0, 0, 0.15);
   }
+}
+
+@keyframes slideInUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.card-decoration {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 8rpx;
+  height: 100%;
+  border-radius: 30rpx 0 0 30rpx;
+}
+
+.decoration-success {
+  background: linear-gradient(135deg, #52c41a 0%, #73d13d 100%);
+}
+
+.decoration-warning {
+  background: linear-gradient(135deg, #faad14 0%, #ffc53d 100%);
+}
+
+.decoration-danger {
+  background: linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%);
 }
 
 .goods-image {
@@ -962,28 +1214,69 @@ const getTotalCount = () => {
   }
 }
 
+/* 浮动添加按钮 */
 .fab {
   position: fixed;
   right: 40rpx;
-  bottom: 40rpx;
-  width: 100rpx;
-  height: 100rpx;
-  background: linear-gradient(135deg, #3c9cff 0%, #1890ff 100%);
+  bottom: 120rpx;
+  width: 120rpx;
+  height: 120rpx;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 8rpx 20rpx rgba(60, 156, 255, 0.3);
-  z-index: 100;
+  z-index: 1000;
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
 
-  .fab-icon {
-    font-size: 48rpx;
-    color: #fff;
-  }
+.fab-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 50%, #ff9ff3 100%);
+  border-radius: 50%;
+  box-shadow: 0 8rpx 30rpx rgba(255, 107, 107, 0.4);
+}
 
-  &:active {
-    transform: scale(0.9);
+.fab-icon {
+  position: relative;
+  z-index: 2;
+  font-size: 48rpx;
+  color: #fff;
+  font-weight: bold;
+  text-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.2);
+}
+
+.fab-ripple {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  animation: ripple 2s infinite;
+}
+
+@keyframes ripple {
+  0% {
+    transform: scale(1);
+    opacity: 1;
   }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+.fab:active {
+  transform: scale(0.9);
+}
+
+.fab:hover .fab-bg {
+  box-shadow: 0 12rpx 40rpx rgba(255, 107, 107, 0.6);
 }
 
 .category-overlay {
