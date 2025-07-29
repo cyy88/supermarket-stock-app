@@ -85,9 +85,10 @@
         refresher-enabled
         :refresher-triggered="refreshing"
         @refresherrefresh="onRefresh"
+        @refresherrestore="onRefreshRestore"
         @scrolltolower="loadMore"
         :refresher-threshold="80"
-        refresher-default-style="none"
+        refresher-default-style="black"
         :lower-threshold="100"
       >
         <!-- 筛选结果统计 -->
@@ -368,15 +369,36 @@ const loadGoodsList = async () => {
 
 // 下拉刷新
 const onRefresh = async () => {
+  if (refreshing.value) return
+
   refreshing.value = true
   try {
     await loadGoodsList()
     await loadCategoriesIfNeeded()
+
+    // 显示刷新成功提示
+    uni.showToast({
+      title: '刷新成功',
+      icon: 'success',
+      duration: 1000
+    })
   } catch (error) {
     console.error('刷新失败:', error)
+    uni.showToast({
+      title: '刷新失败',
+      icon: 'none',
+      duration: 1500
+    })
   } finally {
-    refreshing.value = false
+    // 确保刷新状态被重置
+    setTimeout(() => {
+      refreshing.value = false
+    }, 500)
   }
+}
+
+const onRefreshRestore = () => {
+  refreshing.value = false
 }
 
 // 加载更多（暂时不实现分页，保持原有逻辑）
@@ -386,10 +408,12 @@ const loadMore = () => {
 
 
 const onSearchInput = () => {
+  refreshing.value = false
 }
 
 const clearSearch = () => {
   searchKeyword.value = ''
+  refreshing.value = false
 }
 
 
@@ -516,6 +540,7 @@ const goToStockRecords = () => {
 // 库存筛选方法
 const setStockFilter = (filter) => {
   stockFilter.value = filter
+  refreshing.value = false
 }
 
 // 分类筛选方法
@@ -802,7 +827,7 @@ const getTotalCount = () => {
 .content-area {
   position: relative;
   z-index: 1;
-  margin-top: 300rpx;
+  margin-top: 330rpx;
 }
 
 /* 列表容器 */
@@ -814,6 +839,7 @@ const getTotalCount = () => {
   display: flex;
   flex-direction: column;
   gap: 25rpx;
+  padding-right: 60rpx;
 }
 
 .filter-result-bar {
@@ -823,6 +849,7 @@ const getTotalCount = () => {
   margin-bottom: 20rpx;
   border-left: 6rpx solid #3c9cff;
   backdrop-filter: blur(10px);
+  margin-right: 60rpx;
 
   .filter-result-text {
     font-size: 24rpx;
