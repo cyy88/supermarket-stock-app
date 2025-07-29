@@ -76,6 +76,9 @@
       :refresher-triggered="refreshing"
       @refresherrefresh="onRefresh"
       @scrolltolower="loadMore"
+      refresher-threshold="80"
+      refresher-default-style="none"
+      :lower-threshold="100"
     >
       <view v-if="loading" class="loading-container">
         <view class="loading-animation">
@@ -113,10 +116,12 @@
                 {{ getStatusIcon(item.reviewStatus) }}
               </view>
               <view class="item-info">
-                <text class="item-id">#{{ item.id }}</text>
-                <view class="item-type-badge">
-                  <text class="type-icon">{{ item.type === 'increase' ? '📈' : '📉' }}</text>
-                  <text class="type-text">{{ item.type === 'increase' ? '入库' : '出库' }}</text>
+                <view class="id-type-row">
+                  <text class="item-id">#{{ item.id }}</text>
+                  <view class="item-type-badge">
+                    <text class="type-icon">{{ item.type === 'increase' ? '📈' : '📉' }}</text>
+                    <text class="type-text">{{ item.type === 'increase' ? '入库' : '出库' }}</text>
+                  </view>
                 </view>
               </view>
             </view>
@@ -159,11 +164,7 @@
             </view>
           </view>
 
-          <!-- 点击指示器 -->
-          <view class="click-indicator">
-            <text class="indicator-text">点击查看详情</text>
-            <text class="indicator-arrow">→</text>
-          </view>
+
         </view>
       </view>
     </scroll-view>
@@ -642,9 +643,9 @@ const goToAddStock = () => {
 .stock-item {
   position: relative;
   background: rgba(255, 255, 255, 0.95);
-  border-radius: 30rpx;
-  padding: 40rpx;
-  box-shadow: 0 10rpx 40rpx rgba(0, 0, 0, 0.1);
+  border-radius: 25rpx;
+  padding: 30rpx;
+  box-shadow: 0 8rpx 30rpx rgba(0, 0, 0, 0.1);
   backdrop-filter: blur(10px);
   border: 1rpx solid rgba(255, 255, 255, 0.2);
   transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
@@ -695,7 +696,7 @@ const goToAddStock = () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 30rpx;
+  margin-bottom: 20rpx;
 }
 
 .item-left {
@@ -740,10 +741,18 @@ const goToAddStock = () => {
   gap: 8rpx;
 }
 
+.id-type-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+
 .item-id {
   font-size: 28rpx;
   color: #333;
   font-weight: bold;
+  flex-shrink: 0;
 }
 
 .item-type-badge {
@@ -754,6 +763,7 @@ const goToAddStock = () => {
   background: linear-gradient(135deg, #e6f7ff 0%, #f0f9ff 100%);
   border-radius: 20rpx;
   border: 1rpx solid #91d5ff;
+  flex-shrink: 0;
 }
 
 .type-icon {
@@ -802,8 +812,7 @@ const goToAddStock = () => {
 .item-content {
   display: flex;
   flex-direction: column;
-  gap: 20rpx;
-  margin-bottom: 30rpx;
+  gap: 16rpx;
 }
 
 .info-row {
@@ -850,26 +859,7 @@ const goToAddStock = () => {
   color: #555;
 }
 
-/* 点击指示器 */
-.click-indicator {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16rpx 0;
-  border-top: 1rpx solid #f0f0f0;
-  margin-top: 10rpx;
-}
 
-.indicator-text {
-  font-size: 24rpx;
-  color: #999;
-}
-
-.indicator-arrow {
-  font-size: 24rpx;
-  color: #1890ff;
-  font-weight: bold;
-}
 /* 加载更多 */
 .load-more {
   display: flex;
