@@ -1,71 +1,115 @@
 <template>
   <view class="settings-container">
-    <!-- 用户信息卡片 -->
-    <view class="card user-card">
-      <view class="user-info">
-        <view class="avatar-placeholder">
-          <text class="avatar-text">{{ getAvatarText() }}</text>
-        </view>
-        <view class="user-details">
-          <text class="username">{{ userInfo?.realName || userInfo?.accountName || '用户' }}</text>
-          <text class="store-name">{{ userInfo?.storeName || '门店' }}</text>
-          <text class="merchant-name">{{ userInfo?.merchantName || '' }}</text>
+    <!-- 固定的顶部区域 -->
+    <view class="fixed-header">
+      <!-- 顶部装饰背景 -->
+      <view class="header-bg">
+        <view class="bg-decoration"></view>
+        <view class="bg-decoration-2"></view>
+      </view>
+
+      <!-- 顶部标题区域 -->
+      <view class="header-title">
+        <view class="title-content">
+          <text class="page-title">⚙️ 设置中心</text>
+          <text class="page-subtitle">个人信息与应用设置</text>
         </view>
       </view>
-    </view>
 
-    <!-- 功能设置 -->
-    <view class="card">
-      <view class="card-title">⚙️ 功能设置</view>
-      <view class="setting-list">
-        <view class="setting-item" @click="goToStockAdd">
-          <view class="setting-info">
-            <text class="setting-icon">📦</text>
-            <text class="setting-name">库存入库</text>
+      <!-- 用户信息卡片 -->
+      <view class="user-info-card">
+        <view class="user-info">
+          <view class="avatar-placeholder">
+            <text class="avatar-text">{{ getAvatarText() }}</text>
           </view>
-          <view class="setting-action">
-            <text class="setting-desc">添加商品库存</text>
-            <text class="arrow">→</text>
-          </view>
-        </view>
-
-        <view class="setting-item" @click="goToStockList">
-          <view class="setting-info">
-            <text class="setting-icon">📋</text>
-            <text class="setting-name">入库记录</text>
-          </view>
-          <view class="setting-action">
-            <text class="setting-desc">查看入库记录</text>
-            <text class="arrow">→</text>
+          <view class="user-details">
+            <text class="username">{{ userInfo?.realName || userInfo?.accountName || '用户' }}</text>
+            <text class="store-name">{{ userInfo?.storeName || '门店' }}</text>
+            <text class="merchant-name">{{ userInfo?.merchantName || '' }}</text>
           </view>
         </view>
       </view>
     </view>
 
-    <!-- 应用信息 -->
-    <view class="card">
-      <view class="card-title">ℹ️ 应用信息</view>
-      <view class="info-list">
-        <view class="info-item">
-          <text class="info-label">应用名称</text>
-          <text class="info-value">商品扫码系统</text>
-        </view>
-        <view class="info-item">
-          <text class="info-label">版本号</text>
-          <text class="info-value">v1.0.0</text>
-        </view>
-        <view class="info-item">
-          <text class="info-label">服务器地址</text>
-          <text class="info-value server-url">{{ serverUrl }}</text>
-        </view>
-      </view>
-    </view>
+    <!-- 内容区域 -->
+    <view class="content-area">
+      <scroll-view
+        class="main-content"
+        scroll-y
+        refresher-enabled
+        :refresher-triggered="refreshing"
+        @refresherrefresh="onRefresh"
+        @refresherrestore="onRefreshRestore"
+        :refresher-threshold="80"
+        refresher-default-style="black"
+      >
+        <!-- 功能设置 -->
+        <view class="card" :style="{ animationDelay: '0.1s' }">
+          <view class="card-title">
+            <view class="title-icon">⚙️</view>
+            <text class="title-text">功能设置</text>
+          </view>
+          <view class="setting-list">
+            <view class="setting-item" @click="goToStockAdd">
+              <view class="setting-info">
+                <view class="setting-icon-wrapper stock-icon">
+                  <text class="setting-icon">📦</text>
+                </view>
+                <text class="setting-name">库存入库</text>
+              </view>
+              <view class="setting-action">
+                <text class="setting-desc">添加商品库存</text>
+                <text class="arrow">→</text>
+              </view>
+            </view>
 
-    <!-- 退出登录 -->
-    <view class="logout-section">
-      <button class="logout-btn" @click="handleLogout">
-        🚪 退出登录
-      </button>
+            <view class="setting-item" @click="goToStockList">
+              <view class="setting-info">
+                <view class="setting-icon-wrapper record-icon">
+                  <text class="setting-icon">📋</text>
+                </view>
+                <text class="setting-name">入库记录</text>
+              </view>
+              <view class="setting-action">
+                <text class="setting-desc">查看入库记录</text>
+                <text class="arrow">→</text>
+              </view>
+            </view>
+          </view>
+        </view>
+
+        <!-- 应用信息 -->
+        <view class="card" :style="{ animationDelay: '0.2s' }">
+          <view class="card-title">
+            <view class="title-icon">ℹ️</view>
+            <text class="title-text">应用信息</text>
+          </view>
+          <view class="info-list">
+            <view class="info-item">
+              <text class="info-label">应用名称</text>
+              <text class="info-value">商品扫码系统</text>
+            </view>
+            <view class="info-item">
+              <text class="info-label">版本号</text>
+              <text class="info-value">v1.0.0</text>
+            </view>
+            <view class="info-item">
+              <text class="info-label">服务器地址</text>
+              <text class="info-value server-url">{{ serverUrl }}</text>
+            </view>
+          </view>
+        </view>
+
+        <!-- 退出登录 -->
+        <view class="logout-section" :style="{ animationDelay: '0.3s' }">
+          <button class="logout-btn" @click="handleLogout">
+            <view class="logout-content">
+              <view class="logout-icon">🚪</view>
+              <text class="logout-text">退出登录</text>
+            </view>
+          </button>
+        </view>
+      </scroll-view>
     </view>
   </view>
 </template>
@@ -75,6 +119,7 @@ import { ref, onMounted } from 'vue'
 import userStore from '@/stores/user'
 
 const userInfo = ref(null)
+const refreshing = ref(false)
 const serverUrl = ref('http://msbs-fuint-ts.qingchunnianhua.com:1880')
 
 onMounted(async () => {
@@ -109,6 +154,39 @@ const goToStockList = () => {
 
 
 
+// 下拉刷新
+const onRefresh = async () => {
+  if (refreshing.value) return
+
+  refreshing.value = true
+  try {
+    await userStore.getUserInfo()
+    userInfo.value = userStore.userInfo
+
+    uni.showToast({
+      title: '刷新成功',
+      icon: 'success',
+      duration: 1000
+    })
+  } catch (error) {
+    console.error('刷新失败:', error)
+    uni.showToast({
+      title: '刷新失败',
+      icon: 'none',
+      duration: 1500
+    })
+  } finally {
+    setTimeout(() => {
+      refreshing.value = false
+    }, 500)
+  }
+}
+
+// 刷新恢复事件处理
+const onRefreshRestore = () => {
+  refreshing.value = false
+}
+
 const handleLogout = () => {
   uni.showModal({
     title: '确认退出',
@@ -127,107 +205,248 @@ const handleLogout = () => {
 
 <style lang="scss" scoped>
 .settings-container {
-  padding: 20rpx;
-  background: #f8f9fa;
   min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+  position: relative;
+  overflow: hidden;
 }
 
-.card {
-  background: #fff;
-  border-radius: 20rpx;
-  padding: 30rpx;
-  margin-bottom: 30rpx;
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+/* 顶部装饰背景 */
+.header-bg {
+  position: relative;
+  height: 200rpx;
+  overflow: hidden;
+  z-index: 0;
 }
 
-.card-title {
-  font-size: 32rpx;
+.bg-decoration {
+  position: absolute;
+  top: -100rpx;
+  right: -100rpx;
+  width: 300rpx;
+  height: 300rpx;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  animation: float 6s ease-in-out infinite;
+}
+
+.bg-decoration-2 {
+  position: absolute;
+  top: 200rpx;
+  left: -50rpx;
+  width: 200rpx;
+  height: 200rpx;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 50%;
+  animation: float 8s ease-in-out infinite reverse;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-20px) rotate(180deg); }
+}
+
+/* 顶部标题区域 */
+.header-title {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  padding: 80rpx 40rpx 20rpx;
+  text-align: center;
+}
+
+.title-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.page-title {
+  font-size: 48rpx;
   font-weight: bold;
-  color: #303133;
-  margin-bottom: 30rpx;
+  color: #fff;
+  margin-bottom: 16rpx;
+  text-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.3);
 }
 
-.user-card {
-  .user-info {
+.page-subtitle {
+  font-size: 28rpx;
+  color: rgba(255, 255, 255, 0.8);
+  text-shadow: 0 1rpx 2rpx rgba(0, 0, 0, 0.2);
+}
+
+/* 固定头部区域 */
+.fixed-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* 用户信息卡片 */
+.user-info-card {
+  margin: 0 20rpx 20rpx;
+  padding: 20rpx 30rpx;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 20rpx;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+
+  .avatar-placeholder {
+    width: 100rpx;
+    height: 100rpx;
+    border-radius: 50%;
+    margin-right: 24rpx;
+    background: linear-gradient(135deg, #3c9cff 0%, #1890ff 100%);
     display: flex;
     align-items: center;
+    justify-content: center;
+    box-shadow: 0 4rpx 12rpx rgba(60, 156, 255, 0.3);
 
-    .avatar-placeholder {
-      width: 120rpx;
-      height: 120rpx;
-      border-radius: 60rpx;
-      margin-right: 30rpx;
-      background: linear-gradient(135deg, #3c9cff 0%, #1890ff 100%);
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    .avatar-text {
+      font-size: 40rpx;
+      font-weight: bold;
+      color: #fff;
+    }
+  }
 
-      .avatar-text {
-        font-size: 48rpx;
-        font-weight: bold;
-        color: #fff;
-      }
+  .user-details {
+    flex: 1;
+
+    .username {
+      display: block;
+      font-size: 32rpx;
+      font-weight: bold;
+      color: #303133;
+      margin-bottom: 8rpx;
     }
 
-    .user-details {
-      flex: 1;
+    .store-name {
+      display: block;
+      font-size: 26rpx;
+      color: #606266;
+      margin-bottom: 4rpx;
+    }
 
-      .username {
-        display: block;
-        font-size: 36rpx;
-        font-weight: bold;
-        color: #303133;
-        margin-bottom: 8rpx;
-      }
-
-      .store-name {
-        display: block;
-        font-size: 28rpx;
-        color: #606266;
-        margin-bottom: 4rpx;
-      }
-
-      .merchant-name {
-        font-size: 24rpx;
-        color: #909399;
-      }
+    .merchant-name {
+      font-size: 22rpx;
+      color: #909399;
     }
   }
 }
 
 
 
+/* 内容区域 */
+.content-area {
+  position: relative;
+  z-index: 1;
+  margin-top: 320rpx;
+}
+
+/* 主要内容 */
+.main-content {
+  padding: 20rpx 30rpx 200rpx;
+}
+
+/* 卡片样式 */
+.card {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 25rpx;
+  padding: 30rpx;
+  margin-bottom: 25rpx;
+  box-shadow: 0 8rpx 30rpx rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1rpx solid rgba(255, 255, 255, 0.2);
+  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  animation: slideInUp 0.6s ease-out forwards;
+  opacity: 0;
+  transform: translateY(30rpx);
+  margin-right: 60rpx;
+}
+
+@keyframes slideInUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.card-title {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-bottom: 30rpx;
+
+  .title-icon {
+    font-size: 32rpx;
+  }
+
+  .title-text {
+    font-size: 32rpx;
+    font-weight: bold;
+    color: #303133;
+  }
+}
+
 .setting-list {
   display: flex;
   flex-direction: column;
-  gap: 20rpx;
+  gap: 16rpx;
 }
 
 .setting-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 25rpx;
-  background: #f8f9fa;
-  border-radius: 15rpx;
-  transition: all 0.3s;
+  padding: 20rpx 24rpx;
+  background: rgba(248, 249, 250, 0.8);
+  border-radius: 16rpx;
+  transition: all 0.3s ease;
 
   &:active {
-    background: #e9ecef;
+    background: rgba(233, 236, 239, 0.9);
     transform: scale(0.98);
   }
 
   .setting-info {
     display: flex;
     align-items: center;
+    gap: 20rpx;
 
-    .setting-icon {
-      font-size: 36rpx;
-      margin-right: 20rpx;
+    .setting-icon-wrapper {
+      width: 48rpx;
+      height: 48rpx;
+      border-radius: 12rpx;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      .setting-icon {
+        font-size: 24rpx;
+        color: #fff;
+      }
+    }
+
+    .stock-icon {
+      background: linear-gradient(135deg, #50C878 0%, #228B22 100%);
+    }
+
+    .record-icon {
+      background: linear-gradient(135deg, #4A90E2 0%, #357ABD 100%);
     }
 
     .setting-name {
-      font-size: 30rpx;
+      font-size: 28rpx;
       color: #303133;
       font-weight: 500;
     }
@@ -236,24 +455,25 @@ const handleLogout = () => {
   .setting-action {
     display: flex;
     align-items: center;
+    gap: 12rpx;
 
     .setting-desc {
       font-size: 24rpx;
       color: #909399;
-      margin-right: 15rpx;
     }
 
     .arrow {
-      font-size: 28rpx;
+      font-size: 24rpx;
       color: #c0c4cc;
     }
   }
 }
 
+/* 信息列表 */
 .info-list {
   display: flex;
   flex-direction: column;
-  gap: 20rpx;
+  gap: 16rpx;
 }
 
 .info-item {
@@ -261,7 +481,7 @@ const handleLogout = () => {
   justify-content: space-between;
   align-items: center;
   padding: 20rpx 0;
-  border-bottom: 1rpx solid #f0f0f0;
+  border-bottom: 1rpx solid rgba(240, 240, 240, 0.6);
 
   &:last-child {
     border-bottom: none;
@@ -270,6 +490,7 @@ const handleLogout = () => {
   .info-label {
     font-size: 28rpx;
     color: #606266;
+    font-weight: 500;
   }
 
   .info-value {
@@ -277,32 +498,65 @@ const handleLogout = () => {
     color: #303133;
 
     &.server-url {
-      font-size: 24rpx;
+      font-size: 22rpx;
       color: #909399;
-      max-width: 400rpx;
+      max-width: 350rpx;
       text-align: right;
       word-break: break-all;
+      line-height: 1.4;
     }
   }
 }
 
+/* 退出登录 */
 .logout-section {
-  padding: 40rpx 0;
+  padding: 20rpx 0;
+  animation: slideInUp 0.6s ease-out forwards;
+  opacity: 0;
+  transform: translateY(30rpx);
+  margin-right: 60rpx;
 }
 
 .logout-btn {
   width: 100%;
-  height: 90rpx;
-  background: linear-gradient(135deg, #f56c6c 0%, #ff4757 100%);
-  color: #fff;
+  padding: 0;
   border: none;
-  border-radius: 15rpx;
-  font-size: 32rpx;
-  font-weight: bold;
-  transition: all 0.3s;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 20rpx;
+  box-shadow: 0 8rpx 30rpx rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1rpx solid rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease;
 
   &:active {
-    transform: translateY(2rpx);
+    transform: scale(0.98);
+    box-shadow: 0 12rpx 40rpx rgba(0, 0, 0, 0.15);
   }
+}
+
+.logout-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16rpx;
+  padding: 24rpx;
+}
+
+.logout-icon {
+  width: 48rpx;
+  height: 48rpx;
+  background: linear-gradient(135deg, #f56c6c 0%, #ff4757 100%);
+  border-radius: 12rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24rpx;
+  color: #fff;
+}
+
+.logout-text {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #f56c6c;
 }
 </style>
