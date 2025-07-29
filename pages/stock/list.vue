@@ -1,86 +1,74 @@
 <template>
   <view class="stock-list-container">
-    <!-- 顶部装饰背景 -->
-    <view class="header-bg">
-      <view class="bg-decoration"></view>
-      <view class="bg-decoration-2"></view>
-    </view>
-
-    <!-- 顶部标题区域 -->
-    <view class="header-title">
-      <view class="title-content">
-        <text class="page-title">📦 库存管理</text>
-        <text class="page-subtitle">轻松管理您的商品库存</text>
+    <!-- 固定的顶部区域 -->
+    <view class="fixed-header">
+      <!-- 顶部装饰背景 -->
+      <view class="header-bg">
+        <view class="bg-decoration"></view>
+        <view class="bg-decoration-2"></view>
       </view>
-    </view>
 
-    <!-- 搜索栏 -->
-    <view class="search-container">
-      <view class="search-wrapper">
-        <view class="search-icon">🔍</view>
-        <input
-          v-model="searchKeyword"
-          placeholder="搜索说明备注..."
-          class="search-input"
-          @confirm="handleSearch"
-        />
-        <view v-if="searchKeyword" class="clear-icon" @click="clearSearch">✕</view>
-      </view>
-    </view>
-
-    <!-- 状态筛选标签 -->
-    <view class="filter-container">
-      <scroll-view class="filter-scroll" scroll-x>
-        <view class="filter-tabs">
-          <view
-            class="filter-tab"
-            :class="{ active: statusFilter === 'all' }"
-            @click="setStatusFilter('all')"
-          >
-            <text class="filter-icon">📋</text>
-            <text class="filter-text">全部</text>
-          </view>
-          <view
-            class="filter-tab"
-            :class="{ active: statusFilter === '待审核' }"
-            @click="setStatusFilter('待审核')"
-          >
-            <text class="filter-icon">⏳</text>
-            <text class="filter-text">待审核</text>
-          </view>
-          <view
-            class="filter-tab"
-            :class="{ active: statusFilter === '已通过' }"
-            @click="setStatusFilter('已通过')"
-          >
-            <text class="filter-icon">✅</text>
-            <text class="filter-text">已通过</text>
-          </view>
-          <view
-            class="filter-tab"
-            :class="{ active: statusFilter === '未通过' }"
-            @click="setStatusFilter('未通过')"
-          >
-            <text class="filter-icon">❌</text>
-            <text class="filter-text">未通过</text>
-          </view>
+      <!-- 顶部标题区域 -->
+      <view class="header-title">
+        <view class="title-content">
+          <text class="page-title">📦 库存管理</text>
+          <text class="page-subtitle">轻松管理您的商品库存</text>
         </view>
-      </scroll-view>
+      </view>
+
+      <!-- 状态筛选标签 -->
+      <view class="filter-container">
+        <view class="filter-tabs">
+            <view
+              class="filter-tab"
+              :class="{ active: statusFilter === 'all' }"
+              @click="setStatusFilter('all')"
+            >
+              <text class="filter-icon">📋</text>
+              <text class="filter-text">全部</text>
+            </view>
+            <view
+              class="filter-tab"
+              :class="{ active: statusFilter === '待审核' }"
+              @click="setStatusFilter('待审核')"
+            >
+              <text class="filter-icon">⏳</text>
+              <text class="filter-text">待审核</text>
+            </view>
+            <view
+              class="filter-tab"
+              :class="{ active: statusFilter === '已通过' }"
+              @click="setStatusFilter('已通过')"
+            >
+              <text class="filter-icon">✅</text>
+              <text class="filter-text">已通过</text>
+            </view>
+            <view
+              class="filter-tab"
+              :class="{ active: statusFilter === '未通过' }"
+              @click="setStatusFilter('未通过')"
+            >
+              <text class="filter-icon">❌</text>
+              <text class="filter-text">未通过</text>
+            </view>
+        </view>
+      </view>
     </view>
 
     <!-- 入库记录列表 -->
-    <scroll-view
-      class="stock-list"
-      scroll-y
-      refresher-enabled
-      :refresher-triggered="refreshing"
-      @refresherrefresh="onRefresh"
-      @scrolltolower="loadMore"
-      refresher-threshold="80"
-      refresher-default-style="none"
-      :lower-threshold="100"
-    >
-      <view v-if="loading" class="loading-container">
+    <view class="content-area">
+      <scroll-view
+        class="stock-list"
+        scroll-y
+        refresher-enabled
+        :refresher-triggered="refreshing"
+        @refresherrefresh="onRefresh"
+        @scrolltolower="loadMore"
+        :refresher-threshold="80"
+        refresher-default-style="none"
+        :lower-threshold="100"
+      >
+      <view v-if="!refreshing && loading && stockList.length === 0" class="loading-container">
         <view class="loading-animation">
           <view class="loading-dot"></view>
           <view class="loading-dot"></view>
@@ -89,7 +77,7 @@
         <text class="loading-text">加载中...</text>
       </view>
 
-      <view v-else-if="filteredList.length === 0" class="empty-container">
+      <view v-else-if="!loading && !refreshing && filteredList.length === 0" class="empty-container">
         <view class="empty-animation">
           <text class="empty-icon">📦</text>
           <view class="empty-circle"></view>
@@ -167,14 +155,22 @@
 
         </view>
       </view>
-    </scroll-view>
-
-    <!-- 分页加载 -->
-    <view v-if="hasMore && !loading" class="load-more" @click="loadMore">
-      <view class="load-more-content">
-        <text class="load-more-icon">⬇️</text>
-        <text class="load-more-text">加载更多</text>
-      </view>
+        <!-- 分页加载 -->
+        <view v-if="hasMore" class="load-more" @click="loadMore">
+          <view class="load-more-content">
+            <view v-if="loading" class="loading-more">
+              <view class="loading-dot-small"></view>
+              <view class="loading-dot-small"></view>
+              <view class="loading-dot-small"></view>
+              <text class="loading-more-text">加载中...</text>
+            </view>
+            <view v-else class="load-more-normal">
+              <text class="load-more-icon">⬇️</text>
+              <text class="load-more-text">加载更多</text>
+            </view>
+          </view>
+        </view>
+      </scroll-view>
     </view>
 
     <!-- 浮动添加按钮 -->
@@ -193,7 +189,6 @@ import { getStockList } from '@/api/stock'
 const loading = ref(false)
 const refreshing = ref(false)
 const stockList = ref([])
-const searchKeyword = ref('')
 const statusFilter = ref('all')
 const storeOptions = ref([])
 const imagePath = ref('')
@@ -215,12 +210,7 @@ const filteredList = computed(() => {
     list = list.filter(item => item.reviewStatus === statusFilter.value)
   }
 
-  if (searchKeyword.value) {
-    const keyword = searchKeyword.value.toLowerCase()
-    list = list.filter(item =>
-      (item.description && item.description.toLowerCase().includes(keyword))
-    )
-  }
+
 
   return list
 })
@@ -238,8 +228,14 @@ const loadStockList = async (isLoadMore = false) => {
     const params = {
       page: isLoadMore ? pagination.page + 1 : 1,
       pageSize: pagination.pageSize,
-      type: 'increase' // 只查询入库记录
+      type: 'increase'
     }
+
+    if (statusFilter.value !== 'all') {
+      params.reviewStatus = statusFilter.value
+    }
+
+
 
     const response = await getStockList(params)
 
@@ -268,22 +264,25 @@ const loadStockList = async (isLoadMore = false) => {
   }
 }
 
-const handleSearch = () => {
-}
 
-const clearSearch = () => {
-  searchKeyword.value = ''
-}
 
 const setStatusFilter = (status) => {
   statusFilter.value = status
+  pagination.page = 1
+  loadStockList(false)
 }
 
-const onRefresh = () => {
+const onRefresh = async () => {
   refreshing.value = true
-  loadStockList().finally(() => {
+  try {
+    const oldData = [...stockList.value]
+    pagination.page = 1
+    await loadStockList(false)
+  } catch (error) {
+    console.error('刷新失败:', error)
+  } finally {
     refreshing.value = false
-  })
+  }
 }
 
 const loadMore = () => {
@@ -374,11 +373,8 @@ const goToAddStock = () => {
 
 /* 顶部装饰背景 */
 .header-bg {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 400rpx;
+  position: relative;
+  height: 200rpx;
   overflow: hidden;
   z-index: 0;
 }
@@ -412,9 +408,12 @@ const goToAddStock = () => {
 
 /* 顶部标题区域 */
 .header-title {
-  position: relative;
-  z-index: 1;
-  padding: 60rpx 40rpx 40rpx;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  padding: 80rpx 40rpx 20rpx;
   text-align: center;
 }
 
@@ -439,72 +438,31 @@ const goToAddStock = () => {
 }
 
 
-/* 搜索容器 */
-.search-container {
-  position: relative;
-  z-index: 1;
-  padding: 0 40rpx 30rpx;
+/* 固定头部区域 */
+.fixed-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
-.search-wrapper {
-  position: relative;
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 50rpx;
-  padding: 20rpx 60rpx 20rpx 60rpx;
-  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(10px);
-  display: flex;
-  align-items: center;
-}
 
-.search-icon {
-  position: absolute;
-  left: 24rpx;
-  font-size: 32rpx;
-  color: #999;
-}
 
-.search-input {
-  flex: 1;
-  border: none;
-  outline: none;
-  font-size: 28rpx;
-  color: #333;
-  background: transparent;
-}
 
-.search-input::placeholder {
-  color: #999;
-}
 
-.clear-icon {
-  position: absolute;
-  right: 24rpx;
-  font-size: 24rpx;
-  color: #999;
-  width: 32rpx;
-  height: 32rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: #f0f0f0;
-}
+
 
 /* 筛选容器 */
 .filter-container {
-  position: relative;
-  z-index: 1;
-  padding: 0 40rpx 30rpx;
-}
-
-.filter-scroll {
-  white-space: nowrap;
+  padding: 0 20rpx 20rpx;
 }
 
 .filter-tabs {
   display: flex;
-  gap: 20rpx;
+  justify-content: space-between;
+  gap: 10rpx;
   padding: 0 10rpx;
 }
 
@@ -512,10 +470,11 @@ const goToAddStock = () => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 20rpx 30rpx;
+  padding: 16rpx 20rpx;
   background: rgba(255, 255, 255, 0.2);
   border-radius: 25rpx;
-  min-width: 120rpx;
+  flex: 1;
+  min-width: 0;
   backdrop-filter: blur(10px);
   border: 2rpx solid rgba(255, 255, 255, 0.3);
   transition: all 0.3s ease;
@@ -528,33 +487,39 @@ const goToAddStock = () => {
 }
 
 .filter-icon {
-  font-size: 32rpx;
-  margin-bottom: 8rpx;
+  font-size: 26rpx;
+  margin-bottom: 6rpx;
 }
 
 .filter-text {
-  font-size: 24rpx;
+  font-size: 22rpx;
   color: #fff;
   font-weight: 500;
+  text-align: center;
+  line-height: 1.2;
 }
 
 .filter-tab.active .filter-text {
   color: #333;
 }
 
-/* 列表容器 */
-.stock-list {
+/* 内容区域 */
+.content-area {
   position: relative;
   z-index: 1;
-  padding: 0 40rpx;
-  padding-bottom: 200rpx;
+  margin-top: 240rpx;
+}
+
+/* 列表容器 */
+.stock-list {
+  padding: 20rpx 30rpx 200rpx;
 }
 
 .list-content {
   display: flex;
   flex-direction: column;
-  gap: 30rpx;
-  padding-right: 140rpx; /* 增加右边距，避免被浮动按钮遮挡 */
+  gap: 25rpx;
+  padding-right: 60rpx;
 }
 
 /* 加载和空状态 */
@@ -894,6 +859,34 @@ const goToAddStock = () => {
   font-size: 28rpx;
   color: #1890ff;
   font-weight: 500;
+}
+
+.loading-more {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.loading-dot-small {
+  width: 8rpx;
+  height: 8rpx;
+  background: #1890ff;
+  border-radius: 50%;
+  animation: loading-bounce 1.4s ease-in-out infinite both;
+}
+
+.loading-dot-small:nth-child(1) { animation-delay: -0.32s; }
+.loading-dot-small:nth-child(2) { animation-delay: -0.16s; }
+
+.loading-more-text {
+  font-size: 26rpx;
+  color: #1890ff;
+}
+
+.load-more-normal {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
 }
 
 /* 浮动添加按钮 */
