@@ -63,10 +63,14 @@
         refresher-enabled
         :refresher-triggered="refreshing"
         @refresherrefresh="onRefresh"
-        @scrolltolower="loadMore"
+        @scrolltolower="onScrollToLower"
         :refresher-threshold="80"
         refresher-default-style="none"
-        :lower-threshold="100"
+        :lower-threshold="300"
+        @scroll="onScroll"
+        :id="scrollViewId"
+        show-scrollbar="true"
+        enable-back-to-top="true"
       >
       <view v-if="!refreshing && loading && stockList.length === 0" class="loading-container">
         <view class="loading-animation">
@@ -91,9 +95,7 @@
           v-for="(item, index) in filteredList"
           :key="item.id"
           class="stock-item"
-          :style="{ animationDelay: index * 0.1 + 's' }"
           @click.stop="viewDetail(item)"
-          @touchstart="handleTouchStart"
         >
           <!-- 卡片装饰 -->
           <view class="card-decoration" :class="getCardDecorationClass(item.reviewStatus)"></view>
@@ -151,13 +153,11 @@
               </view>
             </view>
           </view>
-
-
         </view>
       </view>
         <!-- 分页加载 -->
-        <view v-if="hasMore" class="load-more" @click="loadMore">
-          <view class="load-more-content">
+        <view v-if="hasMore" class="load-more">
+          <view class="load-more-content" @click.stop="handleLoadMoreClick">
             <view v-if="loading" class="loading-more">
               <view class="loading-dot-small"></view>
               <view class="loading-dot-small"></view>
@@ -183,7 +183,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import { getStockList } from '@/api/stock'
 
 const loading = ref(false)
@@ -192,6 +192,11 @@ const stockList = ref([])
 const statusFilter = ref('all')
 const storeOptions = ref([])
 const imagePath = ref('')
+const isScrolling = ref(false)
+const scrollTop = ref(null)
+const scrollTimer = ref(null)
+const lastScrollTop = ref(0)
+const scrollViewId = ref('stockScrollView')
 
 const pagination = reactive({
   page: 1,
@@ -219,42 +224,108 @@ onMounted(() => {
   loadStockList()
 })
 
-const loadStockList = async (isLoadMore = false) => {
+const onScroll = (e) => {
+  if (scrollTimer.value) clearTimeout(scrollTimer.value)
+  isScrolling.value = true
+  lastScrollTop.value = e.detail.scrollTop
+  
+  scrollTimer.value = setTimeout(() => {
+    isScrolling.value = false
+  }, 100)
+}
+
+let lastScrollToLowerTime = 0
+const onScrollToLower = () => {
   if (loading.value) return
+  
+  const now = Date.now()
+  if (now - lastScrollToLowerTime < 500) return
+  
+  lastScrollToLowerTime = now
+  if (!loading.value && hasMore.value) {
+    loadMore(false)
+  }
+}
 
+const loadMore = (isClickButton = true) => {
+  if (!loading.value && hasMore.value) {
+    const currentPosition = lastScrollTop.value
+    
+    loadStockList(true).then(() => {
+      if (isClickButton && currentPosition > 0) {
+        setTimeout(() => {
+          try {
+            uni.createSelectorQuery()
+              .select(`#${scrollViewId.value}`)
+              .boundingClientRect(rect => {
+                if (rect) {
+                  uni.pageScrollTo({
+                    scrollTop: currentPosition,
+                    duration: 0
+                  })
+                }
+              }).exec()
+          } catch (e) {
+            console.error('恢复滚动位置失败', e)
+          }
+        }, 50)
+      }
+    }).catch(err => {
+      console.error('加载更多失败', err)
+    })
+  }
+}
+
+const loadStockList = async (isLoadMore = false) => {
+  if (loading.value) return Promise.resolve()
+  
   loading.value = true
-
+  
   try {
     const params = {
       page: isLoadMore ? pagination.page + 1 : 1,
       pageSize: pagination.pageSize,
       type: 'increase'
     }
-
+    
     if (statusFilter.value !== 'all') {
       params.reviewStatus = statusFilter.value
     }
-
-
-
+    
     const response = await getStockList(params)
-
-    if (response.data) {
+    
+    if (response && response.data) {
       const newList = response.data.paginationResponse.content || []
-
+      
       if (isLoadMore) {
         stockList.value = [...stockList.value, ...newList]
         pagination.page++
       } else {
         stockList.value = newList
         pagination.page = 1
+        
+        if (!refreshing.value) {
+          setTimeout(() => {
+            uni.pageScrollTo({
+              scrollTop: 0,
+              duration: 100
+            })
+          }, 100)
+        }
       }
-
+      
       pagination.total = response.data.paginationResponse.totalElements || 0
       storeOptions.value = response.data.storeList || []
       imagePath.value = response.data.imagePath || ''
+    } else {
+      console.error('响应格式不正确:', response)
+      uni.showToast({
+        title: '数据格式异常',
+        icon: 'none'
+      })
     }
   } catch (error) {
+    console.error('请求失败:', error)
     uni.showToast({
       title: '获取数据失败',
       icon: 'none'
@@ -262,11 +333,19 @@ const loadStockList = async (isLoadMore = false) => {
   } finally {
     loading.value = false
   }
+  
+  return Promise.resolve()
 }
 
-
+const handleLoadMoreClick = (e) => {
+  e.stopPropagation() // 防止事件冒泡
+  if (!loading.value && hasMore.value) {
+    loadMore(true)
+  }
+}
 
 const setStatusFilter = (status) => {
+  if (statusFilter.value === status) return // 避免重复点击
   statusFilter.value = status
   pagination.page = 1
   loadStockList(false)
@@ -275,19 +354,24 @@ const setStatusFilter = (status) => {
 const onRefresh = async () => {
   refreshing.value = true
   try {
-    const oldData = [...stockList.value]
     pagination.page = 1
     await loadStockList(false)
+    nextTick(() => {
+      setTimeout(() => {
+        const scrollView = uni.createSelectorQuery().select(`#${scrollViewId.value}`)
+        if (scrollView) {
+          scrollView.node(function(res) {
+            if (res && res.node) {
+              res.node.scrollTop = 0
+            }
+          }).exec()
+        }
+      }, 200)
+    })
   } catch (error) {
     console.error('刷新失败:', error)
   } finally {
     refreshing.value = false
-  }
-}
-
-const loadMore = () => {
-  if (!loading.value && hasMore.value) {
-    loadStockList(true)
   }
 }
 
@@ -511,20 +595,29 @@ const goToAddStock = () => {
   z-index: 1;
   /* 动态计算顶部偏移，包含状态栏高度 */
   margin-top: calc(240rpx + var(--status-bar-height));
+  height: calc(100vh - 240rpx - var(--status-bar-height));
+  overflow: hidden;
 }
 
 /* 列表容器 */
 .stock-list {
   padding: 20rpx 30rpx 200rpx;
+  height: 100%;
+  /* 防止滚动抖动 */
+  -webkit-overflow-scrolling: touch;
+  /* 硬件加速 */
+  transform: translateZ(0);
+  /* 防止多余的边距 */
+  box-sizing: border-box;
 }
 
 .list-content {
   display: flex;
   flex-direction: column;
   gap: 25rpx;
-  padding-right: 60rpx;
-  /*  第一条内容修改处  */
-  margin-top: 70rpx;
+  padding-right: 20rpx;
+  /* 移除可能导致滚动问题的上边距 */
+  margin-top: 20rpx;
 }
 
 /* 加载和空状态 */
@@ -618,10 +711,10 @@ const goToAddStock = () => {
   box-shadow: 0 8rpx 30rpx rgba(0, 0, 0, 0.1);
   backdrop-filter: blur(10px);
   border: 1rpx solid rgba(255, 255, 255, 0.2);
-  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-  animation: slideInUp 0.6s ease-out forwards;
-  opacity: 0;
-  transform: translateY(30rpx);
+  animation: none;
+  opacity: 1;
+  transform: none;
+  transition: transform 0.3s ease;
 }
 
 @keyframes slideInUp {
@@ -834,8 +927,9 @@ const goToAddStock = () => {
 .load-more {
   display: flex;
   justify-content: center;
-  padding: 40rpx;
+  padding: 30rpx;
   margin-top: 20rpx;
+  margin-bottom: 30rpx;
 }
 
 .load-more-content {
@@ -847,6 +941,15 @@ const goToAddStock = () => {
   border-radius: 50rpx;
   box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.1);
   backdrop-filter: blur(10px);
+  /* 添加触摸反馈 */
+  position: relative;
+  z-index: 5;
+  transform: translateZ(0);
+}
+
+.load-more-content:active {
+  opacity: 0.8;
+  transform: scale(0.98) translateZ(0);
 }
 
 .load-more-icon {
@@ -906,7 +1009,9 @@ const goToAddStock = () => {
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transition: transform 0.3s ease;
+  transform: translateZ(0);
+  will-change: transform;
 }
 
 .fab-bg {
