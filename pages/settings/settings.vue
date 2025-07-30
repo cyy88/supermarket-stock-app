@@ -33,53 +33,9 @@
 
     <!-- 内容区域 -->
     <view class="content-area">
-      <scroll-view
-        class="main-content"
-        scroll-y
-        refresher-enabled
-        :refresher-triggered="refreshing"
-        @refresherrefresh="onRefresh"
-        @refresherrestore="onRefreshRestore"
-        :refresher-threshold="80"
-        refresher-default-style="black"
-      >
-        <!-- 功能设置 -->
-        <view class="card" :style="{ animationDelay: '0.1s' }">
-          <view class="card-title">
-            <view class="title-icon">⚙️</view>
-            <text class="title-text">功能设置</text>
-          </view>
-          <view class="setting-list">
-            <view class="setting-item" @click="goToStockAdd">
-              <view class="setting-info">
-                <view class="setting-icon-wrapper stock-icon">
-                  <text class="setting-icon">📦</text>
-                </view>
-                <text class="setting-name">库存入库</text>
-              </view>
-              <view class="setting-action">
-                <text class="setting-desc">添加商品库存</text>
-                <text class="arrow">→</text>
-              </view>
-            </view>
-
-            <view class="setting-item" @click="goToStockList">
-              <view class="setting-info">
-                <view class="setting-icon-wrapper record-icon">
-                  <text class="setting-icon">📋</text>
-                </view>
-                <text class="setting-name">入库记录</text>
-              </view>
-              <view class="setting-action">
-                <text class="setting-desc">查看入库记录</text>
-                <text class="arrow">→</text>
-              </view>
-            </view>
-          </view>
-        </view>
-
+      <view class="main-content">
         <!-- 应用信息 -->
-        <view class="card" :style="{ animationDelay: '0.2s' }">
+        <view class="card" style="margin-top: 90rpx;">
           <view class="card-title">
             <view class="title-icon">ℹ️</view>
             <text class="title-text">应用信息</text>
@@ -101,7 +57,7 @@
         </view>
 
         <!-- 退出登录 -->
-        <view class="logout-section" :style="{ animationDelay: '0.3s' }">
+        <view class="logout-section">
           <button class="logout-btn" @click="handleLogout">
             <view class="logout-content">
               <view class="logout-icon">🚪</view>
@@ -109,7 +65,7 @@
             </view>
           </button>
         </view>
-      </scroll-view>
+      </view>
     </view>
   </view>
 </template>
@@ -119,7 +75,6 @@ import { ref, onMounted } from 'vue'
 import userStore from '@/stores/user'
 
 const userInfo = ref(null)
-const refreshing = ref(false)
 const serverUrl = ref('http://msbs-fuint-ts.qingchunnianhua.com:1880')
 
 onMounted(async () => {
@@ -151,41 +106,6 @@ const goToStockList = () => {
   uni.navigateTo({
     url: '/pages/stock/list'
   })
-}
-
-
-
-// 下拉刷新
-const onRefresh = async () => {
-  if (refreshing.value) return
-
-  refreshing.value = true
-  try {
-    await userStore.getUserInfo()
-    userInfo.value = userStore.userInfo
-
-    uni.showToast({
-      title: '刷新成功',
-      icon: 'success',
-      duration: 1000
-    })
-  } catch (error) {
-    console.error('刷新失败:', error)
-    uni.showToast({
-      title: '刷新失败',
-      icon: 'none',
-      duration: 1500
-    })
-  } finally {
-    setTimeout(() => {
-      refreshing.value = false
-    }, 500)
-  }
-}
-
-// 刷新恢复事件处理
-const onRefreshRestore = () => {
-  refreshing.value = false
 }
 
 const handleLogout = () => {
@@ -353,13 +273,16 @@ const handleLogout = () => {
 .content-area {
   position: relative;
   z-index: 1;
-  /* 动态计算顶部偏移，包含状态栏高度 */
   margin-top: calc(320rpx + var(--status-bar-height));
+  height: calc(100vh - 320rpx - var(--status-bar-height));
 }
 
 /* 主要内容 */
 .main-content {
-  padding: 20rpx 30rpx 200rpx;
+  padding: 20rpx 30rpx 120rpx;
+  position: relative;
+  z-index: 10;
+  background: transparent;
 }
 
 /* 卡片样式 */
@@ -371,12 +294,8 @@ const handleLogout = () => {
   box-shadow: 0 8rpx 30rpx rgba(0, 0, 0, 0.1);
   backdrop-filter: blur(10px);
   border: 1rpx solid rgba(255, 255, 255, 0.2);
-  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-  animation: slideInUp 0.6s ease-out forwards;
-  opacity: 0;
-  transform: translateY(30rpx);
-  margin-right: 60rpx;
-  margin-top: 50rpx;
+  opacity: 1;
+  margin-right: 0rpx;
 }
 
 @keyframes slideInUp {
@@ -516,10 +435,7 @@ const handleLogout = () => {
 /* 退出登录 */
 .logout-section {
   padding: 20rpx 0;
-  animation: slideInUp 0.6s ease-out forwards;
-  opacity: 0;
-  transform: translateY(30rpx);
-  margin-right: 60rpx;
+  margin-right: 0rpx;
 }
 
 .logout-btn {
