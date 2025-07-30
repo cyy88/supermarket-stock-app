@@ -30,62 +30,35 @@
 
     <!-- 内容区域 -->
     <view class="content-area">
-      <scroll-view
-        class="main-content"
-        scroll-y
-        refresher-enabled
-        :refresher-triggered="refreshing"
-        @refresherrefresh="onRefresh"
-        @refresherrestore="onRefreshRestore"
-        :refresher-threshold="80"
-        refresher-default-style="black"
-      >
-        <!-- 统计卡片 -->
-<!--        <view class="stats-section">-->
-<!--          <view class="stat-card" :style="{ animationDelay: '0.1s' }">-->
-<!--            <view class="stat-icon">📈</view>-->
-<!--            <view class="stat-info">-->
-<!--              <text class="stat-number">{{ statistics.todayCount }}</text>-->
-<!--              <text class="stat-label">今日添加</text>-->
-<!--            </view>-->
-<!--          </view>-->
-<!--          <view class="stat-card" :style="{ animationDelay: '0.2s' }">-->
-<!--            <view class="stat-icon">📦</view>-->
-<!--            <view class="stat-info">-->
-<!--              <text class="stat-number">{{ statistics.totalCount }}</text>-->
-<!--              <text class="stat-label">总商品</text>-->
-<!--            </view>-->
-<!--          </view>-->
-<!--        </view>-->
-
+      <view class="main-content">
         <!-- 功能按钮 -->
         <view class="action-buttons">
-          <button class="action-btn primary" @click="goToScan" :style="{ animationDelay: '0.3s' }" style="margin-top: 52rpx;">
+          <button class="action-btn primary" @click="goToScan" style="margin-top: 50rpx">
             <view class="btn-content">
               <text class="btn-icon">📱</text>
               <text class="btn-text">开始扫码</text>
             </view>
           </button>
-          <button class="action-btn secondary" @click="goToGoodsList" :style="{ animationDelay: '0.4s' }">
+          <button class="action-btn secondary" @click="goToGoodsList">
             <view class="btn-content">
               <text class="btn-icon">📦</text>
               <text class="btn-text">商品管理</text>
             </view>
           </button>
-          <button class="action-btn consumables" @click="goToConsumablesList" :style="{ animationDelay: '0.5s' }">
+          <button class="action-btn consumables" @click="goToConsumablesList">
             <view class="btn-content">
               <text class="btn-icon">🧴</text>
               <text class="btn-text">消耗品管理</text>
             </view>
           </button>
-          <button class="action-btn tertiary" @click="manualAdd" :style="{ animationDelay: '0.6s' }">
+          <button class="action-btn tertiary" @click="manualAdd">
             <view class="btn-content">
               <text class="btn-icon">➕</text>
               <text class="btn-text">手动添加</text>
             </view>
           </button>
         </view>
-      </scroll-view>
+      </view>
     </view>
   </view>
 </template>
@@ -97,7 +70,6 @@ import goodsStore from '@/stores/goods'
 
 const title = ref('商品扫码系统')
 const userInfo = ref(null)
-const refreshing = ref(false)
 const statistics = ref({
   todayCount: 0,
   totalCount: 0
@@ -159,38 +131,6 @@ const manualAdd = () => {
   uni.navigateTo({
     url: '/pages/goods/add'
   })
-}
-
-// 下拉刷新
-const onRefresh = async () => {
-  if (refreshing.value) return
-
-  refreshing.value = true
-  try {
-    await checkLoginStatus()
-
-    uni.showToast({
-      title: '刷新成功',
-      icon: 'success',
-      duration: 1000
-    })
-  } catch (error) {
-    console.error('刷新失败:', error)
-    uni.showToast({
-      title: '刷新失败',
-      icon: 'none',
-      duration: 1500
-    })
-  } finally {
-    setTimeout(() => {
-      refreshing.value = false
-    }, 500)
-  }
-}
-
-// 刷新恢复事件处理
-const onRefreshRestore = () => {
-  refreshing.value = false
 }
 </script>
 
@@ -285,12 +225,14 @@ const onRefreshRestore = () => {
   display: flex;
   align-items: center;
   gap: 20rpx;
-  margin: 0 20rpx 20rpx;
+  margin: 0 auto 20rpx;
   padding: 20rpx 30rpx;
   background: rgba(255, 255, 255, 0.9);
   border-radius: 20rpx;
   box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.1);
   backdrop-filter: blur(10px);
+  width: 80%;
+  max-width: 600rpx;
 }
 
 .user-avatar {
@@ -330,21 +272,28 @@ const onRefreshRestore = () => {
 .content-area {
   position: relative;
   z-index: 1;
-  /* 动态计算顶部偏移，包含状态栏高度 */
-  margin-top: calc(280rpx + var(--status-bar-height));
+  margin-top: calc(260rpx + var(--status-bar-height));
+  height: calc(100vh - 260rpx - var(--status-bar-height));
+  padding: 0 30rpx;
 }
 
 /* 主要内容 */
 .main-content {
-  padding: 20rpx 30rpx 200rpx;
+  padding: 0;
+  position: relative;
+  z-index: 10;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
-/* 统计卡片 */
-.stats-section {
-  display: flex;
-  gap: 20rpx;
-  margin-bottom: 40rpx;
-  margin-top: 60rpx;
+/* 滑入动画 */
+@keyframes slideInUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .stat-card {
@@ -366,13 +315,6 @@ const onRefreshRestore = () => {
   &:active {
     transform: translateY(-8rpx) scale(0.98);
     box-shadow: 0 20rpx 60rpx rgba(0, 0, 0, 0.15);
-  }
-}
-
-@keyframes slideInUp {
-  to {
-    opacity: 1;
-    transform: translateY(0);
   }
 }
 
@@ -410,7 +352,9 @@ const onRefreshRestore = () => {
 .action-buttons {
   display: flex;
   flex-direction: column;
-  gap: 25rpx;
+  gap: 30rpx;
+  align-items: center;
+  justify-content: center;
 }
 
 .action-btn {
@@ -422,10 +366,10 @@ const onRefreshRestore = () => {
   box-shadow: 0 8rpx 30rpx rgba(0, 0, 0, 0.1);
   backdrop-filter: blur(10px);
   border: 1rpx solid rgba(255, 255, 255, 0.2);
-  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-  animation: slideInUp 0.6s ease-out forwards;
-  opacity: 0;
-  transform: translateY(30rpx);
+  transition: transform 0.3s ease;
+  opacity: 1;
+  width: 65%;
+  max-width: 500rpx;
 
   &:active {
     transform: translateY(-8rpx) scale(0.98);
@@ -436,19 +380,22 @@ const onRefreshRestore = () => {
 .btn-content {
   display: flex;
   align-items: center;
-  gap: 20rpx;
-  padding: 30rpx 40rpx;
+  gap: 30rpx;
+  padding: 25rpx 40rpx;
+  justify-content: flex-start;
+  width: 100%;
 }
 
 .btn-icon {
-  font-size: 48rpx;
-  width: 80rpx;
-  height: 80rpx;
+  font-size: 44rpx;
+  width: 70rpx;
+  height: 70rpx;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
+  flex-shrink: 0;
 }
 
 .btn-text {
@@ -457,6 +404,7 @@ const onRefreshRestore = () => {
   font-weight: bold;
   color: #303133;
   text-align: left;
+  padding-left: 0;
 }
 
 .action-btn.primary .btn-icon {
