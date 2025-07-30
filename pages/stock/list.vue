@@ -65,7 +65,7 @@
         @refresherrefresh="onRefresh"
         @scrolltolower="onScrollToLower"
         :refresher-threshold="80"
-        refresher-default-style="none"
+        refresher-background="linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)"
         :lower-threshold="300"
         @scroll="onScroll"
         :id="scrollViewId"
@@ -608,6 +608,7 @@ const goToAddStock = () => {
   -webkit-overflow-scrolling: touch;
   transform: translateZ(0);
   box-sizing: border-box;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
 }
 
 /* 进一步调整scroll-view内容区 */

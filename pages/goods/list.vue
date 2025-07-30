@@ -88,8 +88,10 @@
         @refresherrestore="onRefreshRestore"
         @scrolltolower="loadMore"
         :refresher-threshold="80"
-        refresher-default-style="black"
-        :lower-threshold="100"
+        refresher-background="linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)"
+        :lower-threshold="300"
+        show-scrollbar="true"
+        enable-back-to-top="true"
       >
         <!-- 筛选结果统计 -->
         <view v-if="hasActiveFilters" class="filter-result-bar">
@@ -836,6 +838,7 @@ const getTotalCount = () => {
 /* 列表容器 */
 .goods-list {
   padding: 20rpx 30rpx 200rpx;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
 }
 
 .list-content {
