@@ -1,4 +1,3 @@
-// 用户状态管理 (简化版)
 import { login as loginApi, getUserInfo as getUserInfoApi, logout as logoutApi } from '@/api/auth'
 
 class UserStore {
@@ -66,6 +65,5 @@ class UserStore {
   }
 }
 
-// 创建单例
 const userStore = new UserStore()
 export default userStore

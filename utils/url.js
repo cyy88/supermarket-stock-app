@@ -10,12 +10,10 @@
 export const fixMalformedUrl = (url) => {
   if (!url || typeof url !== 'string') return url
   
-  // 查找URL中是否包含重复的域名
   const domainPattern = /(https?:\/\/[^\/]+)(https?:\/\/[^\/]+)/
   const match = url.match(domainPattern)
   
   if (match) {
-    // 如果找到重复的域名，只保留第二个域名
     return url.replace(match[1], '')
   }
   

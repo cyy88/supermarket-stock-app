@@ -15,7 +15,7 @@ export const login = (data) => {
     method: 'POST',
     data,
     header: {
-      isToken: false  // 登录接口不需要token
+      isToken: false
     }
   })
 }

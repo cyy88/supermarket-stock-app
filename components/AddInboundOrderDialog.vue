@@ -222,7 +222,6 @@ const doSave = () => {
     })
     return
   }
-  // 使用深拷贝避免引用问题
   const imageData = JSON.parse(JSON.stringify(baseForm.images))
   emit('submit', imageData)
   emit('closeDialog')

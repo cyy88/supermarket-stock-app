@@ -10,7 +10,7 @@ export const saveGoods = (data) => {
   })
 }
 
-// 更新商品 - 使用POST方法，与新增商品相同接口
+// 更新商品
 export const updateGoods = (data) => {
   return request({
     url: '/backendApi/goods/goods/save',
@@ -24,7 +24,6 @@ export const updateGoods = (data) => {
 
 // 获取商品列表
 export const getGoodsList = (data = {}) => {
-  // 默认参数
   const params = {
     page: 1,
     pageSize: 20,
@@ -111,7 +110,6 @@ export const uploadImage = (filePath) => {
           console.log('解析后的上传响应:', data);
 
           if (data.code === 200) {
-            // 始终使用完整的url字段
             let fullUrl = data.data.url
             console.log('图片上传成功，完整URL:', fullUrl);
             resolve(fullUrl)

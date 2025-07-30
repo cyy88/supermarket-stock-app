@@ -9,7 +9,6 @@ class GoodsStore {
     this.init()
   }
 
-  // 初始化
   init() {
     this.categories = uni.getStorageSync('categories') || []
     this._localGoods = []
@@ -45,12 +44,12 @@ class GoodsStore {
     return []
   }
 
-  // 获取今日添加数量（从服务器获取）
+  // 获取今日添加数量
   get todayCount() {
     return this.todayAddedCount
   }
 
-  // 获取总商品数（从服务器获取）
+  // 获取总商品数
   get totalCount() {
     return this.totalGoodsCount
   }
@@ -75,10 +74,8 @@ class GoodsStore {
     console.log('updateSyncStatus 已禁用，商品ID:', goodsId, '状态:', status)
   }
 
-  // 获取统计数据（暂时返回默认值，避免调用不存在的接口）
+  // 获取统计数据
   async fetchStatistics() {
-    console.trace('fetchStatistics 调用堆栈')
-    // 暂时不调用服务器接口，直接返回默认值
     this.totalGoodsCount = 0
     this.todayAddedCount = 0
 
@@ -90,6 +87,5 @@ class GoodsStore {
   }
 }
 
-// 创建单例
 const goodsStore = new GoodsStore()
 export default goodsStore
