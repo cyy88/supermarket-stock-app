@@ -67,15 +67,27 @@
         </view>
       </view>
     </view>
+
+    <!-- 确认退出登录弹窗 -->
+    <ConfirmDialog
+      v-model:visible="showLogoutDialog"
+      title="确认退出"
+      content="确定要退出登录吗？"
+      type="warning"
+      @confirm="confirmLogout"
+      @cancel="cancelLogout"
+    />
   </view>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
 import userStore from '@/stores/user'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 
 const userInfo = ref(null)
 const serverUrl = ref('http://msbs-fuint-ts.qingchunnianhua.com:1880')
+const showLogoutDialog = ref(false)
 
 onMounted(async () => {
   userInfo.value = userStore.userInfo
@@ -109,18 +121,17 @@ const goToStockList = () => {
 }
 
 const handleLogout = () => {
-  uni.showModal({
-    title: '确认退出',
-    content: '确定要退出登录吗？',
-    success: async (res) => {
-      if (res.confirm) {
-        await userStore.logout()
-        uni.reLaunch({
-          url: '/pages/login/login'
-        })
-      }
-    }
+  showLogoutDialog.value = true
+}
+
+const confirmLogout = async () => {
+  await userStore.logout()
+  uni.reLaunch({
+    url: '/pages/login/login'
   })
+}
+
+const cancelLogout = () => {
 }
 </script>
 

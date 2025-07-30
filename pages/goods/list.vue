@@ -236,6 +236,13 @@
         </view>
       </view>
     </view>
+
+    <CustomToast
+      v-model:visible="showToast"
+      :message="toastMessage"
+      :type="toastType"
+      :duration="1500"
+    />
   </view>
 </template>
 
@@ -244,6 +251,7 @@ import { ref, computed, onMounted } from 'vue'
 import goodsStore from '@/stores/goods'
 import { getGoodsCateList, getGoodsList } from '@/api/goods'
 import cacheManager, { CACHE_KEYS } from '@/utils/cache'
+import CustomToast from '@/components/CustomToast.vue'
 
 const fixMalformedUrl = (url) => {
   if (!url || typeof url !== 'string') return url
@@ -267,6 +275,9 @@ const showCategoryFilter = ref(false)
 const selectedCategory = ref(null)
 const categories = ref([])
 const hasMore = ref(false)
+const showToast = ref(false)
+const toastMessage = ref('')
+const toastType = ref('success')
 
 const filteredGoods = computed(() => {
   let dataSource = goodsList.value
@@ -412,12 +423,9 @@ const onRefresh = async () => {
     await loadGoodsList(true)
     await loadCategoriesIfNeeded()
 
-    // 显示刷新成功提示
-    uni.showToast({
-      title: '刷新成功',
-      icon: 'success',
-      duration: 1000
-    })
+    toastMessage.value = '刷新成功'
+    toastType.value = 'success'
+    showToast.value = true
   } catch (error) {
     console.error('刷新失败:', error)
     uni.showToast({

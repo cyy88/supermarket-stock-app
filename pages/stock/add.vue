@@ -170,6 +170,16 @@
       @close-dialog="closeInboundOrder"
       @submit="handleInboundOrderSubmit"
     />
+
+    <!-- 确认删除弹窗 -->
+    <ConfirmDialog
+      v-model:visible="showDeleteDialog"
+      title="确认删除"
+      content="确定要删除这个商品吗？"
+      type="danger"
+      @confirm="confirmDeleteGoods"
+      @cancel="cancelDeleteGoods"
+    />
   </view>
 </template>
 
@@ -180,6 +190,7 @@ import userStore from '@/stores/user'
 import { saveStock } from '@/api/stock'
 import SelectGoodsDialog from '@/components/SelectGoodsDialog.vue'
 import AddInboundOrderDialog from '@/components/AddInboundOrderDialog.vue'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 
 const fixMalformedUrl = (url) => {
   if (!url || typeof url !== 'string') return url
@@ -201,6 +212,8 @@ const selectedStoreIndex = ref(0)
 const goodsList = ref([])
 const showSelectGoodsDialog = ref(false)
 const showAddInboundOrderDialog = ref(false)
+const showDeleteDialog = ref(false)
+const currentDeleteItem = ref(null)
 
 const selectGoodsDialogRef = ref(null)
 const addInboundOrderDialogRef = ref(null)
@@ -426,17 +439,21 @@ const uploadImage = (filePath, index) => {
 
 // 删除商品
 const deleteGoods = (item) => {
-  uni.showModal({
-    title: '确认删除',
-    content: '确定要删除这个商品吗？',
-    success: (res) => {
-      if (res.confirm) {
-        goodsList.value = goodsList.value.filter(goods => 
-          !(goods.id === item.id && goods.skuId === item.skuId)
-        )
-      }
-    }
-  })
+  currentDeleteItem.value = item
+  showDeleteDialog.value = true
+}
+
+const confirmDeleteGoods = () => {
+  if (currentDeleteItem.value) {
+    goodsList.value = goodsList.value.filter(goods =>
+      !(goods.id === currentDeleteItem.value.id && goods.skuId === currentDeleteItem.value.skuId)
+    )
+    currentDeleteItem.value = null
+  }
+}
+
+const cancelDeleteGoods = () => {
+  currentDeleteItem.value = null
 }
 
 // 转换商品数量（前端与后端转换）
@@ -444,7 +461,6 @@ const convertGoodsQuantity = (goodsList, direction) => {
   return goodsList.map(item => {
     if (item.priceType === 'weight') {
       if (direction === 'toBackend') {
-        // 前端KG转后端g
         return { ...item, num: Math.round(item.num * 1000) }
       } else if (direction === 'toFrontend') {
         // 后端g转前端KG
@@ -455,9 +471,7 @@ const convertGoodsQuantity = (goodsList, direction) => {
   })
 }
 
-// 提交表单
 const submitForm = async () => {
-  // 验证表单
   if (!goodsList.value || goodsList.value.length < 1) {
     uni.showToast({
       title: '请先添加商品',
@@ -474,7 +488,6 @@ const submitForm = async () => {
     return
   }
 
-  // 验证商品数量
   for (let item of goodsList.value) {
     if (!item.num || item.num <= 0) {
       uni.showToast({
@@ -488,7 +501,6 @@ const submitForm = async () => {
   loading.value = true
 
   try {
-    // 转换商品数量：前端小数转为后端整数（KG -> g）
     const convertedGoodsList = convertGoodsQuantity(goodsList.value, 'toBackend')
 
     const submitData = {

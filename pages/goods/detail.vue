@@ -139,6 +139,16 @@
     <view v-else class="loading-state">
       <text class="loading-text">加载中...</text>
     </view>
+
+    <!-- 确认删除弹窗 -->
+    <ConfirmDialog
+      v-model:visible="showDeleteDialog"
+      title="确认删除"
+      content="确定要删除这个商品吗？删除后无法恢复。"
+      type="danger"
+      @confirm="confirmDelete"
+      @cancel="cancelDelete"
+    />
   </view>
 </template>
 
@@ -148,17 +158,15 @@ import { onLoad, onShow } from '@dcloudio/uni-app'
 import goodsStore from '@/stores/goods'
 import { getGoodsDetail, getGoodsCateList, deleteGoods } from '@/api/goods'
 import { formatTime as formatTimeUtil } from '@/utils/time'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 
-// 修复可能包含重复域名的URL
 const fixMalformedUrl = (url) => {
   if (!url || typeof url !== 'string') return url
   
-  // 查找URL中是否包含重复的域名
   const domainPattern = /(https?:\/\/[^\/]+)(https?:\/\/[^\/]+)/
   const match = url.match(domainPattern)
   
   if (match) {
-    // 如果找到重复的域名，只保留第二个域名
     return url.replace(match[1], '')
   }
   
@@ -167,6 +175,7 @@ const fixMalformedUrl = (url) => {
 
 const goodsId = ref('')
 const goods = ref(null)
+const showDeleteDialog = ref(false)
 
 onLoad((options) => {
   if (options.id) {
@@ -320,37 +329,36 @@ const editGoods = () => {
   })
 }
 
-const deleteGoodsHandler = async () => {
-  uni.showModal({
-    title: '确认删除',
-    content: '确定要删除这个商品吗？删除后无法恢复。',
-    success: async (res) => {
-      if (res.confirm) {
-        try {
-          uni.showLoading({
-            title: '删除中...'
-          })
+const deleteGoodsHandler = () => {
+  showDeleteDialog.value = true
+}
 
-          await deleteGoods(goodsId.value)
+const confirmDelete = async () => {
+  try {
+    uni.showLoading({
+      title: '删除中...'
+    })
 
-          uni.showToast({
-            title: '删除成功',
-            icon: 'success'
-          })
-          setTimeout(() => {
-            uni.navigateBack()
-          }, 1500)
-        } catch (error) {
-          uni.showToast({
-            title: '删除失败',
-            icon: 'none'
-          })
-        } finally {
-          uni.hideLoading()
-        }
-      }
-    }
-  })
+    await deleteGoods(goodsId.value)
+
+    uni.showToast({
+      title: '删除成功',
+      icon: 'success'
+    })
+    setTimeout(() => {
+      uni.navigateBack()
+    }, 1500)
+  } catch (error) {
+    uni.showToast({
+      title: '删除失败',
+      icon: 'none'
+    })
+  } finally {
+    uni.hideLoading()
+  }
+}
+
+const cancelDelete = () => {
 }
 </script>
 
