@@ -243,17 +243,15 @@
 import { ref, computed, onMounted } from 'vue'
 import goodsStore from '@/stores/goods'
 import { getGoodsCateList, getGoodsList } from '@/api/goods'
+import cacheManager, { CACHE_KEYS } from '@/utils/cache'
 
-// 修复可能包含重复域名的URL
 const fixMalformedUrl = (url) => {
   if (!url || typeof url !== 'string') return url
   
-  // 查找URL中是否包含重复的域名
   const domainPattern = /(https?:\/\/[^\/]+)(https?:\/\/[^\/]+)/
   const match = url.match(domainPattern)
   
   if (match) {
-    // 如果找到重复的域名，只保留第二个域名
     return url.replace(match[1], '')
   }
   
@@ -321,7 +319,7 @@ const hasActiveFilters = computed(() => {
 })
 
 onMounted(() => {
-  loadGoodsList()
+  loadGoodsListWithCache()
   loadCategoriesIfNeeded()
 })
 
@@ -347,19 +345,20 @@ const loadCategoriesIfNeeded = async () => {
   }
 }
 
-const loadGoodsList = async () => {
+const loadGoodsListWithCache = async () => {
   try {
     loading.value = true
-    const res = await getGoodsList({
-      page: 1,
-      pageSize: 1000,
-      isItaconsumableitem: 0
-    })
 
-    if (res.data && res.data.paginationResponse) {
-      goodsList.value = res.data.paginationResponse.content || []
+    const cachedData = cacheManager.getCache(CACHE_KEYS.GOODS_LIST)
+    if (cachedData) {
+      goodsList.value = cachedData
+      loading.value = false
+      return
     }
+
+    await loadGoodsList(true)
   } catch (error) {
+    console.error('加载商品列表失败:', error)
     uni.showToast({
       title: '获取商品列表失败',
       icon: 'none'
@@ -369,13 +368,48 @@ const loadGoodsList = async () => {
   }
 }
 
+const loadGoodsList = async (shouldCache = false) => {
+  try {
+    if (!shouldCache) {
+      loading.value = true
+    }
+
+    const res = await getGoodsList({
+      page: 1,
+      pageSize: 1000,
+      isItaconsumableitem: 0
+    })
+
+    if (res.data && res.data.paginationResponse) {
+      const newData = res.data.paginationResponse.content || []
+      goodsList.value = newData
+
+      if (shouldCache) {
+        cacheManager.setCache(CACHE_KEYS.GOODS_LIST, newData)
+      }
+    }
+  } catch (error) {
+    if (!shouldCache) {
+      uni.showToast({
+        title: '获取商品列表失败',
+        icon: 'none'
+      })
+    }
+    throw error
+  } finally {
+    if (!shouldCache) {
+      loading.value = false
+    }
+  }
+}
+
 // 下拉刷新
 const onRefresh = async () => {
   if (refreshing.value) return
 
   refreshing.value = true
   try {
-    await loadGoodsList()
+    await loadGoodsList(true)
     await loadCategoriesIfNeeded()
 
     // 显示刷新成功提示

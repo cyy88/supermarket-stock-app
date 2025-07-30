@@ -185,6 +185,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import { getStockList } from '@/api/stock'
+import cacheManager, { CACHE_KEYS } from '@/utils/cache'
 
 const loading = ref(false)
 const refreshing = ref(false)
@@ -221,7 +222,7 @@ const filteredList = computed(() => {
 })
 
 onMounted(() => {
-  loadStockList()
+  loadStockListWithCache()
 })
 
 const onScroll = (e) => {
@@ -276,34 +277,64 @@ const loadMore = (isClickButton = true) => {
   }
 }
 
-const loadStockList = async (isLoadMore = false) => {
-  if (loading.value) return Promise.resolve()
-  
-  loading.value = true
-  
+const loadStockListWithCache = async () => {
+  try {
+    loading.value = true
+
+    const cacheKey = `${CACHE_KEYS.STOCK_LIST}_${statusFilter.value}`
+
+    const cachedData = cacheManager.getCache(cacheKey)
+    if (cachedData && cachedData.stockList) {
+      stockList.value = cachedData.stockList
+      pagination.total = cachedData.total || 0
+      storeOptions.value = cachedData.storeOptions || []
+      imagePath.value = cachedData.imagePath || ''
+      loading.value = false
+      return
+    }
+
+    await loadStockList(false, true)
+  } catch (error) {
+    console.error('加载入库列表失败:', error)
+    uni.showToast({
+      title: '获取数据失败',
+      icon: 'none'
+    })
+  } finally {
+    loading.value = false
+  }
+}
+
+const loadStockList = async (isLoadMore = false, shouldCache = false) => {
+  if (loading.value && !shouldCache) return Promise.resolve()
+
+  if (!shouldCache) {
+    loading.value = true
+  }
+
   try {
     const params = {
       page: isLoadMore ? pagination.page + 1 : 1,
       pageSize: pagination.pageSize,
       type: 'increase'
     }
-    
+
     if (statusFilter.value !== 'all') {
       params.reviewStatus = statusFilter.value
     }
-    
+
     const response = await getStockList(params)
-    
+
     if (response && response.data) {
       const newList = response.data.paginationResponse.content || []
-      
+
       if (isLoadMore) {
         stockList.value = [...stockList.value, ...newList]
         pagination.page++
       } else {
         stockList.value = newList
         pagination.page = 1
-        
+
         if (!refreshing.value) {
           setTimeout(() => {
             uni.pageScrollTo({
@@ -313,27 +344,45 @@ const loadStockList = async (isLoadMore = false) => {
           }, 100)
         }
       }
-      
+
       pagination.total = response.data.paginationResponse.totalElements || 0
       storeOptions.value = response.data.storeList || []
       imagePath.value = response.data.imagePath || ''
+
+      if (shouldCache && !isLoadMore) {
+        const cacheKey = `${CACHE_KEYS.STOCK_LIST}_${statusFilter.value}`
+        const cacheData = {
+          stockList: stockList.value,
+          total: pagination.total,
+          storeOptions: storeOptions.value,
+          imagePath: imagePath.value
+        }
+        cacheManager.setCache(cacheKey, cacheData)
+      }
     } else {
       console.error('响应格式不正确:', response)
-      uni.showToast({
-        title: '数据格式异常',
-        icon: 'none'
-      })
+      if (!shouldCache) {
+        uni.showToast({
+          title: '数据格式异常',
+          icon: 'none'
+        })
+      }
     }
   } catch (error) {
     console.error('请求失败:', error)
-    uni.showToast({
-      title: '获取数据失败',
-      icon: 'none'
-    })
+    if (!shouldCache) {
+      uni.showToast({
+        title: '获取数据失败',
+        icon: 'none'
+      })
+    }
+    throw error
   } finally {
-    loading.value = false
+    if (!shouldCache) {
+      loading.value = false
+    }
   }
-  
+
   return Promise.resolve()
 }
 
@@ -348,14 +397,22 @@ const setStatusFilter = (status) => {
   if (statusFilter.value === status) return // 避免重复点击
   statusFilter.value = status
   pagination.page = 1
-  loadStockList(false)
+
+  loadStockListWithCache()
 }
 
 const onRefresh = async () => {
   refreshing.value = true
   try {
     pagination.page = 1
-    await loadStockList(false)
+    await loadStockList(false, true)
+
+    uni.showToast({
+      title: '刷新成功',
+      icon: 'success',
+      duration: 1000
+    })
+
     nextTick(() => {
       setTimeout(() => {
         const scrollView = uni.createSelectorQuery().select(`#${scrollViewId.value}`)
@@ -370,6 +427,11 @@ const onRefresh = async () => {
     })
   } catch (error) {
     console.error('刷新失败:', error)
+    uni.showToast({
+      title: '刷新失败',
+      icon: 'none',
+      duration: 1500
+    })
   } finally {
     refreshing.value = false
   }
