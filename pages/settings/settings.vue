@@ -133,11 +133,12 @@ onMounted(async () => {
       console.error('获取用户信息失败:', error)
     }
   }
+
 })
 
 const getAvatarText = () => {
   const name = userInfo.value?.realName || userInfo.value?.accountName || '用户'
-  return name.charAt(name.length - 1) // 取最后一个字符作为头像
+  return name.charAt(name.length - 1)
 }
 
 const goToStockAdd = () => {
@@ -285,6 +286,8 @@ const handleLogout = () => {
   right: 0;
   z-index: 1000;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  /* 添加状态栏高度适配 */
+  padding-top: var(--status-bar-height);
 }
 
 /* 用户信息卡片 */
@@ -350,7 +353,8 @@ const handleLogout = () => {
 .content-area {
   position: relative;
   z-index: 1;
-  margin-top: 320rpx;
+  /* 动态计算顶部偏移，包含状态栏高度 */
+  margin-top: calc(320rpx + var(--status-bar-height));
 }
 
 /* 主要内容 */
@@ -372,6 +376,7 @@ const handleLogout = () => {
   opacity: 0;
   transform: translateY(30rpx);
   margin-right: 60rpx;
+  margin-top: 50rpx;
 }
 
 @keyframes slideInUp {

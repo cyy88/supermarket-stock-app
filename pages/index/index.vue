@@ -41,26 +41,26 @@
         refresher-default-style="black"
       >
         <!-- 统计卡片 -->
-        <view class="stats-section">
-          <view class="stat-card" :style="{ animationDelay: '0.1s' }">
-            <view class="stat-icon">📈</view>
-            <view class="stat-info">
-              <text class="stat-number">{{ statistics.todayCount }}</text>
-              <text class="stat-label">今日添加</text>
-            </view>
-          </view>
-          <view class="stat-card" :style="{ animationDelay: '0.2s' }">
-            <view class="stat-icon">📦</view>
-            <view class="stat-info">
-              <text class="stat-number">{{ statistics.totalCount }}</text>
-              <text class="stat-label">总商品</text>
-            </view>
-          </view>
-        </view>
+<!--        <view class="stats-section">-->
+<!--          <view class="stat-card" :style="{ animationDelay: '0.1s' }">-->
+<!--            <view class="stat-icon">📈</view>-->
+<!--            <view class="stat-info">-->
+<!--              <text class="stat-number">{{ statistics.todayCount }}</text>-->
+<!--              <text class="stat-label">今日添加</text>-->
+<!--            </view>-->
+<!--          </view>-->
+<!--          <view class="stat-card" :style="{ animationDelay: '0.2s' }">-->
+<!--            <view class="stat-icon">📦</view>-->
+<!--            <view class="stat-info">-->
+<!--              <text class="stat-number">{{ statistics.totalCount }}</text>-->
+<!--              <text class="stat-label">总商品</text>-->
+<!--            </view>-->
+<!--          </view>-->
+<!--        </view>-->
 
         <!-- 功能按钮 -->
         <view class="action-buttons">
-          <button class="action-btn primary" @click="goToScan" :style="{ animationDelay: '0.3s' }">
+          <button class="action-btn primary" @click="goToScan" :style="{ animationDelay: '0.3s' }" style="margin-top: 52rpx;">
             <view class="btn-content">
               <text class="btn-icon">📱</text>
               <text class="btn-text">开始扫码</text>
@@ -276,6 +276,8 @@ const onRefreshRestore = () => {
   right: 0;
   z-index: 1000;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  /* 添加状态栏高度适配 */
+  padding-top: var(--status-bar-height);
 }
 
 /* 用户信息 */
@@ -328,7 +330,8 @@ const onRefreshRestore = () => {
 .content-area {
   position: relative;
   z-index: 1;
-  margin-top: 280rpx;
+  /* 动态计算顶部偏移，包含状态栏高度 */
+  margin-top: calc(280rpx + var(--status-bar-height));
 }
 
 /* 主要内容 */
@@ -341,6 +344,7 @@ const onRefreshRestore = () => {
   display: flex;
   gap: 20rpx;
   margin-bottom: 40rpx;
+  margin-top: 60rpx;
 }
 
 .stat-card {

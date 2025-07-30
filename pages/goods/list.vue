@@ -651,6 +651,8 @@ const getTotalCount = () => {
   right: 0;
   z-index: 1000;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  /* 添加状态栏高度适配 */
+  padding-top: var(--status-bar-height);
 }
 
 .search-bar {
@@ -827,7 +829,8 @@ const getTotalCount = () => {
 .content-area {
   position: relative;
   z-index: 1;
-  margin-top: 330rpx;
+  /* 动态计算顶部偏移，包含状态栏高度 */
+  margin-top: calc(330rpx + var(--status-bar-height));
 }
 
 /* 列表容器 */
@@ -840,6 +843,7 @@ const getTotalCount = () => {
   flex-direction: column;
   gap: 25rpx;
   padding-right: 60rpx;
+  margin-top: 70rpx;
 }
 
 .filter-result-bar {

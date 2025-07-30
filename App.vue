@@ -6,18 +6,36 @@
 			console.log('App Launch')
 			// 初始化用户状态
 			userStore.init()
+			// 设置状态栏高度
+			this.setStatusBarHeight()
 		},
 		onShow: function() {
 			console.log('App Show')
 		},
 		onHide: function() {
 			console.log('App Hide')
+		},
+		methods: {
+			// 设置状态栏高度
+			setStatusBarHeight() {
+				const systemInfo = uni.getSystemInfoSync()
+				const statusBarHeight = systemInfo.statusBarHeight || 0
+				// 将状态栏高度设置为CSS变量
+				if (typeof document !== 'undefined') {
+					document.documentElement.style.setProperty('--status-bar-height', statusBarHeight + 'px')
+				}
+			}
 		}
 	}
 </script>
 
 <style>
 	/*每个页面公共css */
+	:root {
+		/* 状态栏高度CSS变量，默认值为0 */
+		--status-bar-height: 0px;
+	}
+
 	page {
 		background-color: #f8f9fa;
 	}

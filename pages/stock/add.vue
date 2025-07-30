@@ -526,6 +526,8 @@ const submitForm = async () => {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   padding: 20rpx;
   padding-bottom: 160rpx;
+  /* 添加状态栏高度适配 */
+  padding-top: calc(20rpx + var(--status-bar-height));
 }
 
 /* 操作按钮区域 */

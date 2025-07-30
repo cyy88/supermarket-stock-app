@@ -446,6 +446,8 @@ const goToAddStock = () => {
   right: 0;
   z-index: 1000;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  /* 添加状态栏高度适配 */
+  padding-top: var(--status-bar-height);
 }
 
 
@@ -507,7 +509,8 @@ const goToAddStock = () => {
 .content-area {
   position: relative;
   z-index: 1;
-  margin-top: 240rpx;
+  /* 动态计算顶部偏移，包含状态栏高度 */
+  margin-top: calc(240rpx + var(--status-bar-height));
 }
 
 /* 列表容器 */
@@ -520,6 +523,8 @@ const goToAddStock = () => {
   flex-direction: column;
   gap: 25rpx;
   padding-right: 60rpx;
+  /*  第一条内容修改处  */
+  margin-top: 70rpx;
 }
 
 /* 加载和空状态 */
