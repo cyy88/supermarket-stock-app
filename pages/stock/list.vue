@@ -453,6 +453,10 @@ const goToAddStock = () => {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
   position: relative;
   overflow: hidden;
+  box-sizing: border-box;
+  max-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 /* 顶部装饰背景 */
@@ -593,7 +597,6 @@ const goToAddStock = () => {
 .content-area {
   position: relative;
   z-index: 1;
-  /* 动态计算顶部偏移，包含状态栏高度 */
   margin-top: calc(240rpx + var(--status-bar-height));
   height: calc(100vh - 240rpx - var(--status-bar-height));
   overflow: hidden;
@@ -601,23 +604,21 @@ const goToAddStock = () => {
 
 /* 列表容器 */
 .stock-list {
-  padding: 20rpx 30rpx 200rpx;
   height: 100%;
-  /* 防止滚动抖动 */
   -webkit-overflow-scrolling: touch;
-  /* 硬件加速 */
   transform: translateZ(0);
-  /* 防止多余的边距 */
   box-sizing: border-box;
 }
 
+/* 进一步调整scroll-view内容区 */
 .list-content {
   display: flex;
   flex-direction: column;
   gap: 25rpx;
   padding-right: 20rpx;
-  /* 移除可能导致滚动问题的上边距 */
-  margin-top: 20rpx;
+  padding-bottom: 50rpx;
+  margin-top: 90rpx;
+  margin-left: 20rpx;
 }
 
 /* 加载和空状态 */
@@ -752,6 +753,11 @@ const goToAddStock = () => {
 
 .decoration-default {
   background: linear-gradient(135deg, #d9d9d9 0%, #f0f0f0 100%);
+}
+
+/* 库存项目卡片 - 确保底部有足够间距 */
+.stock-item:last-child {
+  margin-bottom: 20rpx;
 }
 
 /* 卡片头部 */
@@ -927,9 +933,9 @@ const goToAddStock = () => {
 .load-more {
   display: flex;
   justify-content: center;
-  padding: 30rpx;
-  margin-top: 20rpx;
-  margin-bottom: 30rpx;
+  padding: 20rpx 0;
+  margin-top: 10rpx;
+  margin-bottom: 20rpx;
 }
 
 .load-more-content {
@@ -1001,7 +1007,7 @@ const goToAddStock = () => {
 .fab {
   position: fixed;
   right: 40rpx;
-  bottom: 120rpx; /* 向上移动，避免被底部导航栏遮挡 */
+  bottom: 80rpx; 
   width: 120rpx;
   height: 120rpx;
   border-radius: 50%;
