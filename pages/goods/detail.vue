@@ -30,9 +30,17 @@
         </view>
 
         <view class="price-section">
-          <view class="goods-price">¥{{ goods.price }}</view>
-          <view v-if="goods.linePrice && goods.linePrice > 0" class="line-price">
-            原价：¥{{ goods.linePrice }}
+          <!-- 单规格商品价格显示 -->
+          <view v-if="goods.isSingleSpec === 'Y'">
+            <view class="goods-price">¥{{ goods.price }}</view>
+            <view v-if="goods.linePrice && goods.linePrice > 0" class="line-price">
+              原价：¥{{ goods.linePrice }}
+            </view>
+          </view>
+          <!-- 多规格商品价格显示 -->
+          <view v-else-if="goods.isSingleSpec === 'N' && getSkuPriceRange(goods)">
+            <view class="goods-price">{{ getSkuPriceRange(goods) }}</view>
+            <view class="multi-spec-tip">多规格商品，价格区间</view>
           </view>
           <view class="price-type">
             {{ goods.priceType === 'piece' ? '按件计价' : '按重量计价' }}
@@ -71,6 +79,39 @@
             </text>
           </view>
 
+        </view>
+      </view>
+
+      <!-- 多规格信息 -->
+      <view v-if="goods.isSingleSpec === 'N' && getSkuList(goods) && getSkuList(goods).length > 0" class="sku-section">
+        <view class="section-title">📋 商品规格</view>
+        <view class="sku-table">
+          <view class="sku-header">
+            <text class="sku-col-spec">规格</text>
+            <text class="sku-col-sku">SKU编码</text>
+            <text class="sku-col-price">{{ goods.priceType === 'weight' ? '单价(元/千克)' : '价格(元)' }}</text>
+            <text class="sku-col-line-price">划线价格</text>
+            <text class="sku-col-weight">重量(千克)</text>
+          </view>
+          <view
+            v-for="(sku, index) in getSkuList(goods)"
+            :key="index"
+            class="sku-row"
+          >
+            <view class="sku-col-spec">
+              <view
+                v-for="spec in sku.specList"
+                :key="spec.id"
+                class="spec-tag"
+              >
+                <text class="spec-tag-text">{{ spec.value }}</text>
+              </view>
+            </view>
+            <text class="sku-col-sku">{{ sku.skuNo }}</text>
+            <text class="sku-col-price">¥{{ sku.price }}</text>
+            <text class="sku-col-line-price">{{ sku.linePrice ? '¥' + sku.linePrice : '-' }}</text>
+            <text class="sku-col-weight">{{ sku.weight || '0' }}</text>
+          </view>
         </view>
       </view>
 
@@ -339,6 +380,41 @@ const getStockUnit = (item) => {
   return item.priceType === 'weight' ? 'g' : '件'
 }
 
+// 获取SKU列表
+const getSkuList = (item) => {
+  if (!item || !item.skuData) return []
+
+  try {
+    if (typeof item.skuData === 'string') {
+      return JSON.parse(item.skuData)
+    } else if (Array.isArray(item.skuData)) {
+      return item.skuData
+    }
+  } catch (e) {
+    console.error('解析SKU数据失败:', e)
+  }
+
+  return []
+}
+
+// 获取SKU价格区间
+const getSkuPriceRange = (item) => {
+  const skuList = getSkuList(item)
+  if (!skuList || skuList.length === 0) return ''
+
+  const prices = skuList.map(sku => parseFloat(sku.price)).filter(price => !isNaN(price))
+  if (prices.length === 0) return ''
+
+  const minPrice = Math.min(...prices)
+  const maxPrice = Math.max(...prices)
+
+  if (minPrice === maxPrice) {
+    return `¥${minPrice}`
+  } else {
+    return `¥${minPrice} - ¥${maxPrice}`
+  }
+}
+
 const editGoods = () => {
   uni.navigateTo({
     url: `/pages/goods/edit?id=${goodsId.value}`
@@ -480,6 +556,12 @@ const cancelDelete = () => {
       border-radius: 12rpx;
       display: inline-block;
     }
+
+    .multi-spec-tip {
+      font-size: 24rpx;
+      color: #909399;
+      margin-top: 10rpx;
+    }
   }
 
   .info-grid {
@@ -520,6 +602,93 @@ const cancelDelete = () => {
       &.status-inactive {
         color: #f56c6c;
       }
+    }
+  }
+}
+
+.sku-section {
+  background: #fff;
+  padding: 40rpx;
+  margin-top: 20rpx;
+
+  .section-title {
+    font-size: 32rpx;
+    font-weight: bold;
+    color: #303133;
+    margin-bottom: 30rpx;
+  }
+
+  .sku-table {
+    border: 2rpx solid #e9ecef;
+    border-radius: 10rpx;
+    overflow: hidden;
+
+    .sku-header {
+      display: flex;
+      background: #f5f7fa;
+      padding: 20rpx 10rpx;
+      border-bottom: 2rpx solid #e9ecef;
+
+      text {
+        font-size: 24rpx;
+        color: #606266;
+        font-weight: bold;
+        text-align: center;
+      }
+    }
+
+    .sku-row {
+      display: flex;
+      padding: 20rpx 10rpx;
+      border-bottom: 1rpx solid #f0f0f0;
+      align-items: center;
+
+      &:last-child {
+        border-bottom: none;
+      }
+
+      text {
+        font-size: 24rpx;
+        color: #303133;
+        text-align: center;
+      }
+    }
+
+    .sku-col-spec {
+      flex: 1;
+      min-width: 150rpx;
+
+      .spec-tag {
+        display: inline-block;
+        margin: 5rpx;
+
+        .spec-tag-text {
+          background: #e1f3ff;
+          color: #409eff;
+          padding: 8rpx 12rpx;
+          border-radius: 12rpx;
+          font-size: 22rpx;
+        }
+      }
+    }
+
+    .sku-col-sku {
+      width: 150rpx;
+    }
+
+    .sku-col-price {
+      width: 120rpx;
+      color: #f56c6c;
+      font-weight: bold;
+    }
+
+    .sku-col-line-price {
+      width: 120rpx;
+      color: #909399;
+    }
+
+    .sku-col-weight {
+      width: 100rpx;
     }
   }
 }

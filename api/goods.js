@@ -87,6 +87,42 @@ export const getGoodsCateList = (params = {}) => {
   })
 }
 
+// 保存规格名称
+export const saveSpecName = (data) => {
+  return request({
+    url: '/backendApi/goods/spec/saveSpecName',
+    method: 'POST',
+    data
+  })
+}
+
+// 保存规格值
+export const saveSpecValue = (data) => {
+  return request({
+    url: '/backendApi/goods/spec/saveSpecValue',
+    method: 'POST',
+    data
+  })
+}
+
+// 删除规格
+export const deleteSpec = (data) => {
+  return request({
+    url: '/backendApi/goods/spec/deleteSpec',
+    method: 'POST',
+    data
+  })
+}
+
+// 删除规格值
+export const deleteSpecValue = (data) => {
+  return request({
+    url: '/backendApi/goods/spec/deleteSpecValue',
+    method: 'POST',
+    data
+  })
+}
+
 // 上传图片
 export const uploadImage = (filePath) => {
   console.log('开始上传图片:', filePath);

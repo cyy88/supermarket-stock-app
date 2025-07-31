@@ -300,6 +300,51 @@
         </radio-group>
       </view>
 
+      <!-- 多规格商品管理 -->
+      <view v-if="form.isSingleSpec === 'N'" class="form-item">
+        <text class="label">商品规格</text>
+        <view class="spec-guide">
+          <text class="guide-text">首先点击"添加规格"按钮添加规格名称，如"颜色"、"尺寸"等</text>
+          <text class="guide-text">然后为每个规格添加规格值，如"红色"、"黑色"、"L码"、"XL码"等</text>
+          <text class="guide-text">系统会自动生成规格组合，您可以为每个组合设置价格、库存等信息</text>
+        </view>
+        <SkuManager
+          :sku-data="{attrList: [], skuList: [], initSkuList: []}"
+          :price-type="form.priceType"
+          :goods-id="form.goodsId || ''"
+          @sku-change="onSkuChange"
+        />
+      </view>
+
+      <!-- 单规格商品价格 -->
+      <view v-if="form.isSingleSpec === 'Y'" class="form-item">
+        <text class="label required">商品价格</text>
+        <view class="input-group" style="width: 50%;">
+          <input
+            v-model="form.singlePrice"
+            type="digit"
+            placeholder="请输入价格"
+            class="input"
+            @input="updateStep"
+          />
+          <text class="unit">{{ form.priceType === 'weight' ? '元/千克' : '元' }}</text>
+        </view>
+      </view>
+
+      <!-- 单规格划线价格 -->
+      <view v-if="form.isSingleSpec === 'Y'" class="form-item">
+        <text class="label">划线价格</text>
+        <view class="input-group" style="width: 50%;">
+          <input
+            v-model="form.singleLinePrice"
+            type="digit"
+            placeholder="请输入划线价格，空则不显示"
+            class="input"
+          />
+          <text class="unit">元</text>
+        </view>
+      </view>
+
       <!-- 服务时长 -->
       <view class="form-item" v-if="form.type === 'service'">
         <text class="label">服务时长</text>
@@ -489,13 +534,20 @@
   </view>
 </template>
 
-<script setup>
+<script>
 import { ref, reactive, onMounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import goodsStore from '@/stores/goods'
 import userStore from '@/stores/user'
 import { saveGoods as saveGoodsApi, getGoodsCateList, uploadImage } from '@/api/goods'
 import { recognizeProductImage } from '@/api/ai'
+import SkuManager from '@/components/SkuManager.vue'
+
+export default {
+  components: {
+    SkuManager
+  },
+  setup() {
 
 const saving = ref(false)
 const showCategoryPicker = ref(false)
@@ -508,6 +560,13 @@ const imageList = ref([])
 const currentStep = ref(1)
 const selectedCategoryIndex = ref(0)
 const selectedTypeIndex = ref(0)
+
+// SKU数据
+const skuData = ref({
+  attrList: [],
+  skuList: [],
+  initSkuList: []
+})
 
 const showAIModal = ref(false)
 const aiRecognizing = ref(false)
@@ -544,6 +603,10 @@ const form = reactive({
   brand: '',
   supplier: '',
 
+  // 单规格商品价格
+  singlePrice: '',
+  singleLinePrice: '',
+
   description: ''
 })
 
@@ -551,13 +614,28 @@ onLoad((options) => {
   if (options.barcode) {
     form.goodsNo = decodeURIComponent(options.barcode)
   }
+  
+  // 初始化SKU数据
+  skuData.value = {
+    attrList: [],
+    skuList: [],
+    initSkuList: []
+  }
+  
   loadCategoryList()
   updateStep()
 })
 
 const updateStep = () => {
   // 步骤1：基本信息必填项
-  if (form.name && form.cateId && form.price && form.goodsNo && form.safetyStock !== '') {
+  let hasPrice = false
+  if (form.isSingleSpec === 'Y') {
+    hasPrice = form.singlePrice && parseFloat(form.singlePrice) > 0
+  } else {
+    hasPrice = skuData.value.skuList && skuData.value.skuList.length > 0
+  }
+
+  if (form.name && form.cateId && hasPrice && form.goodsNo && form.safetyStock !== '') {
     currentStep.value = 2
   } else {
     currentStep.value = 1
@@ -674,9 +752,44 @@ const onMemberDiscountChange = (e) => {
   form.isMemberDiscount = e.detail.value
 }
 
+// 新增初始化SkuData方法
+const initializeSkuData = () => {
+  skuData.value = {
+    attrList: [],
+    skuList: [],
+    initSkuList: []
+  }
+}
+
 // 规格类型改变事件
 const onSingleSpecChange = (e) => {
   form.isSingleSpec = e.detail.value
+
+  if (form.isSingleSpec === 'N') {
+    form.singlePrice = ''
+    form.singleLinePrice = ''
+    initializeSkuData()
+  }
+  if (form.isSingleSpec === 'Y') {
+    skuData.value = {
+      attrList: [],
+      skuList: [],
+      initSkuList: []
+    }
+  }
+}
+
+// SKU数据变化处理
+const onSkuChange = (newSkuData) => {
+  console.log('SKU数据已更新:', JSON.stringify(newSkuData))
+  // 直接从组件获取最新数据
+  skuData.value = {
+    attrList: Array.isArray(newSkuData.attrList) ? newSkuData.attrList : [],
+    skuList: Array.isArray(newSkuData.skuList) ? newSkuData.skuList : [],
+    initSkuList: Array.isArray(newSkuData.initSkuList) ? newSkuData.initSkuList : []
+  }
+  console.log('更新后的skuData:', JSON.stringify(skuData.value))
+  updateStep()
 }
 
 // 生成随机条码
@@ -781,12 +894,45 @@ const validateForm = () => {
     return false
   }
 
-  if (!form.price || parseFloat(form.price) <= 0) {
-    uni.showToast({
-      title: '请输入正确的商品价格',
-      icon: 'none'
-    })
-    return false
+  // 单规格商品价格验证
+  if (form.isSingleSpec === 'Y') {
+    if (!form.singlePrice || parseFloat(form.singlePrice) <= 0) {
+      uni.showToast({
+        title: '请输入正确的商品价格',
+        icon: 'none'
+      })
+      return false
+    }
+  }
+
+  // 多规格商品验证
+  if (form.isSingleSpec === 'N') {
+    if (!skuData.value.skuList || skuData.value.skuList.length === 0) {
+      uni.showToast({
+        title: '请添加商品规格',
+        icon: 'none'
+      })
+      return false
+    }
+
+    // 验证每个SKU的必填项
+    for (let i = 0; i < skuData.value.skuList.length; i++) {
+      const sku = skuData.value.skuList[i]
+      if (!sku.skuNo || sku.skuNo.trim() === '') {
+        uni.showToast({
+          title: `第${i + 1}个规格的SKU编码不能为空`,
+          icon: 'none'
+        })
+        return false
+      }
+      if (!sku.price || parseFloat(sku.price) <= 0) {
+        uni.showToast({
+          title: `第${i + 1}个规格的价格必须大于0`,
+          icon: 'none'
+        })
+        return false
+      }
+    }
   }
 
   if (form.safetyStock === '' || parseInt(form.safetyStock) < 0) {
@@ -990,8 +1136,8 @@ const handleSaveGoods = async () => {
       type: form.type,
       priceType: form.priceType,
       status: form.status,
-      price: parseFloat(form.price),
-      linePrice: form.linePrice ? parseFloat(form.linePrice) : null,
+      price: form.isSingleSpec === 'Y' ? parseFloat(form.singlePrice) : 0,
+      linePrice: form.isSingleSpec === 'Y' && form.singleLinePrice ? parseFloat(form.singleLinePrice) : null,
       stock: parseInt(form.stock) || 0,
       safetyStock: parseInt(form.safetyStock),
       weight: form.weight ? parseFloat(form.weight) : null,
@@ -1013,6 +1159,10 @@ const handleSaveGoods = async () => {
       shape: form.shape.trim(),
       brand: form.brand.trim(),
       supplier: form.supplier.trim(),
+
+      // 多规格数据
+      skuData: form.isSingleSpec === 'N' ? skuData.value.skuList : [],
+      specData: form.isSingleSpec === 'N' ? skuData.value.attrList : [],
 
       // 固定字段
       isItaconsumableitem: 0,
@@ -1048,6 +1198,57 @@ const handleSaveGoods = async () => {
     })
   } finally {
     saving.value = false
+  }
+}
+
+return {
+  // 响应式数据
+  saving,
+  showCategoryPicker,
+  categoryList,
+  typeOptions,
+  imageList,
+  currentStep,
+  selectedCategoryIndex,
+  selectedTypeIndex,
+  skuData,
+  form,
+  showAIModal,
+  aiRecognizing,
+  aiResult,
+  aiProgress,
+  aiImageUrl,
+  aiProgressTimer,
+
+  // 方法
+  updateStep,
+  loadCategoryList,
+  onCategoryChange,
+  onTypeChange,
+  setPriceType,
+  onPriceTypeChange,
+  onStatusChange,
+  onCanUsePointChange,
+  onMemberDiscountChange,
+  onSingleSpecChange,
+  onSkuChange,
+  generateGoodsNo,
+  chooseImage,
+  uploadImages,
+  deleteImage,
+  validateForm,
+  showAIRecognitionModal,
+  closeAIModal,
+  chooseImageForAI,
+  uploadImageForAI,
+  startAIRecognition,
+  startProgressAnimation,
+  stopProgressAnimation,
+  applyAIResult,
+  retryAIRecognition,
+  handleSaveGoods,
+  initializeSkuData
+}
   }
 }
 </script>
@@ -1778,5 +1979,33 @@ const handleSaveGoods = async () => {
       }
     }
   }
+}
+
+.spec-guide {
+  background-color: #f0f9eb;
+  border: 1rpx solid #e1f3d8;
+  border-radius: 10rpx;
+  padding: 20rpx;
+  margin-top: 20rpx;
+  margin-bottom: 20rpx;
+  font-size: 24rpx;
+  color: #67c23a;
+  line-height: 1.6;
+  text-align: left;
+
+  .guide-text {
+    margin-bottom: 10rpx;
+  }
+}
+
+.initialize-btn {
+  width: 100%;
+  height: 80rpx;
+  background-color: #409eff;
+  color: #fff;
+  border: none;
+  border-radius: 8rpx;
+  font-size: 28rpx;
+  margin: 20rpx 0;
 }
 </style>

@@ -29,6 +29,9 @@ export const GoodsInfo = {
   brand: '', // 品牌
   supplier: '', // 供应商
 
+  // 多规格相关
+  skuData: [], // SKU数据列表
+  specData: [], // 规格数据列表
 
   createTime: 0,
   updateTime: 0

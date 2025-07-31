@@ -305,6 +305,46 @@
         </radio-group>
       </view>
 
+      <!-- 多规格商品管理 -->
+      <view v-if="form.isSingleSpec === 'N'" class="form-item">
+        <text class="label">商品规格</text>
+        <SkuManager
+          :sku-data="skuData"
+          :price-type="form.priceType"
+          :goods-id="goodsId"
+          @sku-change="onSkuChange"
+        />
+      </view>
+
+      <!-- 单规格商品价格 -->
+      <view v-if="form.isSingleSpec === 'Y'" class="form-item">
+        <text class="label required">商品价格</text>
+        <view class="input-group" style="width: 50%;">
+          <input
+            v-model="form.singlePrice"
+            type="digit"
+            placeholder="请输入价格"
+            class="input"
+            @input="updateStep"
+          />
+          <text class="unit">{{ form.priceType === 'weight' ? '元/千克' : '元' }}</text>
+        </view>
+      </view>
+
+      <!-- 单规格划线价格 -->
+      <view v-if="form.isSingleSpec === 'Y'" class="form-item">
+        <text class="label">划线价格</text>
+        <view class="input-group" style="width: 50%;">
+          <input
+            v-model="form.singleLinePrice"
+            type="digit"
+            placeholder="请输入划线价格，空则不显示"
+            class="input"
+          />
+          <text class="unit">元</text>
+        </view>
+      </view>
+
       <!-- 服务时长 -->
       <view class="form-item" v-if="form.type === 'service'">
         <text class="label">服务时长</text>
@@ -499,13 +539,20 @@
   </view>
 </template>
 
-<script setup>
+<script>
 import { ref, reactive, onMounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import goodsStore from '@/stores/goods'
 import userStore from '@/stores/user'
 import { saveGoods, getGoodsCateList, uploadImage, getGoodsDetail } from '@/api/goods'
 import { recognizeProductImage } from '@/api/ai'
+import SkuManager from '@/components/SkuManager.vue'
+
+export default {
+  components: {
+    SkuManager
+  },
+  setup() {
 
 const loading = ref(true)
 const saving = ref(false)
@@ -521,6 +568,13 @@ const goodsId = ref('')
 const selectedCategoryIndex = ref(0)
 const selectedTypeIndex = ref(0)
 const currentStep = ref(1)
+
+// SKU数据
+const skuData = ref({
+  attrList: [],
+  skuList: [],
+  initSkuList: []
+})
 
 // AI识别相关状态
 const showAIModal = ref(false)
@@ -557,6 +611,10 @@ const form = reactive({
   shape: '',
   brand: '',
   supplier: '',
+
+  // 单规格商品价格
+  singlePrice: '',
+  singleLinePrice: '',
 
   description: ''
 })
@@ -649,6 +707,21 @@ const fillForm = (goodsData) => {
   form.shape = goodsData.shape || ''
   form.brand = goodsData.brand || ''
   form.supplier = goodsData.supplier || ''
+
+  // 单规格商品价格处理
+  if (form.isSingleSpec === 'Y') {
+    form.singlePrice = goodsData.price?.toString() || ''
+    form.singleLinePrice = goodsData.linePrice?.toString() || ''
+  }
+
+  // 多规格数据处理
+  if (form.isSingleSpec === 'N' && goodsData.skuData) {
+    skuData.value.skuList = goodsData.skuData || []
+    skuData.value.initSkuList = goodsData.skuData || []
+  }
+  if (form.isSingleSpec === 'N' && goodsData.specData) {
+    skuData.value.attrList = goodsData.specData || []
+  }
 
   // 商品描述
   form.description = goodsData.description || ''
@@ -774,6 +847,24 @@ const onMemberDiscountChange = (e) => {
 
 const onSingleSpecChange = (e) => {
   form.isSingleSpec = e.detail.value
+  // 切换到多规格时，清空单规格价格
+  if (form.isSingleSpec === 'N') {
+    form.singlePrice = ''
+    form.singleLinePrice = ''
+  }
+  // 切换到单规格时，清空多规格数据
+  if (form.isSingleSpec === 'Y') {
+    skuData.value = {
+      attrList: [],
+      skuList: [],
+      initSkuList: []
+    }
+  }
+}
+
+// SKU数据变化处理
+const onSkuChange = (newSkuData) => {
+  skuData.value = newSkuData
 }
 
 const updateStep = () => {
@@ -1057,12 +1148,45 @@ const validateForm = () => {
     return false
   }
 
-  if (!form.price || parseFloat(form.price) <= 0) {
-    uni.showToast({
-      title: '请输入正确的商品价格',
-      icon: 'none'
-    })
-    return false
+  // 单规格商品价格验证
+  if (form.isSingleSpec === 'Y') {
+    if (!form.singlePrice || parseFloat(form.singlePrice) <= 0) {
+      uni.showToast({
+        title: '请输入正确的商品价格',
+        icon: 'none'
+      })
+      return false
+    }
+  }
+
+  // 多规格商品验证
+  if (form.isSingleSpec === 'N') {
+    if (!skuData.value.skuList || skuData.value.skuList.length === 0) {
+      uni.showToast({
+        title: '请添加商品规格',
+        icon: 'none'
+      })
+      return false
+    }
+
+    // 验证每个SKU的必填项
+    for (let i = 0; i < skuData.value.skuList.length; i++) {
+      const sku = skuData.value.skuList[i]
+      if (!sku.skuNo || sku.skuNo.trim() === '') {
+        uni.showToast({
+          title: `第${i + 1}个规格的SKU编码不能为空`,
+          icon: 'none'
+        })
+        return false
+      }
+      if (!sku.price || parseFloat(sku.price) <= 0) {
+        uni.showToast({
+          title: `第${i + 1}个规格的价格必须大于0`,
+          icon: 'none'
+        })
+        return false
+      }
+    }
   }
 
   if (form.safetyStock === '' || parseInt(form.safetyStock) < 0) {
@@ -1112,8 +1236,9 @@ const handleUpdateGoods = async () => {
       type: form.type,
       priceType: form.priceType,
       status: form.status,
-      price: parseFloat(form.price),
-      linePrice: form.linePrice ? parseFloat(form.linePrice) : null,
+      // 单规格商品使用单独的价格字段，多规格商品价格在SKU中
+      price: form.isSingleSpec === 'Y' ? parseFloat(form.singlePrice) : 0,
+      linePrice: form.isSingleSpec === 'Y' && form.singleLinePrice ? parseFloat(form.singleLinePrice) : null,
       stock: parseInt(form.stock) || 0,
       safetyStock: parseInt(form.safetyStock),
       weight: form.weight ? parseFloat(form.weight) : null,
@@ -1135,6 +1260,10 @@ const handleUpdateGoods = async () => {
       shape: form.shape.trim(),
       brand: form.brand.trim(),
       supplier: form.supplier.trim(),
+
+      // 多规格数据
+      skuData: form.isSingleSpec === 'N' ? skuData.value.skuList : [],
+      specData: form.isSingleSpec === 'N' ? skuData.value.attrList : [],
 
       // 保持原有的消耗品标识
       isItaconsumableitem: goods.value.isItaconsumableitem || 0,
@@ -1173,6 +1302,46 @@ const handleUpdateGoods = async () => {
   } finally {
     saving.value = false
   }
+}
+
+// 返回所有需要在模板中使用的变量和函数
+return {
+  // 响应式数据
+  loading,
+  saving,
+  showCategoryPicker,
+  categoryList,
+  typeOptions,
+  imageList,
+  goods,
+  goodsId,
+  selectedCategoryIndex,
+  selectedTypeIndex,
+  currentStep,
+  skuData,
+  form,
+
+  // 方法
+  fillForm,
+  updateStep,
+  loadCategoryList,
+  onCategoryChange,
+  onTypeChange,
+  setPriceType,
+  onPriceTypeChange,
+  onStatusChange,
+  onCanUsePointChange,
+  onMemberDiscountChange,
+  onSingleSpecChange,
+  onSkuChange,
+  generateGoodsNo,
+  chooseImage,
+  uploadImages,
+  deleteImage,
+  validateForm,
+  handleSaveGoods
+}
+}
 }
 </script>
 
