@@ -225,7 +225,7 @@
 
 <script setup>
 import { ref, reactive, watch, computed, nextTick, onMounted } from 'vue'
-import { uploadImage } from '@/api/goods'
+import { uploadImage, saveSpecName, saveSpecValue, deleteSpec, deleteSpecValue } from '@/api/goods'
 
 const props = defineProps({
   skuData: {
@@ -320,7 +320,6 @@ const initLocalData = () => {
     localSkuData.initSkuList = Array.isArray(safeSkuData.initSkuList) ? 
       JSON.parse(JSON.stringify(safeSkuData.initSkuList)) : [];
       
-    // 更新当前最大ID
     updateMaxId();
   } catch (error) {
     console.error('初始化SKU数据失败:', error);
@@ -330,14 +329,16 @@ const initLocalData = () => {
   }
 }
 
-// 监听props变化之前添加初始化代码
-// 立即初始化数据
+
 initLocalData();
 
-// 监听props变化
 watch(() => props.skuData, (newVal) => {
   initLocalData();
 }, { deep: true, immediate: true });
+
+watch(() => localSkuData, () => {
+  emitSkuChange();
+}, { deep: true });
 
 // 添加规格行
 const addSpecRow = () => {
@@ -346,10 +347,45 @@ const addSpecRow = () => {
     content: '请输入规格名称',
     editable: true,
     placeholderText: '例如：颜色、尺寸',
-    success: (res) => {
+    success: async (res) => {
       if (res.confirm && res.content) {
+        let specId;
+
+        if (props.goodsId) {
+          try {
+            uni.showLoading({ title: '保存中...' });
+
+            const response = await saveSpecName({
+              goodsId: props.goodsId,
+              name: res.content
+            });
+
+            if (response && response.data && response.data.id) {
+              specId = Number(response.data.id); // 确保是数字类型
+              uni.hideLoading();
+              uni.showToast({
+                title: '添加成功',
+                icon: 'success'
+              });
+            } else {
+              throw new Error('API返回数据格式错误');
+            }
+          } catch (error) {
+            uni.hideLoading();
+            console.error('保存规格名称失败:', error);
+            // 使用本地ID作为备选方案
+            specId = generateSafeId();
+            uni.showToast({
+              title: '使用本地ID，保存商品时会同步',
+              icon: 'none'
+            });
+          }
+        } else {
+          specId = generateSafeId();
+        }
+
         const newSpec = {
-          id: generateSafeId(), // 使用安全的ID生成方法
+          id: specId,
           name: res.content,
           child: []
         }
@@ -387,32 +423,65 @@ const removeSpecRow = (index) => {
 
 // 添加规格值
 const addSpecValue = (specIndex) => {
+  if (!Array.isArray(localSkuData.attrList) || !localSkuData.attrList[specIndex]) {
+    uni.showToast({
+      title: '规格不存在',
+      icon: 'none'
+    });
+    return;
+  }
+
   uni.showModal({
     title: '添加规格值',
     content: '请输入规格值',
     editable: true,
     placeholderText: '例如：红色、大号',
-    success: (res) => {
+    success: async (res) => {
       if (res.confirm && res.content) {
-        if (!Array.isArray(localSkuData.attrList)) {
-          localSkuData.attrList = [];
-          return;
+        let valueId;
+
+        if (props.goodsId && localSkuData.attrList[specIndex].name) {
+          try {
+            uni.showLoading({ title: '保存中...' });
+
+            const response = await saveSpecValue({
+              goodsId: props.goodsId,
+              specName: localSkuData.attrList[specIndex].name,
+              value: res.content
+            });
+
+            if (response && response.data && response.data.id) {
+              valueId = Number(response.data.id);
+              uni.hideLoading();
+              uni.showToast({
+                title: '添加成功',
+                icon: 'success'
+              });
+            } else {
+              throw new Error('API返回数据格式错误');
+            }
+          } catch (error) {
+            uni.hideLoading();
+            valueId = generateSafeId();
+            uni.showToast({
+              title: '使用本地ID，保存商品时会同步',
+              icon: 'none'
+            });
+          }
+        } else {
+          valueId = generateSafeId();
         }
-        
-        if (!localSkuData.attrList[specIndex]) {
-          return;
-        }
-        
+
         if (!Array.isArray(localSkuData.attrList[specIndex].child)) {
           localSkuData.attrList[specIndex].child = [];
         }
-        
+
         const newValue = {
-          id: generateSafeId(), // 使用安全的ID生成方法
+          id: valueId,
           name: res.content,
           value: res.content
         };
-        
+
         localSkuData.attrList[specIndex].child.push(newValue);
         nextTick(() => {
           updateSkuList();
@@ -454,79 +523,71 @@ const onSpecNameChange = () => {
 // 生成SKU列表
 const generateSkuList = () => {
   try {
-    if (!Array.isArray(localSkuData.attrList)) {
-      return [];
-    }
-    
-    const attrList = localSkuData.attrList.filter(attr => 
-      attr && attr.name && attr.child && attr.child.length > 0
+    const table = [];
+    const attrValueAry = [];
+    const arr = [];
+
+    const tmpSkuData = (localSkuData.attrList || []).filter(
+      (d) => d.name != "" && d.child && d.child.length > 0
     );
-    
-    if (attrList.length === 0) {
+
+    if (!tmpSkuData || tmpSkuData.length == 0) {
       return [];
     }
-    
-    const combinations = [];
-    const attrValues = attrList.map(attr => attr.child || []);
-    
-    const cartesian = (arr, i = 0, current = []) => {
-      if (i === arr.length) {
-        combinations.push([...current]);
-        return;
-      }
-      
-      for (const item of arr[i]) {
-        if (item) {
-          current[i] = item;
-          cartesian(arr, i + 1, current);
+
+    tmpSkuData.forEach((item) => {
+      attrValueAry.push(item.child);
+    });
+
+    function func(skuArr = [], i) {
+      for (let j = 0; j < attrValueAry[i].length; j++) {
+        if (i < attrValueAry.length - 1) {
+          skuArr[i] = attrValueAry[i][j];
+          func(skuArr, i + 1);
+        } else {
+          arr.push([...skuArr, attrValueAry[i][j]]);
         }
       }
     }
-    
-    cartesian(attrValues);
-    
-    if (combinations.length === 0) {
-      return [];
-    }
-    
-    return combinations.map((combination, index) => {
-      // 使用组合中第一个规格值的ID作为specIds
-      const specId = combination[0] ? combination[0].id : generateSafeId();
-      const specIds = String(specId); // 确保是字符串格式
-      
-      // 构建规格列表，确保ID是数字类型
-      const specList = combination.map(item => {
-        if (!item) return { id: 0, name: '', value: '' };
-        return {
-          id: Number(item.id),
-          name: item.name || '',
-          value: item.value || ''
-        };
+    func([], 0);
+
+    arr.forEach((item) => {
+      let specIds = "",
+          specList = [],
+          findItem,
+          tableItem;
+
+      item.forEach((d) => {
+        const numericId = Number(d.id);
+        specIds += specIds ? `-${numericId}` : `${numericId}`;
+        specList.push({ id: numericId, name: d.name, value: d.name });
       });
-      
-      // 查找已存在的SKU数据
-      const existingSku = Array.isArray(localSkuData.skuList) && localSkuData.skuList.find(sku => 
-        sku && sku.specIds === specIds
-      ) || Array.isArray(localSkuData.initSkuList) && localSkuData.initSkuList.find(sku => 
-        sku && sku.specIds === specIds
+
+      findItem = (Array.isArray(localSkuData.initSkuList) ? localSkuData.initSkuList : []).find((item) => {
+        return specIds.includes(item.specIds);
+      }) || {};
+
+      tableItem = Object.assign(
+        {
+          price: '',
+          linePrice: '',
+          skuNo: '',
+          stock: '',
+          logo: '',
+          weight: '0',
+          specList: specList
+        },
+        findItem,
+        {
+          specIds,
+        }
       );
-      
-      // 创建或更新SKU对象
-      return {
-        id: existingSku?.id || 0, // 保留已有ID或设为0（新增时后端会分配）
-        specIds,
-        specList,
-        skuNo: existingSku?.skuNo || `${Date.now()}${index}`.slice(-16), // 生成有效的SKU编号
-        goodsId: props.goodsId || '',
-        price: existingSku?.price || '',
-        linePrice: existingSku?.linePrice || '',
-        weight: existingSku?.weight || '0',
-        stock: existingSku?.stock || '',
-        logo: existingSku?.logo || ''
-      };
+      tableItem.specList = specList;
+      table.push(tableItem);
     });
+
+    return table;
   } catch (error) {
-    console.error('生成SKU列表出错:', error);
     return [];
   }
 }

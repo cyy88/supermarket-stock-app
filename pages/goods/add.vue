@@ -303,15 +303,20 @@
       <!-- 多规格商品管理 -->
       <view v-if="form.isSingleSpec === 'N'" class="form-item">
         <text class="label">商品规格</text>
-        <view class="spec-guide">
+        <view v-if="!form.goodsId" class="spec-tip">
+          <text class="tip-text">请先保存商品基本信息，然后才能添加规格</text>
+          <button class="save-basic-btn" @click="saveBasicInfo">保存基本信息</button>
+        </view>
+        <view v-else class="spec-guide">
           <text class="guide-text">首先点击"添加规格"按钮添加规格名称，如"颜色"、"尺寸"等</text>
           <text class="guide-text">然后为每个规格添加规格值，如"红色"、"黑色"、"L码"、"XL码"等</text>
           <text class="guide-text">系统会自动生成规格组合，您可以为每个组合设置价格、库存等信息</text>
         </view>
         <SkuManager
+          v-if="form.goodsId"
           :sku-data="skuData.value"
           :price-type="form.priceType"
-          :goods-id="form.goodsId || ''"
+          :goods-id="form.goodsId"
           @sku-change="onSkuChange"
         />
       </view>
@@ -789,6 +794,102 @@ const onSkuChange = (newSkuData) => {
   updateStep()
 }
 
+// 保存基本信息
+const saveBasicInfo = async () => {
+  if (!form.name || !form.name.trim()) {
+    uni.showToast({
+      title: '请输入商品名称',
+      icon: 'none'
+    })
+    return
+  }
+
+  if (!form.cateId) {
+    uni.showToast({
+      title: '请选择商品分类',
+      icon: 'none'
+    })
+    return
+  }
+
+  if (!form.goodsNo || !form.goodsNo.trim()) {
+    uni.showToast({
+      title: '请输入商品编号',
+      icon: 'none'
+    })
+    return
+  }
+
+  if (form.safetyStock === '' || parseInt(form.safetyStock) < 0) {
+    uni.showToast({
+      title: '请输入正确的安全库存',
+      icon: 'none'
+    })
+    return
+  }
+
+  try {
+    saving.value = true
+    uni.showLoading({ title: '保存中...' })
+
+    const userInfo = userStore.getUserInfo()
+
+    const imageUrls = await uploadImages()
+
+    const basicData = {
+      name: form.name.trim(),
+      goodsNo: form.goodsNo.trim(),
+      cateId: parseInt(form.cateId),
+      images: imageUrls,
+      type: form.type,
+      priceType: form.priceType,
+      status: form.status,
+      safetyStock: parseInt(form.safetyStock),
+      weight: form.weight ? parseFloat(form.weight) : null,
+      salePoint: form.salePoint.trim(),
+      sort: parseInt(form.sort) || 0,
+
+      // 店铺和商户信息
+      storeId: userInfo.storeId,
+      merchantId: userInfo.merchantId,
+
+      // 新增字段
+      spec: form.spec.trim(),
+      shape: form.shape.trim(),
+      brand: form.brand.trim(),
+      supplier: form.supplier.trim(),
+
+      // 固定字段
+      isItaconsumableitem: 0,
+
+      // 商品描述
+      description: form.description.trim()
+    }
+
+    const response = await saveGoodsApi(basicData)
+
+    if (response && response.data && response.data.goodsInfo) {
+      form.goodsId = response.data.goodsInfo.id
+      uni.hideLoading()
+      uni.showToast({
+        title: '基本信息保存成功',
+        icon: 'success'
+      })
+    } else {
+      throw new Error('保存失败')
+    }
+  } catch (error) {
+    uni.hideLoading()
+    console.error('保存基本信息失败:', error)
+    uni.showToast({
+      title: '保存失败，请重试',
+      icon: 'none'
+    })
+  } finally {
+    saving.value = false
+  }
+}
+
 // 生成随机条码
 const generateGoodsNo = () => {
   if (form.priceType === 'weight') {
@@ -1099,21 +1200,25 @@ const retryAIRecognition = () => {
   }
 }
 
-// 修改handleSaveGoods函数
+// 修改handleSaveGoods函数 - 分步保存
 const handleSaveGoods = async () => {
   try {
     if (!validateForm()) return
 
-    saving.value = true
+    if (!form.goodsId) {
+      await saveBasicInfo()
+      return
+    }
 
-    const imageUrls = imageList.value.map(item => {
-      if (typeof item === 'string') {
-        return item
-      } else if (item && item.url) {
-        return item.url
-      }
-      return null
-    }).filter(url => url)
+    if (form.isSingleSpec === 'N' && (!skuData.value.skuList || skuData.value.skuList.length === 0)) {
+      uni.showToast({
+        title: '请添加商品规格',
+        icon: 'none'
+      })
+      return
+    }
+
+    saving.value = true
 
     // 获取用户信息
     const userInfo = userStore.userInfo
@@ -1128,7 +1233,7 @@ const handleSaveGoods = async () => {
     // 多规格商品时，使用第一个SKU的价格作为商品主价格
     let mainPrice = 0
     let mainLinePrice = null
-    
+
     if (form.isSingleSpec === 'N' && Array.isArray(skuData.value.skuList) && skuData.value.skuList.length > 0) {
       const firstSku = skuData.value.skuList[0]
       if (firstSku && firstSku.price) {
@@ -1139,26 +1244,9 @@ const handleSaveGoods = async () => {
       }
     }
 
-    const goodsData = {
-      // 基础信息
-      name: form.name.trim(),
-      goodsNo: form.goodsNo.trim(),
-      cateId: parseInt(form.cateId),
-      images: imageUrls,
-      type: form.type,
-      priceType: form.priceType,
-      status: form.status,
-      price: form.isSingleSpec === 'Y' ? parseFloat(form.singlePrice) : mainPrice,
-      linePrice: form.isSingleSpec === 'Y' && form.singleLinePrice ? parseFloat(form.singleLinePrice) : mainLinePrice,
-      stock: parseInt(form.stock) || 0,
-      safetyStock: parseInt(form.safetyStock),
-      weight: form.weight ? parseFloat(form.weight) : 0,
-      salePoint: form.salePoint.trim(),
-      sort: parseInt(form.sort) || 0,
-
-      // 店铺和商户信息
-      storeId: userInfo.storeId,
-      merchantId: userInfo.merchantId,
+    // 构建扩展信息数据
+    const extendData = {
+      goodsId: form.goodsId,
 
       // 扩展信息
       canUsePoint: form.canUsePoint,
@@ -1166,31 +1254,23 @@ const handleSaveGoods = async () => {
       isSingleSpec: form.isSingleSpec,
       serviceTime: form.type === 'service' ? parseInt(form.serviceTime) || 0 : 0,
 
-      // 新增字段
-      spec: form.spec.trim(),
-      shape: form.shape.trim(),
-      brand: form.brand.trim(),
-      supplier: form.supplier.trim(),
+      // 价格信息
+      price: form.isSingleSpec === 'Y' ? parseFloat(form.singlePrice) : mainPrice,
+      linePrice: form.isSingleSpec === 'Y' && form.singleLinePrice ? parseFloat(form.singleLinePrice) : mainLinePrice,
+      stock: parseInt(form.stock) || 0,
 
-      // 多规格数据，直接使用skuData，不做额外处理
+      // 多规格数据
       skuData: form.isSingleSpec === 'N' ? skuData.value.skuList : [],
       specData: form.isSingleSpec === 'N' ? skuData.value.attrList : [],
 
-      // 固定字段
-      isItaconsumableitem: 0,
-      
-      // 初始销量设为0
+      // 其他字段
       initSale: 0,
-      
-      // 优惠券ID
-      couponIds: "",
-
-      // 商品描述
-      description: form.description.trim()
+      couponIds: ""
     }
 
+
     try {
-      const response = await saveGoodsApi(goodsData)
+      const response = await saveGoodsApi(extendData)
       if (response.code === 200) {
         uni.showToast({
           title: '商品保存成功',
@@ -1974,5 +2054,32 @@ const handleSaveGoods = async () => {
   border-radius: 8rpx;
   font-size: 28rpx;
   margin: 20rpx 0;
+}
+
+// 规格提示样式
+.spec-tip {
+  background: #f0f9ff;
+  border: 2rpx solid #409eff;
+  border-radius: 12rpx;
+  padding: 30rpx;
+  margin-bottom: 20rpx;
+  text-align: center;
+
+  .tip-text {
+    display: block;
+    font-size: 28rpx;
+    color: #409eff;
+    margin-bottom: 20rpx;
+  }
+
+  .save-basic-btn {
+    background: #409eff;
+    color: #fff;
+    border: none;
+    border-radius: 8rpx;
+    padding: 20rpx 40rpx;
+    font-size: 28rpx;
+    font-weight: bold;
+  }
 }
 </style>

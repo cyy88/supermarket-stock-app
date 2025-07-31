@@ -90,7 +90,7 @@ export const getGoodsCateList = (params = {}) => {
 // 保存规格名称
 export const saveSpecName = (data) => {
   return request({
-    url: '/backendApi/goods/spec/saveSpecName',
+    url: '/backendApi/goods/goods/saveSpecName',
     method: 'POST',
     data
   })
@@ -99,27 +99,27 @@ export const saveSpecName = (data) => {
 // 保存规格值
 export const saveSpecValue = (data) => {
   return request({
-    url: '/backendApi/goods/spec/saveSpecValue',
+    url: '/backendApi/goods/goods/saveSpecValue',
     method: 'POST',
     data
   })
 }
 
 // 删除规格
-export const deleteSpec = (data) => {
+export const deleteSpec = (query) => {
   return request({
-    url: '/backendApi/goods/spec/deleteSpec',
-    method: 'POST',
-    data
+    url: '/backendApi/goods/goods/deleteSpec',
+    method: 'GET',
+    params: query
   })
 }
 
 // 删除规格值
-export const deleteSpecValue = (data) => {
+export const deleteSpecValue = (query) => {
   return request({
-    url: '/backendApi/goods/spec/deleteSpecValue',
-    method: 'POST',
-    data
+    url: '/backendApi/goods/goods/deleteSpecValue',
+    method: 'GET',
+    params: query
   })
 }
 
