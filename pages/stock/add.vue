@@ -115,8 +115,8 @@
               </view>
             </view>
 
-            <!-- 损耗说明单独一行，但长度缩小 -->
-            <view class="suggestion-row">
+            <!-- 损耗说明 -->
+            <view class="suggestion-row" >
               <textarea
                 v-model="item.suggestion"
                 placeholder="损耗建议说明..."
@@ -332,7 +332,6 @@ const handleSelectGoods = (selectData) => {
   }
 
   try {
-
     const processedGoods = selectData.map(item => {
       const goodsItem = JSON.parse(JSON.stringify(item))
 
@@ -343,14 +342,34 @@ const handleSelectGoods = (selectData) => {
       return goodsItem
     })
 
-    goodsList.value = processedGoods
+    let addedCount = 0
+    processedGoods.forEach(newItem => {
+      const existingIndex = goodsList.value.findIndex(existingItem =>
+        existingItem.id === newItem.id &&
+        (existingItem.skuId === newItem.skuId || (!existingItem.skuId && !newItem.skuId))
+      )
+
+      if (existingIndex === -1) {
+        goodsList.value.push(newItem)
+        addedCount++
+      } else {
+      }
+    })
 
     nextTick(() => {
-      uni.showToast({
-        title: `已添加${goodsList.value.length}件商品`,
-        icon: 'success',
-        duration: 1500
-      })
+      if (addedCount > 0) {
+        uni.showToast({
+          title: `已添加${addedCount}件新商品`,
+          icon: 'success',
+          duration: 1500
+        })
+      } else {
+        uni.showToast({
+          title: '所选商品已存在',
+          icon: 'none',
+          duration: 1500
+        })
+      }
     })
   } catch (error) {
     uni.showToast({
@@ -923,7 +942,7 @@ const submitForm = async () => {
 
 .suggestion-input {
   width: 100%;
-  min-height: 80rpx;
+  min-height: 60rpx;
   padding: 16rpx;
   border: 2rpx solid #e9ecef;
   border-radius: 12rpx;

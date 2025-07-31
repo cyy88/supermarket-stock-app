@@ -1,23 +1,17 @@
 <template>
   <view class="select-goods-container">
-    <!-- 导航栏 -->
-    <view class="nav-bar">
-      <view class="nav-left" @click="goBack">
-        <text class="nav-icon">←</text>
-      </view>
-      <view class="nav-title">选择商品</view>
-      <view class="nav-right">
-        <text class="selected-count">已选{{ selectedGoods.length }}件</text>
-      </view>
+    <!-- 标题栏 -->
+    <view class="title-bar">
+      <text class="title-text">选择商品</text>
     </view>
 
     <!-- 搜索栏 -->
     <view class="search-container">
       <view class="search-box">
         <text class="search-icon">🔍</text>
-        <input 
-          v-model="searchKeyword" 
-          placeholder="请输入商品关键字搜索" 
+        <input
+          v-model="searchKeyword"
+          placeholder="请输入商品关键字搜索"
           class="search-input"
           @confirm="handleSearch"
         />
@@ -27,9 +21,9 @@
     </view>
 
     <!-- 商品列表 -->
-    <scroll-view 
-      class="goods-scroll" 
-      scroll-y 
+    <scroll-view
+      class="goods-scroll"
+      scroll-y
       @scrolltolower="loadMore"
       refresher-enabled
       @refresherrefresh="onRefresh"
@@ -46,9 +40,9 @@
         </view>
         
         <view v-else>
-          <view 
-            v-for="(item, index) in goodsList" 
-            :key="item.id + '_' + item.skuId" 
+          <view
+            v-for="(item, index) in goodsList"
+            :key="item.id + '_' + item.skuId"
             class="goods-card"
             :class="{ 'selected': item.checked }"
             @click="toggleSelect(index, item)"
@@ -57,7 +51,7 @@
             <view class="select-indicator" :class="{ 'active': item.checked }">
               <text v-if="item.checked" class="check-icon">✓</text>
             </view>
-            
+
             <!-- 商品图片 -->
             <view class="goods-image-container">
               <image
@@ -67,7 +61,7 @@
                 @error="handleImageError"
               />
             </view>
-            
+
             <!-- 商品信息 -->
             <view class="goods-info">
               <view class="goods-name">{{ item.name }}</view>
@@ -113,8 +107,8 @@
       </view>
       <view class="action-buttons">
         <button class="cancel-btn" @click="goBack">取消</button>
-        <button 
-          class="confirm-btn" 
+        <button
+          class="confirm-btn"
           :class="{ 'disabled': selectedGoods.length === 0 }"
           @click="confirmSelect"
         >
@@ -298,50 +292,21 @@ const goBack = () => {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: #f8f9fa;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
 }
 
-/* 导航栏 */
-.nav-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 88rpx;
-  padding: 0 32rpx;
-  background-color: #fff;
-  border-bottom: 1rpx solid #eee;
-  position: sticky;
-  top: 0;
-  z-index: 100;
+/* 标题栏 */
+.title-bar {
+  padding: 40rpx 32rpx 20rpx;
+  text-align: center;
+  background: transparent;
 }
 
-.nav-left {
-  width: 80rpx;
-  height: 60rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.nav-icon {
-  font-size: 36rpx;
-  color: #333;
-}
-
-.nav-title {
+.title-text {
   font-size: 36rpx;
   font-weight: 600;
-  color: #333;
-}
-
-.nav-right {
-  width: 160rpx;
-  text-align: right;
-}
-
-.selected-count {
-  font-size: 28rpx;
-  color: #007aff;
+  color: #fff;
+  text-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.3);
 }
 
 /* 搜索栏 */
@@ -349,8 +314,6 @@ const goBack = () => {
   display: flex;
   align-items: center;
   padding: 24rpx 32rpx;
-  background-color: #fff;
-  border-bottom: 1rpx solid #eee;
   gap: 20rpx;
 }
 
@@ -358,10 +321,11 @@ const goBack = () => {
   flex: 1;
   display: flex;
   align-items: center;
-  background-color: #f5f5f5;
+  background: rgba(255, 255, 255, 0.9);
   border-radius: 50rpx;
   padding: 0 24rpx;
   height: 72rpx;
+  backdrop-filter: blur(10px);
 }
 
 .search-icon {
@@ -395,11 +359,12 @@ const goBack = () => {
 
 .search-btn {
   padding: 16rpx 32rpx;
-  background-color: #007aff;
-  color: #fff;
+  background: rgba(255, 255, 255, 0.9);
+  color: #333;
   border: none;
   border-radius: 36rpx;
   font-size: 28rpx;
+  backdrop-filter: blur(10px);
 }
 
 /* 商品列表滚动区域 */
@@ -441,18 +406,20 @@ const goBack = () => {
 .goods-card {
   display: flex;
   align-items: flex-start;
-  background-color: #fff;
+  background: rgba(255, 255, 255, 0.95);
   border-radius: 16rpx;
   padding: 24rpx;
   margin-bottom: 24rpx;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.1);
   position: relative;
   transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
 }
 
 .goods-card.selected {
-  border: 2rpx solid #007aff;
-  background-color: #f0f8ff;
+  border: 2rpx solid #52c41a;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 6rpx 25rpx rgba(82, 196, 26, 0.2);
 }
 
 .goods-card:active {
@@ -476,8 +443,8 @@ const goBack = () => {
 }
 
 .select-indicator.active {
-  background-color: #007aff;
-  border-color: #007aff;
+  background-color: #52c41a;
+  border-color: #52c41a;
 }
 
 .check-icon {
@@ -601,8 +568,9 @@ const goBack = () => {
 
 /* 底部操作栏 */
 .bottom-bar {
-  background-color: #fff;
-  border-top: 1rpx solid #eee;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-top: 1rpx solid rgba(255, 255, 255, 0.2);
   padding: 24rpx 32rpx;
   padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
 }
@@ -634,17 +602,64 @@ const goBack = () => {
 }
 
 .cancel-btn {
-  background-color: #f5f5f5;
+  background: rgba(255, 255, 255, 0.8);
   color: #666;
 }
 
 .confirm-btn {
-  background-color: #007aff;
+  background: #52c41a;
   color: #fff;
 }
 
 .confirm-btn.disabled {
-  background-color: #ccc;
+  background: #ccc;
   color: #999;
+}
+
+/* 加载状态 */
+.loading-container,
+.empty-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 120rpx 0;
+  text-align: center;
+}
+
+.loading-text {
+  font-size: 28rpx;
+  color: rgba(255, 255, 255, 0.8);
+  margin-top: 20rpx;
+}
+
+.empty-icon {
+  font-size: 120rpx;
+  margin-bottom: 24rpx;
+  opacity: 0.6;
+}
+
+.empty-text {
+  font-size: 28rpx;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* 加载更多 */
+.load-more,
+.loading-more,
+.no-more {
+  text-align: center;
+  padding: 40rpx 0;
+}
+
+.load-more-text {
+  font-size: 28rpx;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.loading-more-text,
+.no-more-text {
+  font-size: 28rpx;
+  color: rgba(255, 255, 255, 0.6);
 }
 </style>
