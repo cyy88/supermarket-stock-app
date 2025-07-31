@@ -314,6 +314,54 @@
         </view>
         <view class="form-tips">提示：输入数字，单位：分钟</view>
       </view>
+
+      <!-- 规格描述 -->
+      <view class="form-item">
+        <text class="label">规格描述</text>
+        <input
+          style="width: 85%;"
+          v-model="form.spec"
+          placeholder="请输入规格描述，如水多少mL"
+          class="input"
+          maxlength="100"
+        />
+      </view>
+
+      <!-- 形状描述 -->
+      <view class="form-item">
+        <text class="label">形状描述</text>
+        <input
+          style="width: 85%;"
+          v-model="form.shape"
+          placeholder="请输入形状描述，如杯个"
+          class="input"
+          maxlength="100"
+        />
+      </view>
+
+      <!-- 品牌 -->
+      <view class="form-item">
+        <text class="label">品牌</text>
+        <input
+          style="width: 85%;"
+          v-model="form.brand"
+          placeholder="请输入品牌名称"
+          class="input"
+          maxlength="50"
+        />
+      </view>
+
+      <!-- 供应商 -->
+      <view class="form-item">
+        <text class="label">供应商</text>
+        <input
+          style="width: 85%;"
+          v-model="form.supplier"
+          placeholder="请输入供应商名称"
+          class="input"
+          maxlength="100"
+        />
+      </view>
     </view>
 
     <!-- 商品图片卡片 -->
@@ -489,6 +537,12 @@ const form = reactive({
   isMemberDiscount: 'Y',
   isSingleSpec: 'Y',
   serviceTime: 0,
+
+  // 新增字段
+  spec: '',
+  shape: '',
+  brand: '',
+  supplier: '',
 
   description: ''
 })
@@ -953,6 +1007,12 @@ const handleSaveGoods = async () => {
       isMemberDiscount: form.isMemberDiscount,
       isSingleSpec: form.isSingleSpec,
       serviceTime: form.type === 'service' ? parseInt(form.serviceTime) || 0 : 0,
+
+      // 新增字段
+      spec: form.spec.trim(),
+      shape: form.shape.trim(),
+      brand: form.brand.trim(),
+      supplier: form.supplier.trim(),
 
       // 固定字段
       isItaconsumableitem: 0,

@@ -100,6 +100,22 @@
             <text class="extend-label">服务时长</text>
             <text class="extend-value">{{ goods.serviceTime }} 分钟</text>
           </view>
+          <view v-if="goods.spec" class="extend-item">
+            <text class="extend-label">规格描述</text>
+            <text class="extend-value">{{ goods.spec }}</text>
+          </view>
+          <view v-if="goods.shape" class="extend-item">
+            <text class="extend-label">形状描述</text>
+            <text class="extend-value">{{ goods.shape }}</text>
+          </view>
+          <view v-if="goods.brand" class="extend-item">
+            <text class="extend-label">品牌</text>
+            <text class="extend-value">{{ goods.brand }}</text>
+          </view>
+          <view v-if="goods.supplier" class="extend-item">
+            <text class="extend-label">供应商</text>
+            <text class="extend-value">{{ goods.supplier }}</text>
+          </view>
         </view>
       </view>
 

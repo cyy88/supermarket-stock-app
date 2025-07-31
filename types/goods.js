@@ -24,6 +24,11 @@ export const GoodsInfo = {
   isSingleSpec: 'Y', // 规格类型 Y:单规格 N:多规格
   serviceTime: 0, // 服务时长（分钟）
 
+  spec: '', // 规格描述（如水多少mL）
+  shape: '', // 形状描述（如杯个）
+  brand: '', // 品牌
+  supplier: '', // 供应商
+
 
   createTime: 0,
   updateTime: 0
