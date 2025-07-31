@@ -44,6 +44,13 @@
 			}
 		},
 		{
+			"path": "pages/goods/select",
+			"style": {
+				"navigationBarTitleText": "选择商品",
+				"navigationStyle": "custom"
+			}
+		},
+		{
 			"path": "pages/consumables/list",
 			"style": {
 				"navigationBarTitleText": "消耗品管理"

@@ -152,15 +152,7 @@
       </button>
     </view>
 
-    <!-- 选择商品对话框 -->
-    <SelectGoodsDialog
-      ref="selectGoodsDialogRef"
-      :show-dialog="showSelectGoodsDialog"
-      :store-id="form.storeId"
-      :data-list="goodsList"
-      @close-dialog="closeSelectGoods"
-      @submit="doSelectGoods"
-    />
+
 
     <!-- 添加入库单对话框 -->
     <AddInboundOrderDialog
@@ -185,10 +177,10 @@
 
 <script setup>
 import { ref, reactive, onMounted, computed, nextTick } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
+import { onLoad, onShow } from '@dcloudio/uni-app'
 import userStore from '@/stores/user'
 import { saveStock } from '@/api/stock'
-import SelectGoodsDialog from '@/components/SelectGoodsDialog.vue'
+
 import AddInboundOrderDialog from '@/components/AddInboundOrderDialog.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 
@@ -210,12 +202,12 @@ const imagePath = ref('')
 const storeOptions = ref([])
 const selectedStoreIndex = ref(0)
 const goodsList = ref([])
-const showSelectGoodsDialog = ref(false)
+
 const showAddInboundOrderDialog = ref(false)
 const showDeleteDialog = ref(false)
 const currentDeleteItem = ref(null)
 
-const selectGoodsDialogRef = ref(null)
+
 const addInboundOrderDialogRef = ref(null)
 
 const form = reactive({
@@ -251,6 +243,32 @@ onMounted(() => {
   initData()
 })
 
+onShow(() => {
+  setTimeout(() => {
+    checkSelectedGoodsData()
+  }, 100)
+})
+
+const checkSelectedGoodsData = () => {
+  try {
+    const storedData = uni.getStorageSync('selectedGoodsData')
+
+    if (storedData && storedData.data && storedData.timestamp) {
+      const now = Date.now()
+      const dataAge = now - storedData.timestamp
+
+      if (dataAge < 5 * 60 * 1000) { // 5分钟内的数据有效
+        handleSelectGoods(storedData.data)
+        uni.removeStorageSync('selectedGoodsData')
+      } else {
+        uni.removeStorageSync('selectedGoodsData')
+      }
+    } else {
+    }
+  } catch (error) {
+  }
+}
+
 const initData = () => {
   const userInfo = userStore.userInfo
   if (userInfo && userInfo.storeId) {
@@ -285,14 +303,26 @@ const getStoreName = (storeId) => {
 }
 
 const selectGoods = () => {
-  showSelectGoodsDialog.value = true
+  uni.navigateTo({
+    url: `/pages/goods/select?storeId=${form.storeId}`,
+    events: {
+      selectGoods: function(data) {
+        handleSelectGoods(data)
+      }
+    },
+    success: function() {
+    },
+    fail: function(err) {
+      uni.showToast({
+        title: '页面跳转失败',
+        icon: 'none'
+      })
+    }
+  })
 }
 
-const closeSelectGoods = () => {
-  showSelectGoodsDialog.value = false
-}
+const handleSelectGoods = (selectData) => {
 
-const doSelectGoods = (selectData) => {
   if (!selectData || selectData.length === 0) {
     uni.showToast({
       title: '请至少选择一个商品',
@@ -300,15 +330,16 @@ const doSelectGoods = (selectData) => {
     })
     return
   }
-  
+
   try {
+
     const processedGoods = selectData.map(item => {
       const goodsItem = JSON.parse(JSON.stringify(item))
-      
+
       goodsItem.num = goodsItem.priceType === 'weight' ? 0.00 : 1
       goodsItem.lossUrl = goodsItem.lossUrl || null
       goodsItem.suggestion = goodsItem.suggestion || ''
-      
+
       return goodsItem
     })
 
@@ -320,7 +351,6 @@ const doSelectGoods = (selectData) => {
         icon: 'success',
         duration: 1500
       })
-      showSelectGoodsDialog.value = false
     })
   } catch (error) {
     uni.showToast({
@@ -329,6 +359,7 @@ const doSelectGoods = (selectData) => {
     })
   }
 }
+
 
 // 添加入库单
 const addInboundOrder = () => {
