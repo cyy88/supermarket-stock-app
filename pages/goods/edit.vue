@@ -309,7 +309,7 @@
       <view v-if="form.isSingleSpec === 'N'" class="form-item">
         <text class="label">商品规格</text>
         <SkuManager
-          :sku-data="skuData"
+          :sku-data="skuData.value"
           :price-type="form.priceType"
           :goods-id="goodsId"
           @sku-change="onSkuChange"
@@ -467,7 +467,7 @@
       <button
         class="save-btn"
         :class="{ loading: saving }"
-        @click="handleUpdateGoods"
+        @click="handleSaveGoods"
         :disabled="saving"
       >
         {{ saving ? '更新中...' : '💾 更新商品' }}
@@ -539,20 +539,13 @@
   </view>
 </template>
 
-<script>
+<script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import goodsStore from '@/stores/goods'
 import userStore from '@/stores/user'
-import { saveGoods, getGoodsCateList, uploadImage, getGoodsDetail } from '@/api/goods'
-import { recognizeProductImage } from '@/api/ai'
+import { getGoodsDetail, saveGoods, getGoodsCateList, uploadImage } from '@/api/goods'
 import SkuManager from '@/components/SkuManager.vue'
-
-export default {
-  components: {
-    SkuManager
-  },
-  setup() {
 
 const loading = ref(true)
 const saving = ref(false)
@@ -575,14 +568,6 @@ const skuData = ref({
   skuList: [],
   initSkuList: []
 })
-
-// AI识别相关状态
-const showAIModal = ref(false)
-const aiRecognizing = ref(false)
-const aiResult = ref(null)
-const aiProgress = ref(0)
-const aiImageUrl = ref('')
-const aiProgressTimer = ref(null)
 
 const form = reactive({
   type: 'goods',
@@ -622,11 +607,11 @@ const form = reactive({
 onLoad((options) => {
   if (options.id) {
     goodsId.value = options.id
-    loadGoodsDetail()
     loadCategoryList()
+    loadGoodsDetail()
   } else {
     uni.showToast({
-      title: '参数错误',
+      title: '商品ID参数缺失',
       icon: 'none'
     })
     setTimeout(() => {
@@ -635,25 +620,22 @@ onLoad((options) => {
   }
 })
 
+// 加载商品详情
 const loadGoodsDetail = async () => {
   try {
     loading.value = true
-
+    
     const response = await getGoodsDetail(goodsId.value)
-
+    
     if (response.code === 200 && response.data && response.data.goods) {
-      const goodsData = {
-        ...response.data.goods,
-        imagePath: response.data.imagePath || ''
-      }
-      goods.value = goodsData
-      fillForm(goodsData)
+      goods.value = response.data.goods
+      fillForm(goods.value)
     } else {
       throw new Error(response.message || '获取商品详情失败')
     }
   } catch (error) {
     uni.showToast({
-      title: '商品不存在或网络错误',
+      title: error.message || '商品不存在或网络错误',
       icon: 'none'
     })
     setTimeout(() => {
@@ -664,196 +646,121 @@ const loadGoodsDetail = async () => {
   }
 }
 
+// 填充表单数据
 const fillForm = (goodsData) => {
   form.type = goodsData.type || 'goods'
   form.typeName = form.type === 'goods' ? '实物商品' : '服务商品'
   form.priceType = goodsData.priceType || 'piece'
   form.goodsNo = goodsData.goodsNo || ''
   form.name = goodsData.name || ''
-  form.cateId = goodsData.cateId?.toString() || ''
-
-  if (goodsData.cateInfo && goodsData.cateInfo.name) {
-    form.cateName = goodsData.cateInfo.name
-  } else if (goodsData.cateName) {
-    form.cateName = goodsData.cateName
-  } else if (goodsData.cateId) {
-    const categories = goodsStore.categories
-    const category = categories.find(cat => cat.id === goodsData.cateId)
-    if (category) {
-      form.cateName = category.name
-    } else {
-      form.cateName = '未分类'
-    }
-  } else {
-    form.cateName = '未分类'
-  }
-  form.price = goodsData.price?.toString() || ''
-  form.linePrice = goodsData.linePrice?.toString() || ''
-  form.stock = goodsData.stock?.toString() || ''
-  form.safetyStock = goodsData.safetyStock?.toString() || ''
-  form.weight = goodsData.weight?.toString() || ''
+  form.cateId = String(goodsData.cateId || '')
+  form.cateName = goodsData.cateName || ''
+  form.price = goodsData.price ? String(goodsData.price) : ''
+  form.linePrice = goodsData.linePrice ? String(goodsData.linePrice) : ''
+  form.stock = goodsData.stock ? String(goodsData.stock) : '0'
+  form.safetyStock = goodsData.safetyStock ? String(goodsData.safetyStock) : '0'
+  form.weight = goodsData.weight ? String(goodsData.weight) : ''
   form.salePoint = goodsData.salePoint || ''
   form.sort = goodsData.sort || 0
   form.status = goodsData.status || 'A'
-
-  // 扩展信息
+  
   form.canUsePoint = goodsData.canUsePoint || 'Y'
   form.isMemberDiscount = goodsData.isMemberDiscount || 'Y'
   form.isSingleSpec = goodsData.isSingleSpec || 'Y'
-  form.serviceTime = goodsData.serviceTime || 0
-
-  // 新增字段
+  form.serviceTime = goodsData.serviceTime ? String(goodsData.serviceTime) : '0'
+  
   form.spec = goodsData.spec || ''
   form.shape = goodsData.shape || ''
   form.brand = goodsData.brand || ''
   form.supplier = goodsData.supplier || ''
-
-  // 单规格商品价格处理
-  if (form.isSingleSpec === 'Y') {
-    form.singlePrice = goodsData.price?.toString() || ''
-    form.singleLinePrice = goodsData.linePrice?.toString() || ''
-  }
-
-  // 多规格数据处理
-  if (form.isSingleSpec === 'N' && goodsData.skuData) {
-    skuData.value.skuList = goodsData.skuData || []
-    skuData.value.initSkuList = goodsData.skuData || []
-  }
-  if (form.isSingleSpec === 'N' && goodsData.specData) {
-    skuData.value.attrList = goodsData.specData || []
-  }
-
-  // 商品描述
+  
+  form.singlePrice = form.price
+  form.singleLinePrice = form.linePrice
+  
   form.description = goodsData.description || ''
-
-  // 设置商品类型选择器索引
-  const typeIndex = typeOptions.value.findIndex(type => type.key === form.type)
-  if (typeIndex !== -1) {
-    selectedTypeIndex.value = typeIndex
-  }
-
-  if (form.cateId && categoryList.value.length > 0) {
-    const categoryIndex = categoryList.value.findIndex(cat => cat.id.toString() === form.cateId)
-    if (categoryIndex !== -1) {
-      selectedCategoryIndex.value = categoryIndex
-      form.cateName = categoryList.value[categoryIndex].name
-    }
-  }
-
-  const images = []
-
-  if (goodsData.logo) {
-    images.push(goodsData.logo)
-  }
-
+  
+  // 设置图片
+  imageList.value = []
   if (goodsData.images) {
-    if (typeof goodsData.images === 'string') {
-      try {
-        const parsedImages = JSON.parse(goodsData.images)
-        if (Array.isArray(parsedImages)) {
-          parsedImages.forEach(img => {
-            if (img && !images.includes(img)) {
-              images.push(img)
-            }
+    try {
+      let images = []
+      
+      if (typeof goodsData.images === 'string') {
+        try {
+          images = JSON.parse(goodsData.images)
+        } catch (e) {
+          images = [goodsData.images]
+        }
+      } else if (Array.isArray(goodsData.images)) {
+        images = goodsData.images
+      }
+      
+      images.forEach(url => {
+        if (url) {
+          imageList.value.push({
+            url: url
           })
         }
-      } catch (e) {
-        if (goodsData.images && !images.includes(goodsData.images)) {
-          images.push(goodsData.images)
-        }
+      })
+    } catch (e) {
+      console.error('解析商品图片失败:', e)
+    }
+  }
+  
+  // 设置商品分类
+  const categories = categoryList.value
+  const categoryIndex = categories.findIndex(item => String(item.id) === String(form.cateId))
+  selectedCategoryIndex.value = categoryIndex >= 0 ? categoryIndex : 0
+  
+  // 设置商品类型
+  selectedTypeIndex.value = form.type === 'goods' ? 0 : 1
+  
+  // 处理SKU数据
+  handleSkuData(goodsData)
+  
+  // 更新步骤
+  updateStep()
+}
+
+// 处理SKU数据
+const handleSkuData = (goodsData) => {
+  try {
+    const initSkuList = []
+    let skuList = []
+    
+    // 处理SKU数据
+    if (goodsData.skuData) {
+      if (typeof goodsData.skuData === 'string') {
+        skuList = JSON.parse(goodsData.skuData)
+      } else if (Array.isArray(goodsData.skuData)) {
+        skuList = goodsData.skuData
       }
-    } else if (Array.isArray(goodsData.images)) {
-      goodsData.images.forEach(img => {
-        if (img && !images.includes(img)) {
-          images.push(img)
-        }
+    }
+    
+    // 复制到初始SKU列表
+    if (Array.isArray(skuList)) {
+      skuList.forEach(sku => {
+        initSkuList.push({...sku})
       })
     }
-  }
-
-  imageList.value = images.filter(img => img).map(img => ({
-    url: img,
-    tempPath: img
-  }))
-
-  updateStep()
-}
-
-const loadCategoryList = async () => {
-  try {
-    const res = await getGoodsCateList({
-      page: 1,
-      pageSize: 100,
-      status: 'A'
-    })
-
-    if (res.code === 200 && res.data && res.data.paginationResponse) {
-      categoryList.value = res.data.paginationResponse.content || []
-      goodsStore.saveCategories(categoryList.value)
+    
+    // 处理规格数据
+    let attrList = []
+    if (goodsData.specData) {
+      if (typeof goodsData.specData === 'string') {
+        attrList = JSON.parse(goodsData.specData)
+      } else if (Array.isArray(goodsData.specData)) {
+        attrList = goodsData.specData
+      }
+    }
+    
+    skuData.value = {
+      attrList: attrList,
+      skuList: skuList,
+      initSkuList: initSkuList
     }
   } catch (error) {
-    console.error('获取分类失败:', error)
-    categoryList.value = goodsStore.categories
-  }
-}
-
-const onCategoryChange = (e) => {
-  const selectedCategory = categoryList.value[e.detail.value]
-  if (selectedCategory) {
-    form.cateId = selectedCategory.id
-    form.cateName = selectedCategory.name
-    selectedCategoryIndex.value = e.detail.value
-  }
-  showCategoryPicker.value = false
-}
-
-const onTypeChange = (e) => {
-  const selectedType = typeOptions.value[e.detail.value]
-  if (selectedType) {
-    form.type = selectedType.key
-    form.typeName = selectedType.name
-    selectedTypeIndex.value = e.detail.value
-
-    if (form.type === 'service') {
-      form.priceType = 'piece'
-    }
-  }
-}
-
-const setPriceType = (type) => {
-  form.priceType = type
-  if (form.goodsNo) {
-    form.goodsNo = ''
-  }
-  updateStep()
-}
-
-const onPriceTypeChange = (e) => {
-  const newPriceType = e.detail.value
-  setPriceType(newPriceType)
-}
-
-const onStatusChange = (e) => {
-  form.status = e.detail.value
-}
-
-const onCanUsePointChange = (e) => {
-  form.canUsePoint = e.detail.value
-}
-
-const onMemberDiscountChange = (e) => {
-  form.isMemberDiscount = e.detail.value
-}
-
-const onSingleSpecChange = (e) => {
-  form.isSingleSpec = e.detail.value
-  // 切换到多规格时，清空单规格价格
-  if (form.isSingleSpec === 'N') {
-    form.singlePrice = ''
-    form.singleLinePrice = ''
-  }
-  // 切换到单规格时，清空多规格数据
-  if (form.isSingleSpec === 'Y') {
+    console.error('处理SKU数据失败:', error)
     skuData.value = {
       attrList: [],
       skuList: [],
@@ -862,14 +769,16 @@ const onSingleSpecChange = (e) => {
   }
 }
 
-// SKU数据变化处理
-const onSkuChange = (newSkuData) => {
-  skuData.value = newSkuData
-}
-
 const updateStep = () => {
   // 步骤1：基本信息必填项
-  if (form.name && form.cateId && form.price && form.goodsNo && form.safetyStock !== '') {
+  let hasPrice = false
+  if (form.isSingleSpec === 'Y') {
+    hasPrice = form.singlePrice && parseFloat(form.singlePrice) > 0
+  } else {
+    hasPrice = skuData.value.skuList && skuData.value.skuList.length > 0
+  }
+
+  if (form.name && form.cateId && hasPrice && form.goodsNo && form.safetyStock !== '') {
     currentStep.value = 2
   } else {
     currentStep.value = 1
@@ -888,6 +797,122 @@ const updateStep = () => {
   if (form.description) {
     currentStep.value = 4
   }
+}
+
+const loadCategoryList = async () => {
+  try {
+    const res = await getGoodsCateList({
+      page: 1,
+      pageSize: 100,
+      status: 'A'
+    })
+
+    if (res.code === 200 && res.data && res.data.paginationResponse) {
+      const categories = res.data.paginationResponse.content || []
+      categoryList.value = categories
+      goodsStore.saveCategories(categoryList.value)
+    } else {
+      throw new Error(res.message || '获取分类失败')
+    }
+  } catch (error) {
+    categoryList.value = goodsStore.categories
+    
+    if (categoryList.value.length === 0) {
+      uni.showToast({
+        title: '获取分类失败，请检查网络连接',
+        icon: 'none'
+      })
+    }
+  }
+}
+
+const onCategoryChange = (e) => {
+  const selectedCategory = categoryList.value[e.detail.value]
+  if (selectedCategory) {
+    form.cateId = selectedCategory.id
+    form.cateName = selectedCategory.name
+    selectedCategoryIndex.value = e.detail.value
+  }
+  showCategoryPicker.value = false
+  updateStep()
+}
+
+// 商品类型选择
+const onTypeChange = (e) => {
+  const selectedType = typeOptions.value[e.detail.value]
+  if (selectedType) {
+    form.type = selectedType.key
+    form.typeName = selectedType.name
+    selectedTypeIndex.value = e.detail.value
+
+    // 如果选择服务商品，默认设置为计件
+    if (form.type === 'service') {
+      form.priceType = 'piece'
+    }
+  }
+  updateStep()
+}
+
+// 设置计价方式
+const setPriceType = (type) => {
+  form.priceType = type
+  updateStep()
+}
+
+// 计价方式改变事件
+const onPriceTypeChange = (e) => {
+  const newPriceType = e.detail.value
+  setPriceType(newPriceType)
+}
+
+// 商品状态改变事件
+const onStatusChange = (e) => {
+  form.status = e.detail.value
+}
+
+// 积分抵扣改变事件
+const onCanUsePointChange = (e) => {
+  form.canUsePoint = e.detail.value
+}
+
+// 会员折扣改变事件
+const onMemberDiscountChange = (e) => {
+  form.isMemberDiscount = e.detail.value
+}
+
+// 规格类型改变事件
+const onSingleSpecChange = (e) => {
+  form.isSingleSpec = e.detail.value
+
+  // 切换到多规格时，清空单规格价格
+  if (form.isSingleSpec === 'N') {
+    form.singlePrice = ''
+    form.singleLinePrice = ''
+  }
+  // 切换到单规格时，清空多规格数据
+  if (form.isSingleSpec === 'Y') {
+    skuData.value = {
+      attrList: [],
+      skuList: [],
+      initSkuList: []
+    }
+  }
+  updateStep()
+}
+
+// 修改onSkuChange函数，确保数据格式正确
+const onSkuChange = (newSkuData) => {
+  console.log('SKU数据已更新:', newSkuData)
+  
+  // 直接使用组件返回的数据，不做类型转换
+  // 组件内部已经确保ID格式正确
+  skuData.value = {
+    attrList: newSkuData.attrList || [],
+    skuList: newSkuData.skuList || [],
+    initSkuList: newSkuData.initSkuList || []
+  }
+  
+  updateStep()
 }
 
 // 生成随机条码
@@ -946,162 +971,6 @@ const uploadImages = async (filePaths) => {
 const deleteImage = (index) => {
   imageList.value.splice(index, 1)
   updateStep()
-}
-
-// AI识别相关方法
-const showAIRecognitionModal = () => {
-  showAIModal.value = true
-  aiResult.value = null
-  aiProgress.value = 0
-}
-
-const closeAIModal = () => {
-  showAIModal.value = false
-  aiRecognizing.value = false
-  aiResult.value = null
-  aiProgress.value = 0
-  aiImageUrl.value = ''
-  if (aiProgressTimer.value) {
-    clearInterval(aiProgressTimer.value)
-    aiProgressTimer.value = null
-  }
-}
-
-const chooseImageForAI = () => {
-  uni.chooseImage({
-    count: 1,
-    sizeType: ['compressed'],
-    sourceType: ['camera', 'album'],
-    success: (res) => {
-      const filePath = res.tempFilePaths[0]
-      uploadImageForAI(filePath)
-    },
-    fail: (error) => {
-      uni.showToast({
-        title: '选择图片失败',
-        icon: 'none'
-      })
-    }
-  })
-}
-
-const uploadImageForAI = async (filePath) => {
-  try {
-    console.log('开始上传图片用于AI识别:', filePath);
-
-    uni.showLoading({
-      title: '上传图片中...'
-    })
-
-    const imageUrl = await uploadImage(filePath)
-    console.log('图片上传成功，URL:', imageUrl);
-
-    aiImageUrl.value = imageUrl
-
-    uni.hideLoading()
-
-    // 开始AI识别
-    console.log('开始调用AI识别...');
-    startAIRecognition(imageUrl)
-  } catch (error) {
-    console.error('图片上传失败:', error);
-    uni.hideLoading()
-    uni.showToast({
-      title: '图片上传失败',
-      icon: 'none'
-    })
-  }
-}
-
-const startAIRecognition = async (imageUrl) => {
-  try {
-    console.log('startAIRecognition 被调用，图片URL:', imageUrl);
-
-    aiRecognizing.value = true
-    aiProgress.value = 0
-
-    // 启动进度条动画
-    startProgressAnimation()
-
-    console.log('开始调用 recognizeProductImage...');
-
-    // 调用AI识别
-    const result = await recognizeProductImage(imageUrl)
-
-    console.log('AI识别完成，结果:', result);
-
-    // 停止进度条动画
-    stopProgressAnimation()
-
-    aiRecognizing.value = false
-    aiResult.value = result
-
-    if (result.success) {
-      console.log('AI识别成功');
-      uni.showToast({
-        title: '识别成功',
-        icon: 'success'
-      })
-    } else {
-      console.log('AI识别失败:', result.error);
-      uni.showToast({
-        title: '识别失败',
-        icon: 'none'
-      })
-    }
-  } catch (error) {
-    console.error('startAIRecognition 异常:', error);
-    stopProgressAnimation()
-    aiRecognizing.value = false
-    aiResult.value = {
-      success: false,
-      error: error.message || '识别失败，请重试'
-    }
-
-    uni.showToast({
-      title: '识别失败',
-      icon: 'none'
-    })
-  }
-}
-
-const startProgressAnimation = () => {
-  aiProgress.value = 0
-  aiProgressTimer.value = setInterval(() => {
-    if (aiProgress.value < 90) {
-      aiProgress.value += Math.random() * 10
-    }
-  }, 500)
-}
-
-const stopProgressAnimation = () => {
-  if (aiProgressTimer.value) {
-    clearInterval(aiProgressTimer.value)
-    aiProgressTimer.value = null
-  }
-  aiProgress.value = 100
-}
-
-const applyAIResult = () => {
-  if (aiResult.value && aiResult.value.success) {
-    form.name = aiResult.value.data.name
-    form.goodsNo = aiResult.value.data.num
-    updateStep()
-    closeAIModal()
-
-    uni.showToast({
-      title: '已应用AI识别结果',
-      icon: 'success'
-    })
-  }
-}
-
-const retryAIRecognition = () => {
-  if (aiImageUrl.value) {
-    startAIRecognition(aiImageUrl.value)
-  } else {
-    chooseImageForAI()
-  }
 }
 
 const validateForm = () => {
@@ -1200,12 +1069,21 @@ const validateForm = () => {
   return true
 }
 
-// 更新商品
-const handleUpdateGoods = async () => {
+// 修改handleSaveGoods函数
+const handleSaveGoods = async () => {
   try {
     if (!validateForm()) return
 
     saving.value = true
+
+    const imageUrls = imageList.value.map(item => {
+      if (typeof item === 'string') {
+        return item
+      } else if (item && item.url) {
+        return item.url
+      }
+      return null
+    }).filter(url => url)
 
     // 获取用户信息
     const userInfo = userStore.userInfo
@@ -1217,18 +1095,25 @@ const handleUpdateGoods = async () => {
       return
     }
 
-    // 处理图片URL
-    const imageUrls = imageList.value.map(item => {
-      if (typeof item === 'string') {
-        return item
-      } else if (item && item.url) {
-        return item.url
+    // 多规格商品时，使用第一个SKU的价格作为商品主价格
+    let mainPrice = 0
+    let mainLinePrice = null
+    
+    if (form.isSingleSpec === 'N' && Array.isArray(skuData.value.skuList) && skuData.value.skuList.length > 0) {
+      const firstSku = skuData.value.skuList[0]
+      if (firstSku && firstSku.price) {
+        mainPrice = Number(firstSku.price)
+        if (firstSku.linePrice) {
+          mainLinePrice = Number(firstSku.linePrice)
+        }
       }
-      return null
-    }).filter(url => url)
+    }
 
     const updatedData = {
-      goodsId: String(goods.value.id || goodsId.value),
+      // ID
+      id: goods.value.id,
+      goodsId: goods.value.goodsId || goods.value.id,
+
       // 基础信息
       name: form.name.trim(),
       goodsNo: form.goodsNo.trim(),
@@ -1236,12 +1121,11 @@ const handleUpdateGoods = async () => {
       type: form.type,
       priceType: form.priceType,
       status: form.status,
-      // 单规格商品使用单独的价格字段，多规格商品价格在SKU中
-      price: form.isSingleSpec === 'Y' ? parseFloat(form.singlePrice) : 0,
-      linePrice: form.isSingleSpec === 'Y' && form.singleLinePrice ? parseFloat(form.singleLinePrice) : null,
+      price: form.isSingleSpec === 'Y' ? parseFloat(form.singlePrice) : mainPrice,
+      linePrice: form.isSingleSpec === 'Y' && form.singleLinePrice ? parseFloat(form.singleLinePrice) : mainLinePrice,
       stock: parseInt(form.stock) || 0,
       safetyStock: parseInt(form.safetyStock),
-      weight: form.weight ? parseFloat(form.weight) : null,
+      weight: form.weight ? parseFloat(form.weight) : 0,
       salePoint: form.salePoint.trim(),
       sort: parseInt(form.sort) || 0,
 
@@ -1261,12 +1145,18 @@ const handleUpdateGoods = async () => {
       brand: form.brand.trim(),
       supplier: form.supplier.trim(),
 
-      // 多规格数据
+      // 多规格数据，直接使用skuData，不做额外处理
       skuData: form.isSingleSpec === 'N' ? skuData.value.skuList : [],
       specData: form.isSingleSpec === 'N' ? skuData.value.attrList : [],
 
       // 保持原有的消耗品标识
       isItaconsumableitem: goods.value.isItaconsumableitem || 0,
+      
+      // 初始销量
+      initSale: goods.value.initSale || 0,
+      
+      // 优惠券IDs
+      couponIds: goods.value.couponIds || "",
 
       // 图片和描述
       images: imageUrls,
@@ -1274,7 +1164,6 @@ const handleUpdateGoods = async () => {
     }
 
     try {
-
       const response = await saveGoods(updatedData)
       if (response.code === 200) {
         uni.showToast({
@@ -1293,7 +1182,6 @@ const handleUpdateGoods = async () => {
         icon: 'none'
       })
     }
-
   } catch (error) {
     uni.showToast({
       title: error.message || '更新失败，请重试',
@@ -1302,46 +1190,6 @@ const handleUpdateGoods = async () => {
   } finally {
     saving.value = false
   }
-}
-
-// 返回所有需要在模板中使用的变量和函数
-return {
-  // 响应式数据
-  loading,
-  saving,
-  showCategoryPicker,
-  categoryList,
-  typeOptions,
-  imageList,
-  goods,
-  goodsId,
-  selectedCategoryIndex,
-  selectedTypeIndex,
-  currentStep,
-  skuData,
-  form,
-
-  // 方法
-  fillForm,
-  updateStep,
-  loadCategoryList,
-  onCategoryChange,
-  onTypeChange,
-  setPriceType,
-  onPriceTypeChange,
-  onStatusChange,
-  onCanUsePointChange,
-  onMemberDiscountChange,
-  onSingleSpecChange,
-  onSkuChange,
-  generateGoodsNo,
-  chooseImage,
-  uploadImages,
-  deleteImage,
-  validateForm,
-  handleSaveGoods
-}
-}
 }
 </script>
 

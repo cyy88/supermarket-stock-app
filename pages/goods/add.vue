@@ -309,7 +309,7 @@
           <text class="guide-text">系统会自动生成规格组合，您可以为每个组合设置价格、库存等信息</text>
         </view>
         <SkuManager
-          :sku-data="{attrList: [], skuList: [], initSkuList: []}"
+          :sku-data="skuData.value"
           :price-type="form.priceType"
           :goods-id="form.goodsId || ''"
           @sku-change="onSkuChange"
@@ -534,7 +534,7 @@
   </view>
 </template>
 
-<script>
+<script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import goodsStore from '@/stores/goods'
@@ -542,12 +542,6 @@ import userStore from '@/stores/user'
 import { saveGoods as saveGoodsApi, getGoodsCateList, uploadImage } from '@/api/goods'
 import { recognizeProductImage } from '@/api/ai'
 import SkuManager from '@/components/SkuManager.vue'
-
-export default {
-  components: {
-    SkuManager
-  },
-  setup() {
 
 const saving = ref(false)
 const showCategoryPicker = ref(false)
@@ -625,6 +619,15 @@ onLoad((options) => {
   loadCategoryList()
   updateStep()
 })
+
+// 新增初始化SkuData方法
+const initializeSkuData = () => {
+  skuData.value = {
+    attrList: [],
+    skuList: [],
+    initSkuList: []
+  }
+}
 
 const updateStep = () => {
   // 步骤1：基本信息必填项
@@ -752,15 +755,6 @@ const onMemberDiscountChange = (e) => {
   form.isMemberDiscount = e.detail.value
 }
 
-// 新增初始化SkuData方法
-const initializeSkuData = () => {
-  skuData.value = {
-    attrList: [],
-    skuList: [],
-    initSkuList: []
-  }
-}
-
 // 规格类型改变事件
 const onSingleSpecChange = (e) => {
   form.isSingleSpec = e.detail.value
@@ -779,15 +773,18 @@ const onSingleSpecChange = (e) => {
   }
 }
 
-// SKU数据变化处理
+// 修改onSkuChange函数，确保数据格式正确
 const onSkuChange = (newSkuData) => {
   console.log('SKU数据已更新:', JSON.stringify(newSkuData))
-  // 直接从组件获取最新数据
+  
+  // 直接使用组件返回的数据，不做类型转换
+  // 组件内部已经确保ID格式正确
   skuData.value = {
-    attrList: Array.isArray(newSkuData.attrList) ? newSkuData.attrList : [],
-    skuList: Array.isArray(newSkuData.skuList) ? newSkuData.skuList : [],
-    initSkuList: Array.isArray(newSkuData.initSkuList) ? newSkuData.initSkuList : []
+    attrList: newSkuData.attrList || [],
+    skuList: newSkuData.skuList || [],
+    initSkuList: newSkuData.initSkuList || []
   }
+  
   console.log('更新后的skuData:', JSON.stringify(skuData.value))
   updateStep()
 }
@@ -1102,6 +1099,7 @@ const retryAIRecognition = () => {
   }
 }
 
+// 修改handleSaveGoods函数
 const handleSaveGoods = async () => {
   try {
     if (!validateForm()) return
@@ -1127,6 +1125,20 @@ const handleSaveGoods = async () => {
       return
     }
 
+    // 多规格商品时，使用第一个SKU的价格作为商品主价格
+    let mainPrice = 0
+    let mainLinePrice = null
+    
+    if (form.isSingleSpec === 'N' && Array.isArray(skuData.value.skuList) && skuData.value.skuList.length > 0) {
+      const firstSku = skuData.value.skuList[0]
+      if (firstSku && firstSku.price) {
+        mainPrice = Number(firstSku.price)
+        if (firstSku.linePrice) {
+          mainLinePrice = Number(firstSku.linePrice)
+        }
+      }
+    }
+
     const goodsData = {
       // 基础信息
       name: form.name.trim(),
@@ -1136,11 +1148,11 @@ const handleSaveGoods = async () => {
       type: form.type,
       priceType: form.priceType,
       status: form.status,
-      price: form.isSingleSpec === 'Y' ? parseFloat(form.singlePrice) : 0,
-      linePrice: form.isSingleSpec === 'Y' && form.singleLinePrice ? parseFloat(form.singleLinePrice) : null,
+      price: form.isSingleSpec === 'Y' ? parseFloat(form.singlePrice) : mainPrice,
+      linePrice: form.isSingleSpec === 'Y' && form.singleLinePrice ? parseFloat(form.singleLinePrice) : mainLinePrice,
       stock: parseInt(form.stock) || 0,
       safetyStock: parseInt(form.safetyStock),
-      weight: form.weight ? parseFloat(form.weight) : null,
+      weight: form.weight ? parseFloat(form.weight) : 0,
       salePoint: form.salePoint.trim(),
       sort: parseInt(form.sort) || 0,
 
@@ -1160,12 +1172,18 @@ const handleSaveGoods = async () => {
       brand: form.brand.trim(),
       supplier: form.supplier.trim(),
 
-      // 多规格数据
+      // 多规格数据，直接使用skuData，不做额外处理
       skuData: form.isSingleSpec === 'N' ? skuData.value.skuList : [],
       specData: form.isSingleSpec === 'N' ? skuData.value.attrList : [],
 
       // 固定字段
       isItaconsumableitem: 0,
+      
+      // 初始销量设为0
+      initSale: 0,
+      
+      // 优惠券ID
+      couponIds: "",
 
       // 商品描述
       description: form.description.trim()
@@ -1198,57 +1216,6 @@ const handleSaveGoods = async () => {
     })
   } finally {
     saving.value = false
-  }
-}
-
-return {
-  // 响应式数据
-  saving,
-  showCategoryPicker,
-  categoryList,
-  typeOptions,
-  imageList,
-  currentStep,
-  selectedCategoryIndex,
-  selectedTypeIndex,
-  skuData,
-  form,
-  showAIModal,
-  aiRecognizing,
-  aiResult,
-  aiProgress,
-  aiImageUrl,
-  aiProgressTimer,
-
-  // 方法
-  updateStep,
-  loadCategoryList,
-  onCategoryChange,
-  onTypeChange,
-  setPriceType,
-  onPriceTypeChange,
-  onStatusChange,
-  onCanUsePointChange,
-  onMemberDiscountChange,
-  onSingleSpecChange,
-  onSkuChange,
-  generateGoodsNo,
-  chooseImage,
-  uploadImages,
-  deleteImage,
-  validateForm,
-  showAIRecognitionModal,
-  closeAIModal,
-  chooseImageForAI,
-  uploadImageForAI,
-  startAIRecognition,
-  startProgressAnimation,
-  stopProgressAnimation,
-  applyAIResult,
-  retryAIRecognition,
-  handleSaveGoods,
-  initializeSkuData
-}
   }
 }
 </script>

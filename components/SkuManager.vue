@@ -223,412 +223,432 @@
   </view>
 </template>
 
-<script>
+<script setup>
 import { ref, reactive, watch, computed, nextTick, onMounted } from 'vue'
 import { uploadImage } from '@/api/goods'
 
-export default {
-  name: 'SkuManager',
-  props: {
-    skuData: {
-      type: Object,
-      default: () => ({ attrList: [], skuList: [], initSkuList: [] })
-    },
-    disabled: {
-      type: Boolean,
-      default: false
-    },
-    priceType: {
-      type: String,
-      default: 'piece'
-    },
-    goodsId: {
-      type: String,
-      default: ''
-    }
+const props = defineProps({
+  skuData: {
+    type: Object,
+    default: () => ({ attrList: [], skuList: [], initSkuList: [] })
   },
+  disabled: {
+    type: Boolean,
+    default: false
+  },
+  priceType: {
+    type: String,
+    default: 'piece'
+  },
+  goodsId: {
+    type: String,
+    default: ''
+  }
+})
 
-  emits: ['skuChange'],
+const emit = defineEmits(['skuChange'])
 
-  setup(props, { emit }) {
-    console.log('SkuManager组件被初始化，接收的props:', JSON.stringify(props.skuData))
-    
-    // 使用本地数据，避免直接修改props
-    const localSkuData = reactive({
-      attrList: [],
-      skuList: [],
-      initSkuList: []
-    })
 
-    // 批量设置数据
-    const batch = reactive({
-      skuNo: '',
-      price: '',
-      linePrice: '',
-      weight: ''
-    })
+// 使用本地数据，避免直接修改props
+const localSkuData = reactive({
+  attrList: [],
+  skuList: [],
+  initSkuList: []
+})
 
-    // 初始化本地数据
-    const initLocalData = () => {
-      try {
-        console.log('开始初始化本地数据，props.skuData:', JSON.stringify(props.skuData))
-        
-        // 确保数据结构完整
-        const safeSkuData = props.skuData || { attrList: [], skuList: [], initSkuList: [] }
-        
-        localSkuData.attrList = Array.isArray(safeSkuData.attrList) ? 
-          JSON.parse(JSON.stringify(safeSkuData.attrList)) : [];
-        localSkuData.skuList = Array.isArray(safeSkuData.skuList) ? 
-          JSON.parse(JSON.stringify(safeSkuData.skuList)) : [];
-        localSkuData.initSkuList = Array.isArray(safeSkuData.initSkuList) ? 
-          JSON.parse(JSON.stringify(safeSkuData.initSkuList)) : [];
-          
-        console.log('本地数据初始化完成:', JSON.stringify(localSkuData))
-      } catch (error) {
-        console.error('初始化SKU数据失败:', error);
-        // 确保出错时也有默认值
-        localSkuData.attrList = [];
-        localSkuData.skuList = [];
-        localSkuData.initSkuList = [];
+// 批量设置数据
+const batch = reactive({
+  skuNo: '',
+  price: '',
+  linePrice: '',
+  weight: ''
+})
+
+// 在初始化本地数据后添加一个获取当前最大ID的函数，确保新生成的ID不重复
+let currentMaxId = 1;
+
+// 修改generateSafeId函数，保证ID唯一并且是数字类型
+const generateSafeId = () => {
+  // 返回自增的ID，确保唯一性
+  return currentMaxId++;
+}
+
+// 初始化本地数据时同时更新最大ID
+const updateMaxId = () => {
+  // 从attrList中找最大ID
+  if (Array.isArray(localSkuData.attrList)) {
+    localSkuData.attrList.forEach(attr => {
+      if (attr && typeof attr.id === 'number' && attr.id > currentMaxId) {
+        currentMaxId = attr.id + 1;
       }
-    }
-
-    // 立即初始化数据
-    initLocalData();
-
-    // 监听props变化
-    watch(() => props.skuData, (newVal) => {
-      console.log('props.skuData变化:', JSON.stringify(newVal))
-      initLocalData();
-    }, { deep: true, immediate: true });
-
-    // 添加规格行
-    const addSpecRow = () => {
-      uni.showModal({
-        title: '添加规格',
-        content: '请输入规格名称',
-        editable: true,
-        placeholderText: '例如：颜色、尺寸',
-        success: (res) => {
-          if (res.confirm && res.content) {
-            const newSpec = {
-              id: Date.now(),
-              name: res.content,
-              child: []
-            }
-            if (!Array.isArray(localSkuData.attrList)) {
-              localSkuData.attrList = [];
-            }
-            localSkuData.attrList.push(newSpec);
-            console.log('添加规格后:', JSON.stringify(localSkuData.attrList))
-            nextTick(() => {
-              updateSkuList();
-            });
+      
+      // 检查child数组
+      if (Array.isArray(attr.child)) {
+        attr.child.forEach(child => {
+          if (child && typeof child.id === 'number' && child.id > currentMaxId) {
+            currentMaxId = child.id + 1;
           }
-        }
-      });
-    }
-
-    // 删除规格行
-    const removeSpecRow = (index) => {
-      uni.showModal({
-        title: '确认删除',
-        content: '确定要删除这个规格吗？',
-        success: (res) => {
-          if (res.confirm) {
-            if (!Array.isArray(localSkuData.attrList)) {
-              localSkuData.attrList = [];
-              return;
-            }
-            localSkuData.attrList.splice(index, 1);
-            nextTick(() => {
-              updateSkuList();
-            });
-          }
-        }
-      });
-    }
-
-    // 添加规格值
-    const addSpecValue = (specIndex) => {
-      uni.showModal({
-        title: '添加规格值',
-        content: '请输入规格值',
-        editable: true,
-        placeholderText: '例如：红色、大号',
-        success: (res) => {
-          if (res.confirm && res.content) {
-            if (!Array.isArray(localSkuData.attrList)) {
-              localSkuData.attrList = [];
-              return;
-            }
-            
-            if (!localSkuData.attrList[specIndex]) {
-              return;
-            }
-            
-            if (!Array.isArray(localSkuData.attrList[specIndex].child)) {
-              localSkuData.attrList[specIndex].child = [];
-            }
-            
-            const newValue = {
-              id: Date.now(),
-              name: res.content,
-              value: res.content
-            };
-            
-            localSkuData.attrList[specIndex].child.push(newValue);
-            console.log('添加规格值后:', JSON.stringify(localSkuData.attrList[specIndex].child))
-            nextTick(() => {
-              updateSkuList();
-            });
-          }
-        }
-      });
-    }
-
-    // 删除规格值
-    const removeSpecValue = (specIndex, valueIndex) => {
-      uni.showModal({
-        title: '确认删除',
-        content: '确定要删除这个规格值吗？',
-        success: (res) => {
-          if (res.confirm) {
-            if (!Array.isArray(localSkuData.attrList) || 
-                !localSkuData.attrList[specIndex] ||
-                !Array.isArray(localSkuData.attrList[specIndex].child)) {
-              return;
-            }
-            
-            localSkuData.attrList[specIndex].child.splice(valueIndex, 1);
-            nextTick(() => {
-              updateSkuList();
-            });
-          }
-        }
-      });
-    }
-
-    // 规格名称变更时更新
-    const onSpecNameChange = () => {
-      nextTick(() => {
-        updateSkuList();
-      });
-    }
-
-    // 生成SKU列表
-    const generateSkuList = () => {
-      try {
-        if (!Array.isArray(localSkuData.attrList)) {
-          console.error('attrList不是数组', localSkuData);
-          return [];
-        }
-        
-        const attrList = localSkuData.attrList.filter(attr => 
-          attr && attr.name && attr.child && attr.child.length > 0
-        );
-        
-        if (attrList.length === 0) {
-          console.log('没有有效的规格数据');
-          return [];
-        }
-        
-        const combinations = [];
-        const attrValues = attrList.map(attr => attr.child || []);
-        
-        // 生成笛卡尔积
-        const cartesian = (arr, i = 0, current = []) => {
-          if (i === arr.length) {
-            combinations.push([...current]);
-            return;
-          }
-          
-          for (const item of arr[i]) {
-            if (item) {
-              current[i] = item;
-              cartesian(arr, i + 1, current);
-            }
-          }
-        }
-        
-        cartesian(attrValues);
-        
-        if (combinations.length === 0) {
-          console.log('生成的组合为空');
-          return [];
-        }
-        
-        console.log('成功生成规格组合，数量:', combinations.length);
-        
-        return combinations.map(combination => {
-          const specIds = combination.map(item => item ? item.id : '').join('-');
-          const specList = combination.map(item => {
-            if (!item) return { id: '', name: '', value: '' };
-            return {
-              id: item.id,
-              name: item.name || '',
-              value: item.value || ''
-            };
-          });
-          
-          // 查找已存在的SKU数据
-          const existingSku = Array.isArray(localSkuData.skuList) && localSkuData.skuList.find(sku => 
-            sku && sku.specIds === specIds
-          ) || Array.isArray(localSkuData.initSkuList) && localSkuData.initSkuList.find(sku => 
-            sku && sku.specIds === specIds
-          );
-          
-          return {
-            specIds,
-            specList,
-            skuNo: existingSku?.skuNo || '',
-            price: existingSku?.price || '',
-            linePrice: existingSku?.linePrice || '',
-            weight: existingSku?.weight || '0',
-            logo: existingSku?.logo || ''
-          };
         });
-      } catch (error) {
-        console.error('生成SKU列表出错:', error);
-        return [];
-      }
-    }
-
-    // 更新SKU列表
-    const updateSkuList = () => {
-      try {
-        const newSkuList = generateSkuList();
-        localSkuData.skuList = newSkuList;
-        
-        // 通知父组件数据变化
-        emitSkuChange();
-      } catch (error) {
-        console.error('更新SKU列表失败:', error);
-      }
-    }
-
-    // 通知父组件数据变化
-    const emitSkuChange = () => {
-      try {
-        const emitData = {
-          attrList: Array.isArray(localSkuData.attrList) ? localSkuData.attrList : [],
-          skuList: Array.isArray(localSkuData.skuList) ? localSkuData.skuList : [],
-          initSkuList: Array.isArray(localSkuData.initSkuList) ? localSkuData.initSkuList : []
-        };
-        
-        console.log('通知父组件数据变化:', JSON.stringify(emitData));
-        emit('skuChange', emitData);
-      } catch (error) {
-        console.error('通知数据变化失败:', error);
-      }
-    }
-
-    // 批量设置SKU
-    const batchSetSku = () => {
-      if (!Array.isArray(localSkuData.skuList) || localSkuData.skuList.length === 0) {
-        uni.showToast({
-          title: '没有可用的SKU列表',
-          icon: 'none'
-        });
-        return;
-      }
-
-      localSkuData.skuList.forEach((sku, index) => {
-        if (sku) {
-          if (batch.skuNo) {
-            sku.skuNo = batch.skuNo + index;
-          }
-          if (batch.price) {
-            sku.price = batch.price;
-          }
-          if (batch.linePrice) {
-            sku.linePrice = batch.linePrice;
-          }
-          if (batch.weight) {
-            sku.weight = batch.weight;
-          }
-        }
-      });
-      
-      emitSkuChange();
-      
-      uni.showToast({
-        title: '批量设置成功',
-        icon: 'success'
-      });
-    }
-
-    // 生成随机SKU编码
-    const generateSkuNo = () => {
-      const randomNum = Math.floor(Math.random() * 10000000000000) + 1000000000000;
-      batch.skuNo = randomNum.toString();
-    }
-
-    // 选择SKU图片
-    const chooseSkuImage = (index) => {
-      if (props.disabled) return;
-      
-      uni.chooseImage({
-        count: 1,
-        sizeType: ['compressed'],
-        sourceType: ['camera', 'album'],
-        success: (res) => {
-          uni.showLoading({ title: '上传中...' });
-          
-          uploadImage(res.tempFilePaths[0])
-            .then(imageUrl => {
-              if (!Array.isArray(localSkuData.skuList)) {
-                localSkuData.skuList = [];
-              }
-              
-              if (localSkuData.skuList[index]) {
-                localSkuData.skuList[index].logo = imageUrl;
-                emitSkuChange();
-              }
-              
-              uni.hideLoading();
-              uni.showToast({
-                title: '上传成功',
-                icon: 'success'
-              });
-            })
-            .catch(error => {
-              console.error('图片上传失败:', error);
-              uni.hideLoading();
-              uni.showToast({
-                title: '上传失败',
-                icon: 'none'
-              });
-            });
-        }
-      });
-    }
-    
-    // 在组件挂载后确保数据初始化
-    onMounted(() => {
-      console.log('SkuManager组件挂载完成');
-      try {
-        initLocalData();
-        updateSkuList();
-      } catch (error) {
-        console.error('组件挂载后初始化失败:', error);
       }
     });
-
-    return {
-      localSkuData,
-      batch,
-      addSpecRow,
-      removeSpecRow,
-      addSpecValue,
-      removeSpecValue,
-      onSpecNameChange,
-      batchSetSku,
-      generateSkuNo,
-      chooseSkuImage
-    }
+  }
+  
+  // 从skuList中找最大ID
+  if (Array.isArray(localSkuData.skuList)) {
+    localSkuData.skuList.forEach(sku => {
+      if (sku && typeof sku.id === 'number' && sku.id > currentMaxId) {
+        currentMaxId = sku.id + 1;
+      }
+    });
+  }
+  
+  // 如果没找到任何ID，从500开始（避免与其他自动生成ID冲突）
+  if (currentMaxId <= 1) {
+    currentMaxId = 500;
   }
 }
+
+// 初始化本地数据
+const initLocalData = () => {
+  try {
+    const safeSkuData = props.skuData || { attrList: [], skuList: [], initSkuList: [] };
+    
+    localSkuData.attrList = Array.isArray(safeSkuData.attrList) ? 
+      JSON.parse(JSON.stringify(safeSkuData.attrList)) : [];
+    localSkuData.skuList = Array.isArray(safeSkuData.skuList) ? 
+      JSON.parse(JSON.stringify(safeSkuData.skuList)) : [];
+    localSkuData.initSkuList = Array.isArray(safeSkuData.initSkuList) ? 
+      JSON.parse(JSON.stringify(safeSkuData.initSkuList)) : [];
+      
+    // 更新当前最大ID
+    updateMaxId();
+  } catch (error) {
+    console.error('初始化SKU数据失败:', error);
+    localSkuData.attrList = [];
+    localSkuData.skuList = [];
+    localSkuData.initSkuList = [];
+  }
+}
+
+// 监听props变化之前添加初始化代码
+// 立即初始化数据
+initLocalData();
+
+// 监听props变化
+watch(() => props.skuData, (newVal) => {
+  initLocalData();
+}, { deep: true, immediate: true });
+
+// 添加规格行
+const addSpecRow = () => {
+  uni.showModal({
+    title: '添加规格',
+    content: '请输入规格名称',
+    editable: true,
+    placeholderText: '例如：颜色、尺寸',
+    success: (res) => {
+      if (res.confirm && res.content) {
+        const newSpec = {
+          id: generateSafeId(), // 使用安全的ID生成方法
+          name: res.content,
+          child: []
+        }
+        if (!Array.isArray(localSkuData.attrList)) {
+          localSkuData.attrList = [];
+        }
+        localSkuData.attrList.push(newSpec);
+        nextTick(() => {
+          updateSkuList();
+        });
+      }
+    }
+  });
+}
+
+// 删除规格行
+const removeSpecRow = (index) => {
+  uni.showModal({
+    title: '确认删除',
+    content: '确定要删除这个规格吗？',
+    success: (res) => {
+      if (res.confirm) {
+        if (!Array.isArray(localSkuData.attrList)) {
+          localSkuData.attrList = [];
+          return;
+        }
+        localSkuData.attrList.splice(index, 1);
+        nextTick(() => {
+          updateSkuList();
+        });
+      }
+    }
+  });
+}
+
+// 添加规格值
+const addSpecValue = (specIndex) => {
+  uni.showModal({
+    title: '添加规格值',
+    content: '请输入规格值',
+    editable: true,
+    placeholderText: '例如：红色、大号',
+    success: (res) => {
+      if (res.confirm && res.content) {
+        if (!Array.isArray(localSkuData.attrList)) {
+          localSkuData.attrList = [];
+          return;
+        }
+        
+        if (!localSkuData.attrList[specIndex]) {
+          return;
+        }
+        
+        if (!Array.isArray(localSkuData.attrList[specIndex].child)) {
+          localSkuData.attrList[specIndex].child = [];
+        }
+        
+        const newValue = {
+          id: generateSafeId(), // 使用安全的ID生成方法
+          name: res.content,
+          value: res.content
+        };
+        
+        localSkuData.attrList[specIndex].child.push(newValue);
+        nextTick(() => {
+          updateSkuList();
+        });
+      }
+    }
+  });
+}
+
+// 删除规格值
+const removeSpecValue = (specIndex, valueIndex) => {
+  uni.showModal({
+    title: '确认删除',
+    content: '确定要删除这个规格值吗？',
+    success: (res) => {
+      if (res.confirm) {
+        if (!Array.isArray(localSkuData.attrList) || 
+            !localSkuData.attrList[specIndex] ||
+            !Array.isArray(localSkuData.attrList[specIndex].child)) {
+          return;
+        }
+        
+        localSkuData.attrList[specIndex].child.splice(valueIndex, 1);
+        nextTick(() => {
+          updateSkuList();
+        });
+      }
+    }
+  });
+}
+
+// 规格名称变更时更新
+const onSpecNameChange = () => {
+  nextTick(() => {
+    updateSkuList();
+  });
+}
+
+// 生成SKU列表
+const generateSkuList = () => {
+  try {
+    if (!Array.isArray(localSkuData.attrList)) {
+      return [];
+    }
+    
+    const attrList = localSkuData.attrList.filter(attr => 
+      attr && attr.name && attr.child && attr.child.length > 0
+    );
+    
+    if (attrList.length === 0) {
+      return [];
+    }
+    
+    const combinations = [];
+    const attrValues = attrList.map(attr => attr.child || []);
+    
+    const cartesian = (arr, i = 0, current = []) => {
+      if (i === arr.length) {
+        combinations.push([...current]);
+        return;
+      }
+      
+      for (const item of arr[i]) {
+        if (item) {
+          current[i] = item;
+          cartesian(arr, i + 1, current);
+        }
+      }
+    }
+    
+    cartesian(attrValues);
+    
+    if (combinations.length === 0) {
+      return [];
+    }
+    
+    return combinations.map((combination, index) => {
+      // 使用组合中第一个规格值的ID作为specIds
+      const specId = combination[0] ? combination[0].id : generateSafeId();
+      const specIds = String(specId); // 确保是字符串格式
+      
+      // 构建规格列表，确保ID是数字类型
+      const specList = combination.map(item => {
+        if (!item) return { id: 0, name: '', value: '' };
+        return {
+          id: Number(item.id),
+          name: item.name || '',
+          value: item.value || ''
+        };
+      });
+      
+      // 查找已存在的SKU数据
+      const existingSku = Array.isArray(localSkuData.skuList) && localSkuData.skuList.find(sku => 
+        sku && sku.specIds === specIds
+      ) || Array.isArray(localSkuData.initSkuList) && localSkuData.initSkuList.find(sku => 
+        sku && sku.specIds === specIds
+      );
+      
+      // 创建或更新SKU对象
+      return {
+        id: existingSku?.id || 0, // 保留已有ID或设为0（新增时后端会分配）
+        specIds,
+        specList,
+        skuNo: existingSku?.skuNo || `${Date.now()}${index}`.slice(-16), // 生成有效的SKU编号
+        goodsId: props.goodsId || '',
+        price: existingSku?.price || '',
+        linePrice: existingSku?.linePrice || '',
+        weight: existingSku?.weight || '0',
+        stock: existingSku?.stock || '',
+        logo: existingSku?.logo || ''
+      };
+    });
+  } catch (error) {
+    console.error('生成SKU列表出错:', error);
+    return [];
+  }
+}
+
+// 更新SKU列表
+const updateSkuList = () => {
+  try {
+    const newSkuList = generateSkuList();
+    localSkuData.skuList = newSkuList;
+    
+    // 通知父组件数据变化
+    emitSkuChange();
+  } catch (error) {
+  }
+}
+
+// 通知父组件数据变化
+const emitSkuChange = () => {
+  try {
+    const emitData = {
+      attrList: Array.isArray(localSkuData.attrList) ? localSkuData.attrList : [],
+      skuList: Array.isArray(localSkuData.skuList) ? localSkuData.skuList : [],
+      initSkuList: Array.isArray(localSkuData.initSkuList) ? localSkuData.initSkuList : []
+    };
+    
+    emit('skuChange', emitData);
+  } catch (error) {
+    console.error('通知数据变化失败:', error);
+  }
+}
+
+// 批量设置SKU
+const batchSetSku = () => {
+  if (!Array.isArray(localSkuData.skuList) || localSkuData.skuList.length === 0) {
+    uni.showToast({
+      title: '没有可用的SKU列表',
+      icon: 'none'
+    });
+    return;
+  }
+
+  localSkuData.skuList.forEach((sku, index) => {
+    if (sku) {
+      if (batch.skuNo) {
+        sku.skuNo = batch.skuNo + index;
+      }
+      if (batch.price) {
+        sku.price = batch.price;
+      }
+      if (batch.linePrice) {
+        sku.linePrice = batch.linePrice;
+      }
+      if (batch.weight) {
+        sku.weight = batch.weight;
+      }
+    }
+  });
+  
+  emitSkuChange();
+  
+  uni.showToast({
+    title: '批量设置成功',
+    icon: 'success'
+  });
+}
+
+// 生成随机SKU编码
+const generateSkuNo = () => {
+  const randomNum = Math.floor(Math.random() * 10000000000000) + 1000000000000;
+  batch.skuNo = randomNum.toString();
+}
+
+// 选择SKU图片
+const chooseSkuImage = (index) => {
+  if (props.disabled) return;
+  
+  uni.chooseImage({
+    count: 1,
+    sizeType: ['compressed'],
+    sourceType: ['camera', 'album'],
+    success: (res) => {
+      uni.showLoading({ title: '上传中...' });
+      
+      uploadImage(res.tempFilePaths[0])
+        .then(imageUrl => {
+          if (!Array.isArray(localSkuData.skuList)) {
+            localSkuData.skuList = [];
+          }
+          
+          if (localSkuData.skuList[index]) {
+            localSkuData.skuList[index].logo = imageUrl;
+            emitSkuChange();
+          }
+          
+          uni.hideLoading();
+          uni.showToast({
+            title: '上传成功',
+            icon: 'success'
+          });
+        })
+        .catch(error => {
+          console.error('图片上传失败:', error);
+          uni.hideLoading();
+          uni.showToast({
+            title: '上传失败',
+            icon: 'none'
+          });
+        });
+    }
+  });
+}
+
+// 在组件挂载后确保数据初始化
+onMounted(() => {
+  console.log('SkuManager组件挂载完成');
+  try {
+    initLocalData();
+    updateSkuList();
+  } catch (error) {
+    console.error('组件挂载后初始化失败:', error);
+  }
+});
 </script>
 
 <style lang="scss" scoped>
