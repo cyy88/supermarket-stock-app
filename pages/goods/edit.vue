@@ -309,7 +309,7 @@
       <view v-if="form.isSingleSpec === 'N'" class="form-item">
         <text class="label">商品规格</text>
         <SkuManager
-          :sku-data="skuData.value"
+          :sku-data="skuData"
           :price-type="form.priceType"
           :goods-id="goodsId"
           @sku-change="onSkuChange"
@@ -547,6 +547,8 @@ import userStore from '@/stores/user'
 import { getGoodsDetail, saveGoods, getGoodsCateList, uploadImage } from '@/api/goods'
 import SkuManager from '@/components/SkuManager.vue'
 
+
+
 const loading = ref(true)
 const saving = ref(false)
 const showCategoryPicker = ref(false)
@@ -624,9 +626,9 @@ onLoad((options) => {
 const loadGoodsDetail = async () => {
   try {
     loading.value = true
-    
+
     const response = await getGoodsDetail(goodsId.value)
-    
+
     if (response.code === 200 && response.data && response.data.goods) {
       goods.value = response.data.goods
       fillForm(goods.value)
@@ -663,28 +665,27 @@ const fillForm = (goodsData) => {
   form.salePoint = goodsData.salePoint || ''
   form.sort = goodsData.sort || 0
   form.status = goodsData.status || 'A'
-  
+
   form.canUsePoint = goodsData.canUsePoint || 'Y'
   form.isMemberDiscount = goodsData.isMemberDiscount || 'Y'
-  form.isSingleSpec = goodsData.isSingleSpec || 'Y'
   form.serviceTime = goodsData.serviceTime ? String(goodsData.serviceTime) : '0'
-  
+
   form.spec = goodsData.spec || ''
   form.shape = goodsData.shape || ''
   form.brand = goodsData.brand || ''
   form.supplier = goodsData.supplier || ''
-  
+
   form.singlePrice = form.price
   form.singleLinePrice = form.linePrice
-  
+
   form.description = goodsData.description || ''
-  
+
   // 设置图片
   imageList.value = []
   if (goodsData.images) {
     try {
       let images = []
-      
+
       if (typeof goodsData.images === 'string') {
         try {
           images = JSON.parse(goodsData.images)
@@ -694,7 +695,7 @@ const fillForm = (goodsData) => {
       } else if (Array.isArray(goodsData.images)) {
         images = goodsData.images
       }
-      
+
       images.forEach(url => {
         if (url) {
           imageList.value.push({
@@ -706,18 +707,22 @@ const fillForm = (goodsData) => {
       console.error('解析商品图片失败:', e)
     }
   }
-  
+
   // 设置商品分类
   const categories = categoryList.value
   const categoryIndex = categories.findIndex(item => String(item.id) === String(form.cateId))
   selectedCategoryIndex.value = categoryIndex >= 0 ? categoryIndex : 0
-  
+
   // 设置商品类型
   selectedTypeIndex.value = form.type === 'goods' ? 0 : 1
-  
+
   // 处理SKU数据
   handleSkuData(goodsData)
-  
+  skuData.value = handleSkuData(goodsData);
+  console.log("填充后的skuData:", skuData.value);
+  form.isSingleSpec = goodsData.isSingleSpec || 'Y'
+
+
   // 更新步骤
   updateStep()
 }
@@ -725,47 +730,69 @@ const fillForm = (goodsData) => {
 // 处理SKU数据
 const handleSkuData = (goodsData) => {
   try {
-    const initSkuList = []
-    let skuList = []
-    
-    // 处理SKU数据
-    if (goodsData.skuData) {
-      if (typeof goodsData.skuData === 'string') {
-        skuList = JSON.parse(goodsData.skuData)
-      } else if (Array.isArray(goodsData.skuData)) {
-        skuList = goodsData.skuData
-      }
-    }
-    
-    // 复制到初始SKU列表
-    if (Array.isArray(skuList)) {
-      skuList.forEach(sku => {
-        initSkuList.push({...sku})
-      })
-    }
-    
-    // 处理规格数据
-    let attrList = []
-    if (goodsData.specData) {
-      if (typeof goodsData.specData === 'string') {
-        attrList = JSON.parse(goodsData.specData)
-      } else if (Array.isArray(goodsData.specData)) {
-        attrList = goodsData.specData
-      }
-    }
-    
-    skuData.value = {
-      attrList: attrList,
-      skuList: skuList,
-      initSkuList: initSkuList
-    }
+    // 转换规格数据（attrList）
+    const attrList = Array.isArray(goodsData.specList)
+        ? goodsData.specList.reduce((result, spec) => {
+          // 检查是否已存在该规格名
+          const existingSpec = result.find(item => item.name === spec.name);
+
+          if (existingSpec) {
+            // 添加到现有规格的child数组
+            existingSpec.child.push({
+              id: spec.id,
+              name: spec.value,
+              value: spec.value
+            });
+          } else {
+            // 创建新的规格类型
+            result.push({
+              id: spec.id,
+              name: spec.name,
+              child: [{
+                id: spec.id,
+                name: spec.value,
+                value: spec.value
+              }]
+            });
+          }
+          return result;
+        }, [])
+        : [];
+
+    // SKU数据直接使用
+    const skuList = Array.isArray(goodsData.skuList)
+        ? goodsData.skuList.map(sku => ({
+          ...sku,
+          // 添加specList数组（规格组合）
+          specList: (sku.specIds || "").split("-").map(id => {
+            const spec = goodsData.specList?.find(s => String(s.id) === id);
+            return {
+              id,
+              name: spec?.name || "",
+              value: spec?.value || ""
+            };
+          })
+        }))
+        : [];
+
+    // 深拷贝创建初始SKU列表
+    const initSkuList = JSON.parse(JSON.stringify(skuList));
+
+    console.log("转换后的规格数据:", attrList);
+    console.log("转换后的SKU数据:", skuList);
+
+    return {
+      attrList,
+      skuList,
+      initSkuList
+    };
   } catch (error) {
-    console.error('处理SKU数据失败:', error)
-    skuData.value = {
+    console.error('处理SKU数据失败:', error);
+    return {
       attrList: [],
       skuList: [],
       initSkuList: []
-    }
+    };
   }
 }
 
@@ -816,7 +843,7 @@ const loadCategoryList = async () => {
     }
   } catch (error) {
     categoryList.value = goodsStore.categories
-    
+
     if (categoryList.value.length === 0) {
       uni.showToast({
         title: '获取分类失败，请检查网络连接',
@@ -903,7 +930,7 @@ const onSingleSpecChange = (e) => {
 // 修改onSkuChange函数，确保数据格式正确
 const onSkuChange = (newSkuData) => {
   console.log('SKU数据已更新:', newSkuData)
-  
+
   // 直接使用组件返回的数据，不做类型转换
   // 组件内部已经确保ID格式正确
   skuData.value = {
@@ -911,7 +938,7 @@ const onSkuChange = (newSkuData) => {
     skuList: newSkuData.skuList || [],
     initSkuList: newSkuData.initSkuList || []
   }
-  
+
   updateStep()
 }
 
@@ -1098,7 +1125,7 @@ const handleSaveGoods = async () => {
     // 多规格商品时，使用第一个SKU的价格作为商品主价格
     let mainPrice = 0
     let mainLinePrice = null
-    
+
     if (form.isSingleSpec === 'N' && Array.isArray(skuData.value.skuList) && skuData.value.skuList.length > 0) {
       const firstSku = skuData.value.skuList[0]
       if (firstSku && firstSku.price) {
@@ -1151,10 +1178,10 @@ const handleSaveGoods = async () => {
 
       // 保持原有的消耗品标识
       isItaconsumableitem: goods.value.isItaconsumableitem || 0,
-      
+
       // 初始销量
       initSale: goods.value.initSale || 0,
-      
+
       // 优惠券IDs
       couponIds: goods.value.couponIds || "",
 
