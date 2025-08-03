@@ -128,7 +128,7 @@
       </view>
     </view>
 
-    <!-- SKU表格 -->
+    <!-- SKU卡片列表 -->
     <view v-if="(localSkuData.skuList || []).length > 0" class="sku-table-container">
       <view class="sku-table-header">
         <text class="table-title">商品规格设置</text>
@@ -137,13 +137,6 @@
 
       <view class="sku-table">
         <view class="table-header">
-          <view class="th th-index">序号</view>
-          <view class="th th-image">图片</view>
-          <view class="th th-spec">规格</view>
-          <view class="th th-sku">SKU编码</view>
-          <view class="th th-price">{{ priceType === 'weight' ? '单价(元/千克)' : '销售价格(元)' }}</view>
-          <view class="th th-line-price">{{ priceType === 'weight' ? '划线单价(元/千克)' : '划线价格(元)' }}</view>
-          <view class="th th-weight">重量(千克)</view>
         </view>
 
         <view
@@ -151,23 +144,27 @@
           :key="index"
           class="table-row"
         >
-          <view class="td td-index">{{ index + 1 }}</view>
-
-          <view class="td td-image">
-            <view class="image-upload" @click="chooseSkuImage(index)">
-              <image
-                v-if="sku.logo"
-                :src="sku.logo"
-                class="sku-image"
-                mode="aspectFill"
-              />
-              <view v-else class="upload-placeholder">
-                <text class="upload-icon">+</text>
+          <!-- 卡片头部：序号和图片 -->
+          <view class="sku-card-header">
+            <view class="sku-index">{{ index + 1 }}</view>
+            <view class="sku-image-container">
+              <view class="image-upload" @click="chooseSkuImage(index)">
+                <image
+                  v-if="sku.logo"
+                  :src="sku.logo"
+                  class="sku-image"
+                  mode="aspectFill"
+                />
+                <view v-else class="upload-placeholder">
+                  <text class="upload-icon">+</text>
+                </view>
               </view>
             </view>
           </view>
 
-          <view class="td td-spec">
+          <!-- 规格标签区域 -->
+          <view class="sku-spec-section">
+            <text class="spec-label">商品规格</text>
             <view class="spec-tags">
               <view
                 v-for="(spec, specIdx) in sku.specList || []"
@@ -179,43 +176,68 @@
             </view>
           </view>
 
-          <view class="td td-sku">
-            <input
-              v-model="sku.skuNo"
-              class="table-input"
-              placeholder="请输入SKU编码"
-              :disabled="disabled"
-            />
+          <!-- 输入字段区域 -->
+          <view class="sku-fields">
+            <!-- 第一行：SKU编码 -->
+            <view class="field-row">
+              <view class="field-item">
+                <text class="field-label">SKU编码</text>
+                <input
+                  v-model="sku.skuNo"
+                  class="field-input"
+                  placeholder="请输入SKU编码"
+                  :disabled="disabled"
+                />
+              </view>
+            </view>
+
+            <!-- 第二行：价格和划线价格 -->
+            <view class="field-row">
+              <view class="field-item">
+                <text class="field-label">{{ priceType === 'weight' ? '单价(元/千克)' : '销售价格(元)' }}</text>
+                <input
+                  v-model="sku.price"
+                  class="field-input"
+                  type="digit"
+                  placeholder="0.00"
+                  :disabled="disabled"
+                />
+              </view>
+              <view class="field-item">
+                <text class="field-label">{{ priceType === 'weight' ? '划线单价(元/千克)' : '划线价格(元)' }}</text>
+                <input
+                  v-model="sku.linePrice"
+                  class="field-input"
+                  type="digit"
+                  placeholder="0.00"
+                  :disabled="disabled"
+                />
+              </view>
+            </view>
+
+            <!-- 第三行：重量 -->
+            <view class="field-row">
+              <view class="field-item">
+                <text class="field-label">重量(千克)</text>
+                <input
+                  v-model="sku.weight"
+                  class="field-input"
+                  type="digit"
+                  placeholder="0.00"
+                  :disabled="disabled"
+                />
+              </view>
+            </view>
           </view>
 
-          <view class="td td-price">
-            <input
-              v-model="sku.price"
-              class="table-input"
-              type="digit"
-              placeholder="0.00"
-              :disabled="disabled"
-            />
-          </view>
-
-          <view class="td td-line-price">
-            <input
-              v-model="sku.linePrice"
-              class="table-input"
-              type="digit"
-              placeholder="0.00"
-              :disabled="disabled"
-            />
-          </view>
-
-          <view class="td td-weight">
-            <input
-              v-model="sku.weight"
-              class="table-input"
-              type="digit"
-              placeholder="0.00"
-              :disabled="disabled"
-            />
+          <view style="display: none;">
+            <view class="td td-index">{{ index + 1 }}</view>
+            <view class="td td-image"></view>
+            <view class="td td-spec"></view>
+            <view class="td td-sku"></view>
+            <view class="td td-price"></view>
+            <view class="td td-line-price"></view>
+            <view class="td td-weight"></view>
           </view>
         </view>
       </view>
@@ -738,8 +760,9 @@ onMounted(() => {
 <style lang="scss" scoped>
 .sku-manager {
   background: #f8f9fa;
-  border-radius: 12rpx;
+  border-radius: 16rpx;
   overflow: hidden;
+  margin: 20rpx 0;
 }
 
 // 规格设置头部
@@ -747,25 +770,32 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 30rpx;
-  background: #fff;
-  border-bottom: 2rpx solid #f0f0f0;
+  padding: 32rpx 24rpx;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
 
   .spec-title {
-    font-size: 32rpx;
-    font-weight: bold;
-    color: #303133;
+    font-size: 34rpx;
+    font-weight: 600;
+    color: #fff;
   }
 
   .add-spec-btn {
     display: flex;
     align-items: center;
-    background: #409eff;
+    background: rgba(255, 255, 255, 0.2);
     color: #fff;
-    border: none;
-    border-radius: 8rpx;
-    padding: 16rpx 24rpx;
+    border: 2rpx solid rgba(255, 255, 255, 0.3);
+    border-radius: 50rpx;
+    padding: 16rpx 28rpx;
     font-size: 26rpx;
+    backdrop-filter: blur(10rpx);
+    transition: all 0.3s ease;
+
+    &:active {
+      background: rgba(255, 255, 255, 0.3);
+      transform: scale(0.95);
+    }
 
     .add-icon {
       margin-right: 8rpx;
@@ -781,61 +811,76 @@ onMounted(() => {
 }
 
 .spec-item {
-  border-bottom: 2rpx solid #f0f0f0;
+  margin: 20rpx;
+  border-radius: 16rpx;
+  background: #fff;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.08);
+  overflow: hidden;
 
   &:last-child {
-    border-bottom: none;
+    margin-bottom: 0;
   }
 
   .spec-header-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 24rpx 30rpx 16rpx;
-    background: #fafbfc;
+    padding: 24rpx 28rpx;
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: #fff;
 
     .spec-index {
-      font-size: 28rpx;
-      font-weight: bold;
-      color: #303133;
+      font-size: 30rpx;
+      font-weight: 600;
+      color: #fff;
     }
 
     .delete-spec-btn {
-      background: none;
-      border: none;
-      color: #f56c6c;
-      font-size: 26rpx;
-      padding: 8rpx 16rpx;
+      background: rgba(255, 255, 255, 0.2);
+      border: 2rpx solid rgba(255, 255, 255, 0.3);
+      color: #fff;
+      font-size: 24rpx;
+      padding: 12rpx 20rpx;
+      border-radius: 30rpx;
+      backdrop-filter: blur(10rpx);
+      transition: all 0.3s ease;
+
+      &:active {
+        background: rgba(255, 255, 255, 0.3);
+        transform: scale(0.95);
+      }
     }
   }
 
   .spec-content {
-    padding: 20rpx 30rpx 30rpx;
+    padding: 28rpx;
   }
 
   .spec-name-row {
-    display: flex;
-    align-items: center;
-    margin-bottom: 24rpx;
+    margin-bottom: 32rpx;
 
     .label {
-      width: 120rpx;
+      display: block;
       font-size: 28rpx;
-      color: #606266;
-      font-weight: 500;
+      color: #333;
+      font-weight: 600;
+      margin-bottom: 16rpx;
     }
 
     .spec-name-input {
-      flex: 1;
-      height: 72rpx;
-      padding: 0 20rpx;
-      border: 2rpx solid #dcdfe6;
-      border-radius: 8rpx;
-      font-size: 28rpx;
-      background: #fff;
+      width: 100%;
+      height: 88rpx;
+      padding: 0 24rpx;
+      border: 2rpx solid #e8e8e8;
+      border-radius: 16rpx;
+      font-size: 30rpx;
+      background: #fafafa;
+      transition: all 0.3s ease;
 
       &:focus {
-        border-color: #409eff;
+        border-color: #667eea;
+        background: #fff;
+        box-shadow: 0 0 0 6rpx rgba(102, 126, 234, 0.1);
       }
     }
   }
@@ -843,51 +888,65 @@ onMounted(() => {
   .spec-values-row {
     .label {
       display: block;
-      width: 120rpx;
       font-size: 28rpx;
-      color: #606266;
-      font-weight: 500;
-      margin-bottom: 16rpx;
+      color: #333;
+      font-weight: 600;
+      margin-bottom: 20rpx;
     }
 
     .spec-values-container {
       .spec-values-list {
         display: flex;
         flex-wrap: wrap;
-        gap: 12rpx;
-        margin-bottom: 20rpx;
+        gap: 16rpx;
+        margin-bottom: 24rpx;
 
         .spec-value-item {
           display: flex;
           align-items: center;
-          background: #e1f3ff;
-          border: 2rpx solid #b3d8ff;
-          border-radius: 6rpx;
-          padding: 12rpx 16rpx;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          border-radius: 30rpx;
+          padding: 16rpx 24rpx;
+          box-shadow: 0 4rpx 12rpx rgba(102, 126, 234, 0.3);
 
           .value-text {
             font-size: 26rpx;
-            color: #409eff;
-            margin-right: 8rpx;
+            color: #fff;
+            margin-right: 12rpx;
+            font-weight: 500;
           }
 
           .value-delete {
-            color: #f56c6c;
-            font-size: 32rpx;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 28rpx;
             font-weight: bold;
             line-height: 1;
             cursor: pointer;
+            transition: all 0.3s ease;
+
+            &:active {
+              color: #fff;
+              transform: scale(1.2);
+            }
           }
         }
       }
 
       .add-value-btn {
-        background: #f0f9ff;
-        border: 2rpx dashed #409eff;
-        color: #409eff;
-        border-radius: 6rpx;
-        padding: 12rpx 20rpx;
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        border: none;
+        color: #fff;
+        border-radius: 30rpx;
+        padding: 16rpx 32rpx;
         font-size: 26rpx;
+        font-weight: 500;
+        box-shadow: 0 4rpx 12rpx rgba(240, 147, 251, 0.3);
+        transition: all 0.3s ease;
+
+        &:active {
+          transform: scale(0.95);
+          box-shadow: 0 2rpx 8rpx rgba(240, 147, 251, 0.4);
+        }
       }
     }
   }
@@ -896,260 +955,283 @@ onMounted(() => {
 // 批量设置
 .batch-setting {
   background: #fff;
-  border-top: 2rpx solid #f0f0f0;
-  padding: 30rpx;
-  margin-bottom: 30rpx;
+  margin: 20rpx;
+  border-radius: 16rpx;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.08);
+  overflow: hidden;
 
   .batch-header {
-    margin-bottom: 24rpx;
+    padding: 28rpx;
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    color: #fff;
 
     .batch-title {
       font-size: 32rpx;
-      font-weight: bold;
-      color: #303133;
+      font-weight: 600;
+      color: #fff;
       display: block;
       margin-bottom: 8rpx;
     }
 
     .batch-desc {
-      font-size: 24rpx;
-      color: #909399;
+      font-size: 26rpx;
+      color: rgba(255, 255, 255, 0.8);
     }
   }
 
   .batch-form {
+    padding: 28rpx;
+
     .batch-row {
-      display: flex;
-      margin-bottom: 24rpx;
-      gap: 20rpx;
+      margin-bottom: 32rpx;
 
       &:last-child {
         margin-bottom: 0;
       }
 
       .batch-item {
-        flex: 1;
+        margin-bottom: 24rpx;
+
+        &:last-child {
+          margin-bottom: 0;
+        }
 
         .batch-label {
           display: block;
-          font-size: 26rpx;
-          color: #606266;
-          margin-bottom: 12rpx;
-          font-weight: 500;
+          font-size: 28rpx;
+          color: #333;
+          margin-bottom: 16rpx;
+          font-weight: 600;
         }
 
         .batch-input {
           width: 100%;
-          height: 72rpx;
-          padding: 0 20rpx;
-          border: 2rpx solid #dcdfe6;
-          border-radius: 8rpx;
-          font-size: 28rpx;
-          background: #fff;
+          height: 88rpx;
+          padding: 0 24rpx;
+          border: 2rpx solid #e8e8e8;
+          border-radius: 16rpx;
+          font-size: 30rpx;
+          background: #fafafa;
+          transition: all 0.3s ease;
 
           &:focus {
-            border-color: #409eff;
+            border-color: #4facfe;
+            background: #fff;
+            box-shadow: 0 0 0 6rpx rgba(79, 172, 254, 0.1);
           }
         }
 
         .batch-input-group {
           display: flex;
-          gap: 12rpx;
+          gap: 16rpx;
+          align-items: flex-end;
 
           .batch-input {
             flex: 1;
           }
 
           .generate-btn {
-            background: #909399;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: #fff;
             border: none;
-            border-radius: 8rpx;
-            padding: 0 20rpx;
-            font-size: 24rpx;
+            border-radius: 16rpx;
+            padding: 0 24rpx;
+            height: 88rpx;
+            font-size: 26rpx;
             white-space: nowrap;
+            box-shadow: 0 4rpx 12rpx rgba(102, 126, 234, 0.3);
+            transition: all 0.3s ease;
+
+            &:active {
+              transform: scale(0.95);
+            }
           }
         }
 
         .batch-apply-btn {
           width: 100%;
-          height: 72rpx;
-          background: #67c23a;
+          height: 88rpx;
+          background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
           color: #fff;
           border: none;
-          border-radius: 8rpx;
-          font-size: 28rpx;
-          font-weight: bold;
+          border-radius: 16rpx;
+          font-size: 30rpx;
+          font-weight: 600;
+          box-shadow: 0 4rpx 12rpx rgba(17, 153, 142, 0.3);
+          transition: all 0.3s ease;
+
+          &:active {
+            transform: scale(0.98);
+            box-shadow: 0 2rpx 8rpx rgba(17, 153, 142, 0.4);
+          }
         }
       }
     }
   }
 }
 
-// SKU表格容器
+// SKU表格容器 - 改为卡片式布局
 .sku-table-container {
-  background: #fff;
-  border-top: 2rpx solid #f0f0f0;
+  background: transparent;
+  margin: 20rpx;
 
   .sku-table-header {
-    padding: 30rpx;
-    border-bottom: 2rpx solid #f0f0f0;
+    padding: 28rpx;
+    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    border-radius: 16rpx;
+    margin-bottom: 20rpx;
+    box-shadow: 0 4rpx 20rpx rgba(250, 112, 154, 0.3);
 
     .table-title {
       font-size: 32rpx;
-      font-weight: bold;
-      color: #303133;
+      font-weight: 600;
+      color: #fff;
       display: block;
       margin-bottom: 8rpx;
     }
 
     .table-desc {
-      font-size: 24rpx;
-      color: #909399;
+      font-size: 26rpx;
+      color: rgba(255, 255, 255, 0.8);
     }
   }
 
   .sku-table {
-    overflow-x: auto;
-
+    // 移除表格样式，改为卡片列表
     .table-header {
-      display: flex;
-      background: #fafbfc;
-      border-bottom: 2rpx solid #e4e7ed;
-
-      .th {
-        padding: 20rpx 12rpx;
-        font-size: 26rpx;
-        font-weight: bold;
-        color: #606266;
-        text-align: center;
-        border-right: 2rpx solid #e4e7ed;
-
-        &:last-child {
-          border-right: none;
-        }
-
-        &.th-index {
-          width: 80rpx;
-          min-width: 80rpx;
-        }
-
-        &.th-image {
-          width: 120rpx;
-          min-width: 120rpx;
-        }
-
-        &.th-spec {
-          width: 200rpx;
-          min-width: 200rpx;
-        }
-
-        &.th-sku {
-          width: 180rpx;
-          min-width: 180rpx;
-        }
-
-        &.th-price {
-          width: 160rpx;
-          min-width: 160rpx;
-        }
-
-        &.th-line-price {
-          width: 160rpx;
-          min-width: 160rpx;
-        }
-
-        &.th-weight {
-          width: 120rpx;
-          min-width: 120rpx;
-        }
-      }
+      display: none; // 隐藏表头
     }
 
     .table-row {
-      display: flex;
-      border-bottom: 2rpx solid #f0f0f0;
+      background: #fff;
+      border-radius: 16rpx;
+      margin-bottom: 20rpx;
+      padding: 28rpx;
+      box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.08);
+      border: none;
+      display: block; // 改为块级布局
 
       &:last-child {
-        border-bottom: none;
+        margin-bottom: 0;
       }
 
-      &:nth-child(even) {
-        background: #fafbfc;
-      }
-
-      .td {
-        padding: 20rpx 12rpx;
-        border-right: 2rpx solid #f0f0f0;
+      // 卡片头部 - 序号和图片
+      .sku-card-header {
         display: flex;
         align-items: center;
-        justify-content: center;
+        margin-bottom: 24rpx;
+        padding-bottom: 20rpx;
+        border-bottom: 2rpx solid #f5f5f5;
 
-        &:last-child {
-          border-right: none;
-        }
-
-        &.td-index {
-          width: 80rpx;
-          min-width: 80rpx;
+        .sku-index {
+          width: 60rpx;
+          height: 60rpx;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #fff;
           font-size: 26rpx;
-          color: #606266;
+          font-weight: 600;
+          margin-right: 20rpx;
         }
 
-        &.td-image {
-          width: 120rpx;
-          min-width: 120rpx;
+        .sku-image-container {
+          flex: 1;
+          display: flex;
+          justify-content: center;
+        }
+      }
+
+      // 规格标签区域
+      .sku-spec-section {
+        margin-bottom: 24rpx;
+
+        .spec-label {
+          font-size: 26rpx;
+          color: #666;
+          margin-bottom: 12rpx;
+          font-weight: 500;
         }
 
-        &.td-spec {
-          width: 200rpx;
-          min-width: 200rpx;
+        .spec-tags {
+          justify-content: flex-start;
         }
+      }
 
-        &.td-sku {
-          width: 180rpx;
-          min-width: 180rpx;
-        }
+      // 输入字段区域
+      .sku-fields {
+        .field-row {
+          display: flex;
+          margin-bottom: 20rpx;
+          gap: 16rpx;
 
-        &.td-price {
-          width: 160rpx;
-          min-width: 160rpx;
-        }
+          &:last-child {
+            margin-bottom: 0;
+          }
 
-        &.td-line-price {
-          width: 160rpx;
-          min-width: 160rpx;
-        }
+          .field-item {
+            flex: 1;
 
-        &.td-weight {
-          width: 120rpx;
-          min-width: 120rpx;
+            .field-label {
+              display: block;
+              font-size: 26rpx;
+              color: #333;
+              margin-bottom: 12rpx;
+              font-weight: 500;
+            }
+
+            .field-input {
+              width: 100%;
+              height: 72rpx;
+              padding: 0 20rpx;
+              border: 2rpx solid #e8e8e8;
+              border-radius: 12rpx;
+              font-size: 28rpx;
+              background: #fafafa;
+              transition: all 0.3s ease;
+
+              &:focus {
+                border-color: #667eea;
+                background: #fff;
+                box-shadow: 0 0 0 4rpx rgba(102, 126, 234, 0.1);
+              }
+            }
+          }
         }
+      }
+
+      // 移除原有的td样式，因为不再使用表格布局
+      .td {
+        display: none;
       }
     }
   }
 }
 
-// 表格内部元素样式
+// 图片上传样式
 .image-upload {
-  width: 80rpx;
-  height: 80rpx;
-  border: 2rpx dashed #dcdfe6;
-  border-radius: 8rpx;
+  width: 120rpx;
+  height: 120rpx;
+  border: 3rpx dashed #e8e8e8;
+  border-radius: 16rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #fafafa;
+  background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
   cursor: pointer;
+  transition: all 0.3s ease;
 
-  &:hover {
-    border-color: #409eff;
+  &:active {
+    border-color: #667eea;
+    transform: scale(0.95);
   }
 
   .sku-image {
     width: 100%;
     height: 100%;
-    border-radius: 6rpx;
+    border-radius: 12rpx;
     object-fit: cover;
   }
 
@@ -1161,8 +1243,8 @@ onMounted(() => {
     height: 100%;
 
     .upload-icon {
-      font-size: 32rpx;
-      color: #c0c4cc;
+      font-size: 40rpx;
+      color: rgba(255, 255, 255, 0.8);
       font-weight: bold;
     }
   }
@@ -1171,38 +1253,43 @@ onMounted(() => {
 .spec-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 8rpx;
-  justify-content: center;
+  gap: 12rpx;
+  justify-content: flex-start;
 
   .spec-tag {
     .spec-tag-text {
-      background: #e1f3ff;
-      color: #409eff;
-      padding: 6rpx 12rpx;
-      border-radius: 6rpx;
-      font-size: 22rpx;
-      border: 2rpx solid #b3d8ff;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+      padding: 12rpx 20rpx;
+      border-radius: 30rpx;
+      font-size: 24rpx;
+      font-weight: 500;
+      box-shadow: 0 4rpx 12rpx rgba(102, 126, 234, 0.3);
     }
   }
 }
 
 .table-input {
   width: 100%;
-  height: 60rpx;
-  padding: 0 12rpx;
-  border: 2rpx solid #dcdfe6;
-  border-radius: 6rpx;
-  font-size: 24rpx;
+  height: 72rpx;
+  padding: 0 20rpx;
+  border: 2rpx solid #e8e8e8;
+  border-radius: 12rpx;
+  font-size: 28rpx;
   text-align: center;
-  background: #fff;
+  background: #fafafa;
+  transition: all 0.3s ease;
 
   &:focus {
-    border-color: #409eff;
+    border-color: #667eea;
+    background: #fff;
+    box-shadow: 0 0 0 4rpx rgba(102, 126, 234, 0.1);
   }
 
   &:disabled {
-    background: #f5f7fa;
-    color: #c0c4cc;
+    background: #f5f5f5;
+    color: #ccc;
+    border-color: #f0f0f0;
   }
 }
 </style>
