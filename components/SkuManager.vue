@@ -227,6 +227,7 @@
 import { ref, reactive, watch, computed, nextTick, onMounted } from 'vue'
 import { uploadImage, saveSpecName, saveSpecValue, deleteSpec, deleteSpecValue } from '@/api/goods'
 
+
 const props = defineProps({
   skuData: {
     type: Object,
@@ -281,7 +282,7 @@ const updateMaxId = () => {
       if (attr && typeof attr.id === 'number' && attr.id > currentMaxId) {
         currentMaxId = attr.id + 1;
       }
-      
+
       // 检查child数组
       if (Array.isArray(attr.child)) {
         attr.child.forEach(child => {
@@ -292,7 +293,7 @@ const updateMaxId = () => {
       }
     });
   }
-  
+
   // 从skuList中找最大ID
   if (Array.isArray(localSkuData.skuList)) {
     localSkuData.skuList.forEach(sku => {
@@ -301,7 +302,7 @@ const updateMaxId = () => {
       }
     });
   }
-  
+
   // 如果没找到任何ID，从500开始（避免与其他自动生成ID冲突）
   if (currentMaxId <= 1) {
     currentMaxId = 500;
@@ -310,16 +311,20 @@ const updateMaxId = () => {
 
 // 初始化本地数据
 const initLocalData = () => {
+  console.log('=== 初始化SKU数据 ===');
+  console.log('父组件传递的skuData:', props.skuData);
+  console.log('attrList数据:', props.skuData?.attrList);
+
   try {
     const safeSkuData = props.skuData || { attrList: [], skuList: [], initSkuList: [] };
-    
-    localSkuData.attrList = Array.isArray(safeSkuData.attrList) ? 
+
+    localSkuData.attrList = Array.isArray(safeSkuData.attrList) ?
       JSON.parse(JSON.stringify(safeSkuData.attrList)) : [];
-    localSkuData.skuList = Array.isArray(safeSkuData.skuList) ? 
+    localSkuData.skuList = Array.isArray(safeSkuData.skuList) ?
       JSON.parse(JSON.stringify(safeSkuData.skuList)) : [];
-    localSkuData.initSkuList = Array.isArray(safeSkuData.initSkuList) ? 
+    localSkuData.initSkuList = Array.isArray(safeSkuData.initSkuList) ?
       JSON.parse(JSON.stringify(safeSkuData.initSkuList)) : [];
-      
+
     updateMaxId();
   } catch (error) {
     console.error('初始化SKU数据失败:', error);
@@ -332,7 +337,25 @@ const initLocalData = () => {
 
 initLocalData();
 
+//
+// watch(
+//     () => props.skuData,
+//     (newVal) => {
+//       console.log('接收到新数据', newVal);
+//       if (newVal && newVal.attrList?.length > 0) {
+//         initLocalData(JSON.parse(JSON.stringify(newVal)) // 深拷贝
+//       }
+//     },
+//     { immediate: true, deep: true }
+// )
+
 watch(() => props.skuData, (newVal) => {
+  // console.log('=== 接收到父组件skuData变化 ===');
+  // console.log('完整数据:', newVal);
+  // console.log('attrList:', newVal?.attrList);
+  // console.log('attrList类型:', typeof newVal?.attrList);
+  // console.log('attrList是否为数组:', Array.isArray(newVal?.attrList));
+
   initLocalData();
 }, { deep: true, immediate: true });
 
@@ -498,12 +521,12 @@ const removeSpecValue = (specIndex, valueIndex) => {
     content: '确定要删除这个规格值吗？',
     success: (res) => {
       if (res.confirm) {
-        if (!Array.isArray(localSkuData.attrList) || 
+        if (!Array.isArray(localSkuData.attrList) ||
             !localSkuData.attrList[specIndex] ||
             !Array.isArray(localSkuData.attrList[specIndex].child)) {
           return;
         }
-        
+
         localSkuData.attrList[specIndex].child.splice(valueIndex, 1);
         nextTick(() => {
           updateSkuList();
@@ -597,7 +620,7 @@ const updateSkuList = () => {
   try {
     const newSkuList = generateSkuList();
     localSkuData.skuList = newSkuList;
-    
+
     // 通知父组件数据变化
     emitSkuChange();
   } catch (error) {
@@ -612,7 +635,7 @@ const emitSkuChange = () => {
       skuList: Array.isArray(localSkuData.skuList) ? localSkuData.skuList : [],
       initSkuList: Array.isArray(localSkuData.initSkuList) ? localSkuData.initSkuList : []
     };
-    
+
     emit('skuChange', emitData);
   } catch (error) {
     console.error('通知数据变化失败:', error);
@@ -645,9 +668,9 @@ const batchSetSku = () => {
       }
     }
   });
-  
+
   emitSkuChange();
-  
+
   uni.showToast({
     title: '批量设置成功',
     icon: 'success'
@@ -663,25 +686,25 @@ const generateSkuNo = () => {
 // 选择SKU图片
 const chooseSkuImage = (index) => {
   if (props.disabled) return;
-  
+
   uni.chooseImage({
     count: 1,
     sizeType: ['compressed'],
     sourceType: ['camera', 'album'],
     success: (res) => {
       uni.showLoading({ title: '上传中...' });
-      
+
       uploadImage(res.tempFilePaths[0])
         .then(imageUrl => {
           if (!Array.isArray(localSkuData.skuList)) {
             localSkuData.skuList = [];
           }
-          
+
           if (localSkuData.skuList[index]) {
             localSkuData.skuList[index].logo = imageUrl;
             emitSkuChange();
           }
-          
+
           uni.hideLoading();
           uni.showToast({
             title: '上传成功',
