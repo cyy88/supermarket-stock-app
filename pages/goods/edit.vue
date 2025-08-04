@@ -540,7 +540,8 @@ import { ref, reactive, onMounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import goodsStore from '@/stores/goods'
 import userStore from '@/stores/user'
-import { getGoodsDetail, saveGoods, getGoodsCateList, uploadImage } from '@/api/goods'
+import { getGoodsDetail, saveGoods, getGoodsCateList } from '@/api/goods'
+import { uploadImage, uploadImages, getFullImageUrl } from '@/utils/image.js'
 import SkuManager from '@/components/SkuManager.vue'
 
 
@@ -559,6 +560,12 @@ const goodsId = ref('')
 const selectedCategoryIndex = ref(0)
 const selectedTypeIndex = ref(0)
 const currentStep = ref(1)
+
+// AI识别相关变量
+const showAIModal = ref(false)
+const aiRecognizing = ref(false)
+const aiResult = ref(null)
+const aiProgress = ref(0)
 
 // SKU数据
 const skuData = ref({
@@ -1019,12 +1026,12 @@ const chooseImage = () => {
     sizeType: ['compressed'],
     sourceType: ['camera', 'album'],
     success: (res) => {
-      uploadImages(res.tempFilePaths)
+      uploadGoodsImages(res.tempFilePaths)
     }
   })
 }
 
-const uploadImages = async (filePaths) => {
+const uploadGoodsImages = async (filePaths) => {
   uni.showLoading({
     title: '上传中...'
   })
@@ -1275,6 +1282,86 @@ const handleSaveGoods = async () => {
   } finally {
     saving.value = false
   }
+}
+
+// AI识别相关函数
+const showAIRecognitionModal = () => {
+  showAIModal.value = true
+  aiResult.value = null
+  aiProgress.value = 0
+}
+
+const closeAIModal = () => {
+  showAIModal.value = false
+  aiRecognizing.value = false
+  aiResult.value = null
+  aiProgress.value = 0
+}
+
+const chooseImageForAI = () => {
+  uni.chooseImage({
+    count: 1,
+    sizeType: ['compressed'],
+    sourceType: ['camera', 'album'],
+    success: (res) => {
+      if (res.tempFilePaths && res.tempFilePaths.length > 0) {
+        recognizeImage(res.tempFilePaths[0])
+      }
+    }
+  })
+}
+
+const recognizeImage = async (imagePath) => {
+  aiRecognizing.value = true
+  aiProgress.value = 0
+
+  // 模拟进度条
+  const progressInterval = setInterval(() => {
+    if (aiProgress.value < 90) {
+      aiProgress.value += 10
+    }
+  }, 1000)
+
+  try {
+    // 这里应该调用实际的AI识别API
+    // 暂时使用模拟数据
+    await new Promise(resolve => setTimeout(resolve, 3000))
+
+    aiProgress.value = 100
+    aiResult.value = {
+      success: true,
+      data: {
+        name: '示例商品名称',
+        num: '1234567890123'
+      }
+    }
+  } catch (error) {
+    aiResult.value = {
+      success: false,
+      error: error.message || 'AI识别失败'
+    }
+  } finally {
+    clearInterval(progressInterval)
+    aiRecognizing.value = false
+  }
+}
+
+const applyAIResult = () => {
+  if (aiResult.value && aiResult.value.success) {
+    form.name = aiResult.value.data.name
+    form.goodsNo = aiResult.value.data.num
+    updateStep()
+    closeAIModal()
+    uni.showToast({
+      title: '已应用AI识别结果',
+      icon: 'success'
+    })
+  }
+}
+
+const retryAIRecognition = () => {
+  aiResult.value = null
+  chooseImageForAI()
 }
 </script>
 

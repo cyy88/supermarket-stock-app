@@ -190,6 +190,7 @@ import { onLoad, onShow } from '@dcloudio/uni-app'
 import userStore from '@/stores/user'
 import { saveStock } from '@/api/stock'
 import { IMAGE_CONFIG, UPLOAD_CONFIG } from '@/config/index.js'
+import { getFullImageUrl, parseImageUrls } from '@/utils/image.js'
 
 import AddInboundOrderDialog from '@/components/AddInboundOrderDialog.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
@@ -235,23 +236,13 @@ const fullStockUrl = computed(() => {
 })
 
 const stockImageUrls = computed(() => {
-  if (!form.stockUrl) return []
-
-  try {
-    const urls = JSON.parse(form.stockUrl)
-    return Array.isArray(urls) ? urls : [form.stockUrl]
-  } catch (error) {
-    return [form.stockUrl]
-  }
+  return parseImageUrls(form.stockUrl)
 })
 
-const getFullImageUrl = (imageUrl) => {
-  if (!imageUrl) {
-    return ''
-  }
-
-  return fixMalformedUrl(imageUrl)
-}
+// 使用统一的图片处理工具
+// const getFullImageUrl = (imageUrl) => {
+//   return getFullImageUrl(imageUrl)
+// }
 
 // 处理图片加载错误
 const handleImageError = (e) => {

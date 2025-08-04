@@ -122,7 +122,7 @@
 <script setup>
 import { ref, reactive, onMounted, nextTick } from 'vue'
 import { selectGoodsList } from '@/api/stock'
-import { fixMalformedUrl } from '@/utils/url'
+import { getGoodsMainImage } from '@/utils/image.js'
 
 const props = defineProps({
   storeId: {
@@ -243,8 +243,7 @@ const toggleSelect = (index, item) => {
 }
 
 const getGoodsImageUrl = (item) => {
-  if (!item.logo) return '/static/images/default-goods.png'
-  return fixMalformedUrl(item.logo)
+  return getGoodsMainImage(item)
 }
 
 const handleImageError = (e) => {

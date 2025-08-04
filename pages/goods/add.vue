@@ -540,8 +540,9 @@ import { ref, reactive, onMounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import goodsStore from '@/stores/goods'
 import userStore from '@/stores/user'
-import { saveGoods as saveGoodsApi, getGoodsCateList, uploadImage } from '@/api/goods'
+import { saveGoods as saveGoodsApi, getGoodsCateList } from '@/api/goods'
 import { recognizeProductImage } from '@/api/ai'
+import { uploadImage, uploadImages, getFullImageUrl } from '@/utils/image.js'
 import SkuManager from '@/components/SkuManager.vue'
 
 const saving = ref(false)

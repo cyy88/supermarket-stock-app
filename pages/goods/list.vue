@@ -252,6 +252,7 @@ import goodsStore from '@/stores/goods'
 import { getGoodsCateList, getGoodsList } from '@/api/goods'
 import cacheManager, { CACHE_KEYS } from '@/utils/cache'
 import CustomToast from '@/components/CustomToast.vue'
+import { getGoodsMainImage } from '@/utils/image.js'
 
 const fixMalformedUrl = (url) => {
   if (!url || typeof url !== 'string') return url
@@ -463,27 +464,7 @@ const clearSearch = () => {
 
 
 const getGoodsImage = (item) => {
-  if (item.logo) {
-    return fixMalformedUrl(item.logo)
-  }
-
-  if (item.images) {
-    if (typeof item.images === 'string') {
-      try {
-        const parsedImages = JSON.parse(item.images)
-        if (Array.isArray(parsedImages) && parsedImages.length > 0) {
-          return fixMalformedUrl(parsedImages[0])
-        }
-      } catch (e) {
-
-        return fixMalformedUrl(item.images)
-      }
-    } else if (Array.isArray(item.images) && item.images.length > 0) {
-      return fixMalformedUrl(item.images[0])
-    }
-  }
-
-  return null
+  return getGoodsMainImage(item)
 }
 
 const getGoodsCategory = (item) => {

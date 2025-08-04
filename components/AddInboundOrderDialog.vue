@@ -97,6 +97,7 @@
 <script setup>
 import { ref, reactive, watch } from 'vue'
 import { UPLOAD_CONFIG, BUSINESS_CONFIG } from '@/config/index.js'
+import { uploadImage, getFullImageUrl } from '@/utils/image.js'
 
 const props = defineProps({
   showDialog: {
@@ -140,7 +141,7 @@ const chooseImage = () => {
     sourceType: ['camera', 'album'],
     success: (res) => {
       res.tempFilePaths.forEach(tempFilePath => {
-        uploadImage(tempFilePath)
+        uploadImageFile(tempFilePath)
       })
     },
     fail: (error) => {
@@ -153,82 +154,54 @@ const chooseImage = () => {
 }
 
 // 上传图片
-const uploadImage = (filePath) => {
+const uploadImageFile = async (filePath) => {
   // 检查文件大小
-  uni.getFileInfo({
-    filePath: filePath,
-    success: (fileInfo) => {
-      const fileSizeMB = fileInfo.size / (1024 * 1024)
-      if (fileSizeMB > maxSize) {
-        errorMessage.value = `图片大小不能超过${maxSize}MB`
-        return
-      }
+  return new Promise((resolve, reject) => {
+    uni.getFileInfo({
+      filePath: filePath,
+      success: async (fileInfo) => {
+        const fileSizeMB = fileInfo.size / (1024 * 1024)
+        if (fileSizeMB > maxSize) {
+          errorMessage.value = `图片大小不能超过${maxSize}MB`
+          reject(new Error(`图片大小不能超过${maxSize}MB`))
+          return
+        }
 
-      // 开始上传
-      uni.showLoading({
-        title: '上传中...'
-      })
+        // 开始上传
+        uni.showLoading({
+          title: '上传中...'
+        })
 
-      const token = uni.getStorageSync('token')
-
-      uni.uploadFile({
-        url: UPLOAD_CONFIG.uploadUrl,
-        filePath: filePath,
-        name: 'file',
-        header: {
-          'Access-Token': token || '',
-          'platform': 'MOBILE'
-        },
-        success: (uploadRes) => {
-          try {
-            const response = JSON.parse(uploadRes.data)
-            if (response.code === 200) {
-              // 始终使用完整的url字段
-              let fullUrl = response.data.url
-
-              const fileData = {
-                url: fullUrl,
-                fileName: response.data.fileName || `image_${Date.now()}.jpg`
-              }
-              baseForm.images.push(fileData)
-              errorMessage.value = ''
-              uni.showToast({
-                title: '上传成功',
-                icon: 'success'
-              })
-            } else {
-              errorMessage.value = response.message || '上传失败'
-              uni.showToast({
-                title: '上传失败',
-                icon: 'none'
-              })
-            }
-          } catch (error) {
-            console.error('解析上传响应失败:', error)
-            errorMessage.value = '上传失败'
-            uni.showToast({
-              title: '上传失败',
-              icon: 'none'
-            })
+        try {
+          const imageUrl = await uploadImage(filePath)
+          const fileData = {
+            url: imageUrl,
+            fileName: `image_${Date.now()}.jpg`
           }
-        },
-        fail: (error) => {
+          baseForm.images.push(fileData)
+          errorMessage.value = ''
+          uni.showToast({
+            title: '上传成功',
+            icon: 'success'
+          })
+          resolve(fileData)
+        } catch (error) {
           console.error('上传失败:', error)
-          errorMessage.value = '上传失败'
+          errorMessage.value = error.message || '上传失败'
           uni.showToast({
             title: '上传失败',
             icon: 'none'
           })
-        },
-        complete: () => {
+          reject(error)
+        } finally {
           uni.hideLoading()
         }
-      })
-    },
-    fail: (error) => {
-      console.error('获取文件信息失败:', error)
-      errorMessage.value = '获取文件信息失败'
-    }
+      },
+      fail: (error) => {
+        errorMessage.value = '获取文件信息失败'
+        reject(error)
+      }
+    })
   })
 }
 

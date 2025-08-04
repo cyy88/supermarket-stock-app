@@ -428,7 +428,8 @@ import { ref, reactive, onMounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import goodsStore from '@/stores/goods'
 import userStore from '@/stores/user'
-import { saveGoods as saveGoodsApi, uploadImage } from '@/api/goods'
+import { saveGoods as saveGoodsApi } from '@/api/goods'
+import { uploadImage, uploadImages, getFullImageUrl } from '@/utils/image.js'
 import { recognizeProductImage } from '@/api/ai'
 
 const saving = ref(false)

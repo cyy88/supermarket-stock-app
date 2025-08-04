@@ -187,6 +187,8 @@ import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { getStockInfo, saveStock } from '@/api/stock'
 import userStore from '@/stores/user'
+import { UPLOAD_CONFIG } from '@/config/index.js'
+import { getFullImageUrl, parseImageUrls, previewImage } from '@/utils/image.js'
 
 const fixMalformedUrl = (url) => {
   if (!url || typeof url !== 'string') return url
@@ -214,33 +216,7 @@ const canEdit = computed(() => {
 })
 
 const stockImageUrls = computed(() => {
-  if (!stockInfo.value.stockUrl) return []
-
-  const stockUrl = stockInfo.value.stockUrl
-
-  if (Array.isArray(stockUrl)) {
-    return stockUrl
-  }
-
-  if (typeof stockUrl === 'string') {
-    try {
-      const parsed = JSON.parse(stockUrl)
-      if (Array.isArray(parsed)) {
-        return parsed
-      }
-    } catch (error) {
-    }
-
-    if (stockUrl.startsWith('[') && stockUrl.endsWith(']')) {
-      const urlString = stockUrl.slice(1, -1)
-      const urls = urlString.split(',').map(url => url.trim())
-      const filteredUrls = urls.filter(url => url.length > 0)
-      return filteredUrls
-    }
-    return [stockUrl]
-  }
-
-  return []
+  return parseImageUrls(stockInfo.value.stockUrl)
 })
 
 onLoad((options) => {

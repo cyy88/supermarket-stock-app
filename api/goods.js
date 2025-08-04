@@ -132,7 +132,7 @@ export const uploadImage = (filePath) => {
     console.log('使用token:', token);
 
     uni.uploadFile({
-      url: 'http://msbs-fuint-ts.qingchunnianhua.com:1880/backendApi/file/upload',
+      url: UPLOAD_CONFIG.uploadUrl,
       filePath: filePath,
       name: 'file',
       header: {

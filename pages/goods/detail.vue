@@ -230,6 +230,7 @@ import goodsStore from '@/stores/goods'
 import { getGoodsDetail, getGoodsCateList, deleteGoods } from '@/api/goods'
 import { formatTime as formatTimeUtil } from '@/utils/time'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
+import { getGoodsImages, previewImage } from '@/utils/image.js'
 
 const fixMalformedUrl = (url) => {
   if (!url || typeof url !== 'string') return url
@@ -355,42 +356,10 @@ const getGoodsCategory = (item) => {
   return '未分类'
 }
 
-const getGoodsImages = (item) => {
-  if (!item) return []
-
-  const images = []
-
-  if (item.logo) {
-    images.push(fixMalformedUrl(item.logo))
-  }
-
-  if (item.images) {
-    if (typeof item.images === 'string') {
-      try {
-        const parsedImages = JSON.parse(item.images)
-        if (Array.isArray(parsedImages)) {
-          parsedImages.forEach(img => {
-            if (img && !images.includes(img)) {
-              images.push(fixMalformedUrl(img))
-            }
-          })
-        }
-      } catch (e) {
-        if (!images.includes(item.images)) {
-          images.push(fixMalformedUrl(item.images))
-        }
-      }
-    } else if (Array.isArray(item.images)) {
-      item.images.forEach(img => {
-        if (img && !images.includes(img)) {
-          images.push(fixMalformedUrl(img))
-        }
-      })
-    }
-  }
-
-  return images.filter(img => img)
-}
+// 使用统一的图片处理工具
+// const getGoodsImages = (item) => {
+//   return getGoodsImages(item)
+// }
 
 const getCreateTime = (item) => {
   if (!item) return null
