@@ -19,7 +19,7 @@
         <view class="progress-line" :class="{ active: currentStep >= 3 }"></view>
         <view class="progress-step" :class="{ active: currentStep >= 3 }">
           <text class="step-number">3</text>
-          <text class="step-text">图片描述</text>
+          <text class="step-text">商品描述</text>
         </view>
         <view class="progress-line" :class="{ active: currentStep >= 4 }"></view>
         <view class="progress-step" :class="{ active: currentStep >= 4 }">
@@ -206,6 +206,33 @@
           class="input"
           maxlength="50"
         />
+      </view>
+
+      <!-- 商品图片 -->
+      <view class="form-item">
+        <text class="label">商品图片</text>
+        <view class="image-upload">
+          <view class="image-list">
+            <view
+              v-for="(image, index) in imageList"
+              :key="index"
+              class="image-item"
+            >
+              <image :src="image.url" mode="aspectFill" class="image" />
+              <view class="image-delete" @click="deleteImage(index)">✕</view>
+            </view>
+
+            <view
+              v-if="imageList.length < 5"
+              class="image-add"
+              @click="chooseImage"
+            >
+              <text class="add-icon">📷</text>
+              <text class="add-text">添加图片</text>
+            </view>
+          </view>
+          <text class="image-tip">最多可上传5张图片</text>
+        </view>
       </view>
 
 <!--      <view class="form-item">-->
@@ -414,41 +441,10 @@
       </view>
     </view>
 
-    <!-- 商品图片卡片 -->
-    <view class="card" :class="{ active: currentStep === 3 }">
-      <view class="card-header">
-        <view class="card-title">
-          <text class="title-icon">🖼️</text>
-          <text class="title-text">商品图片</text>
-        </view>
-        <view class="card-badge optional">可选</view>
-      </view>
-      <view class="image-upload">
-        <view class="image-list">
-          <view 
-            v-for="(image, index) in imageList" 
-            :key="index"
-            class="image-item"
-          >
-            <image :src="image.url" mode="aspectFill" class="image" />
-            <view class="image-delete" @click="deleteImage(index)">✕</view>
-          </view>
-          
-          <view 
-            v-if="imageList.length < 5" 
-            class="image-add"
-            @click="chooseImage"
-          >
-            <text class="add-icon">📷</text>
-            <text class="add-text">添加图片</text>
-          </view>
-        </view>
-        <text class="image-tip">最多可上传5张图片</text>
-      </view>
-    </view>
+
 
     <!-- 商品描述卡片 -->
-    <view class="card" :class="{ active: currentStep === 4 }">
+    <view class="card" :class="{ active: currentStep === 3 }">
       <view class="card-header">
         <view class="card-title">
           <text class="title-icon">📝</text>
@@ -653,14 +649,9 @@ const updateStep = () => {
   // 步骤2：扩展信息（可选）
   currentStep.value = 2
 
-  // 步骤3：图片上传（可选）
-  if (imageList.value.length > 0) {
-    currentStep.value = 3
-  }
-
-  // 步骤4：商品描述（可选）
+  // 步骤3：商品描述（可选）
   if (form.description) {
-    currentStep.value = 4
+    currentStep.value = 3
   }
 }
 
@@ -909,12 +900,12 @@ const chooseImage = () => {
     sizeType: ['compressed'],
     sourceType: ['camera', 'album'],
     success: (res) => {
-      uploadImages(res.tempFilePaths)
+      uploadImagesFromPaths(res.tempFilePaths)
     }
   })
 }
 
-const uploadImages = async (filePaths) => {
+const uploadImagesFromPaths = async (filePaths) => {
   uni.showLoading({
     title: '上传中...'
   })
@@ -941,6 +932,17 @@ const uploadImages = async (filePaths) => {
   } finally {
     uni.hideLoading()
   }
+}
+
+// 上传图片并返回URL数组（用于保存商品时）
+const uploadImages = async () => {
+  const imageUrls = []
+  for (const image of imageList.value) {
+    if (image.url) {
+      imageUrls.push(image.url)
+    }
+  }
+  return imageUrls
 }
 
 const deleteImage = (index) => {
@@ -1446,7 +1448,6 @@ const handleSaveGoods = async () => {
 }
 
 .card .form-item,
-.card .image-upload,
 .card .textarea,
 .card .char-count {
   margin: 0 20rpx;
@@ -1457,7 +1458,6 @@ const handleSaveGoods = async () => {
 }
 
 .card .form-item:last-of-type,
-.card .image-upload,
 .card .char-count {
   margin-bottom: 30rpx;
 }
@@ -1634,6 +1634,8 @@ const handleSaveGoods = async () => {
 }
 
 .image-upload {
+  margin-top: 15rpx;
+
   .image-list {
     display: flex;
     flex-wrap: wrap;
