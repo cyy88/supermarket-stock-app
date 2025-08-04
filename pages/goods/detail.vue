@@ -85,32 +85,64 @@
       <!-- 多规格信息 -->
       <view v-if="goods.isSingleSpec === 'N' && getSkuList(goods) && getSkuList(goods).length > 0" class="sku-section">
         <view class="section-title">📋 商品规格</view>
-        <view class="sku-table">
-          <view class="sku-header">
-            <text class="sku-col-spec">规格</text>
-            <text class="sku-col-sku">SKU编码</text>
-            <text class="sku-col-price">{{ goods.priceType === 'weight' ? '单价(元/千克)' : '价格(元)' }}</text>
-            <text class="sku-col-line-price">划线价格</text>
-            <text class="sku-col-weight">重量(千克)</text>
-          </view>
+        <view class="sku-cards">
           <view
             v-for="(sku, index) in getSkuList(goods)"
             :key="index"
-            class="sku-row"
+            class="sku-card"
           >
-            <view class="sku-col-spec">
-              <view
-                v-for="spec in sku.specList"
-                :key="spec.id"
-                class="spec-tag"
-              >
-                <text class="spec-tag-text">{{ spec.value }}</text>
+            <!-- 卡片头部：规格标签 -->
+            <view class="sku-card-header">
+              <view class="sku-number">规格 {{ index + 1 }}</view>
+              <view class="sku-specs">
+                <view
+                  v-for="spec in sku.specList"
+                  :key="spec.id"
+                  class="spec-tag"
+                >
+                  <text class="spec-tag-text">{{ spec.value }}</text>
+                </view>
               </view>
             </view>
-            <text class="sku-col-sku">{{ sku.skuNo }}</text>
-            <text class="sku-col-price">¥{{ sku.price }}</text>
-            <text class="sku-col-line-price">{{ sku.linePrice ? '¥' + sku.linePrice : '-' }}</text>
-            <text class="sku-col-weight">{{ sku.weight || '0' }}</text>
+
+            <!-- 卡片内容：详细信息 -->
+            <view class="sku-card-content">
+              <!-- SKU编码 -->
+              <view class="sku-detail-item">
+                <view class="detail-icon">🏷️</view>
+                <view class="detail-content">
+                  <text class="detail-label">SKU编码</text>
+                  <text class="detail-value">{{ sku.skuNo || '未设置' }}</text>
+                </view>
+              </view>
+
+              <!-- 价格信息 -->
+              <view class="sku-detail-item">
+                <view class="detail-icon">💰</view>
+                <view class="detail-content">
+                  <text class="detail-label">{{ goods.priceType === 'weight' ? '单价(元/千克)' : '销售价格(元)' }}</text>
+                  <text class="detail-value price">¥{{ sku.price || '0.00' }}</text>
+                </view>
+              </view>
+
+              <!-- 划线价格 -->
+              <view v-if="sku.linePrice" class="sku-detail-item">
+                <view class="detail-icon">🏷️</view>
+                <view class="detail-content">
+                  <text class="detail-label">划线价格</text>
+                  <text class="detail-value line-price">¥{{ sku.linePrice }}</text>
+                </view>
+              </view>
+
+              <!-- 重量信息 -->
+              <view v-if="sku.weight" class="sku-detail-item">
+                <view class="detail-icon">⚖️</view>
+                <view class="detail-content">
+                  <text class="detail-label">重量(千克)</text>
+                  <text class="detail-value">{{ sku.weight }}</text>
+                </view>
+              </view>
+            </view>
           </view>
         </view>
       </view>
@@ -283,6 +315,25 @@ const loadGoodsDetail = async () => {
         ...response.data.goods,
         imagePath: response.data.imagePath || ''
       }
+
+      // 处理多规格数据
+      if (response.data.skuData && Array.isArray(response.data.skuData)) {
+        goodsData.skuData = response.data.skuData
+      }
+
+      // 处理规格数据
+      if (response.data.specData && Array.isArray(response.data.specData)) {
+        goodsData.specData = response.data.specData
+      }
+
+      if (response.data.cateList && Array.isArray(response.data.cateList) && goodsData.cateId) {
+        const category = response.data.cateList.find(cat => String(cat.id) === String(goodsData.cateId))
+        if (category) {
+          goodsData.cateName = category.name
+          goodsData.cateInfo = { name: category.name }
+        }
+      }
+
       goods.value = goodsData
     } else {
       throw new Error(response.message || '获取商品详情失败')
@@ -382,16 +433,21 @@ const getStockUnit = (item) => {
 
 // 获取SKU列表
 const getSkuList = (item) => {
-  if (!item || !item.skuData) return []
+  if (!item) return []
 
-  try {
-    if (typeof item.skuData === 'string') {
-      return JSON.parse(item.skuData)
-    } else if (Array.isArray(item.skuData)) {
-      return item.skuData
-    }
-  } catch (e) {
-    console.error('解析SKU数据失败:', e)
+  if (item.skuData) {
+    try {
+      if (typeof item.skuData === 'string') {
+        const parsed = JSON.parse(item.skuData)
+        return Array.isArray(parsed) ? parsed : []
+      } else if (Array.isArray(item.skuData)) {
+        return item.skuData
+      }
+    } catch (e) {}
+  }
+
+  if (item.skuList && Array.isArray(item.skuList)) {
+    return item.skuList
   }
 
   return []
@@ -618,77 +674,121 @@ const cancelDelete = () => {
     margin-bottom: 30rpx;
   }
 
-  .sku-table {
-    border: 2rpx solid #e9ecef;
-    border-radius: 10rpx;
-    overflow: hidden;
-
-    .sku-header {
-      display: flex;
-      background: #f5f7fa;
-      padding: 20rpx 10rpx;
-      border-bottom: 2rpx solid #e9ecef;
-
-      text {
-        font-size: 24rpx;
-        color: #606266;
-        font-weight: bold;
-        text-align: center;
-      }
-    }
-
-    .sku-row {
-      display: flex;
-      padding: 20rpx 10rpx;
-      border-bottom: 1rpx solid #f0f0f0;
-      align-items: center;
+  .sku-cards {
+    .sku-card {
+      background: #fff;
+      border-radius: 20rpx;
+      margin-bottom: 32rpx;
+      box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+      border: 2rpx solid #f0f0f0;
 
       &:last-child {
-        border-bottom: none;
+        margin-bottom: 0;
       }
 
-      text {
-        font-size: 24rpx;
-        color: #303133;
-        text-align: center;
-      }
-    }
+      .sku-card-header {
+        padding: 32rpx;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #fff;
+        position: relative;
 
-    .sku-col-spec {
-      flex: 1;
-      min-width: 150rpx;
+        &::after {
+          content: '';
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          height: 6rpx;
+          background: linear-gradient(90deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.1) 100%);
+        }
 
-      .spec-tag {
-        display: inline-block;
-        margin: 5rpx;
+        .sku-number {
+          font-size: 32rpx;
+          font-weight: 700;
+          color: #fff;
+          margin-bottom: 20rpx;
+          text-shadow: 0 2rpx 4rpx rgba(0,0,0,0.2);
+        }
 
-        .spec-tag-text {
-          background: #e1f3ff;
-          color: #409eff;
-          padding: 8rpx 12rpx;
-          border-radius: 12rpx;
-          font-size: 22rpx;
+        .sku-specs {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 16rpx;
+
+          .spec-tag {
+            .spec-tag-text {
+              background: rgba(255, 255, 255, 0.25);
+              color: #fff;
+              padding: 16rpx 24rpx;
+              border-radius: 50rpx;
+              font-size: 26rpx;
+              font-weight: 600;
+              backdrop-filter: blur(10rpx);
+              border: 2rpx solid rgba(255, 255, 255, 0.4);
+              box-shadow: 0 4rpx 12rpx rgba(0,0,0,0.1);
+            }
+          }
         }
       }
-    }
 
-    .sku-col-sku {
-      width: 150rpx;
-    }
+      .sku-card-content {
+        padding: 32rpx;
 
-    .sku-col-price {
-      width: 120rpx;
-      color: #f56c6c;
-      font-weight: bold;
-    }
+        .sku-detail-item {
+          display: flex;
+          align-items: center;
+          padding: 24rpx 0;
+          border-bottom: 2rpx solid #f8f9fa;
 
-    .sku-col-line-price {
-      width: 120rpx;
-      color: #909399;
-    }
+          &:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+          }
 
-    .sku-col-weight {
-      width: 100rpx;
+          .detail-icon {
+            width: 80rpx;
+            height: 80rpx;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32rpx;
+            margin-right: 24rpx;
+            box-shadow: 0 4rpx 16rpx rgba(240, 147, 251, 0.3);
+          }
+
+          .detail-content {
+            flex: 1;
+
+            .detail-label {
+              display: block;
+              font-size: 28rpx;
+              color: #666;
+              margin-bottom: 8rpx;
+              font-weight: 500;
+            }
+
+            .detail-value {
+              font-size: 32rpx;
+              color: #333;
+              font-weight: 700;
+
+              &.price {
+                color: #f56c6c;
+                font-size: 36rpx;
+              }
+
+              &.line-price {
+                color: #999;
+                text-decoration: line-through;
+                font-size: 28rpx;
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

@@ -321,34 +321,34 @@
         />
       </view>
 
-      <!-- 单规格商品价格 -->
-      <view v-if="form.isSingleSpec === 'Y'" class="form-item">
-        <text class="label required">商品价格</text>
-        <view class="input-group" style="width: 50%;">
-          <input
-            v-model="form.singlePrice"
-            type="digit"
-            placeholder="请输入价格"
-            class="input"
-            @input="updateStep"
-          />
-          <text class="unit">{{ form.priceType === 'weight' ? '元/千克' : '元' }}</text>
-        </view>
-      </view>
+<!--      &lt;!&ndash; 单规格商品价格 &ndash;&gt;-->
+<!--      <view v-if="form.isSingleSpec === 'Y'" class="form-item">-->
+<!--        <text class="label required">商品价格</text>-->
+<!--        <view class="input-group" style="width: 50%;">-->
+<!--          <input-->
+<!--            v-model="form.singlePrice"-->
+<!--            type="digit"-->
+<!--            placeholder="请输入价格"-->
+<!--            class="input"-->
+<!--            @input="updateStep"-->
+<!--          />-->
+<!--          <text class="unit">{{ form.priceType === 'weight' ? '元/千克' : '元' }}</text>-->
+<!--        </view>-->
+<!--      </view>-->
 
-      <!-- 单规格划线价格 -->
-      <view v-if="form.isSingleSpec === 'Y'" class="form-item">
-        <text class="label">划线价格</text>
-        <view class="input-group" style="width: 50%;">
-          <input
-            v-model="form.singleLinePrice"
-            type="digit"
-            placeholder="请输入划线价格，空则不显示"
-            class="input"
-          />
-          <text class="unit">元</text>
-        </view>
-      </view>
+<!--      &lt;!&ndash; 单规格划线价格 &ndash;&gt;-->
+<!--      <view v-if="form.isSingleSpec === 'Y'" class="form-item">-->
+<!--        <text class="label">划线价格</text>-->
+<!--        <view class="input-group" style="width: 50%;">-->
+<!--          <input-->
+<!--            v-model="form.singleLinePrice"-->
+<!--            type="digit"-->
+<!--            placeholder="请输入划线价格，空则不显示"-->
+<!--            class="input"-->
+<!--          />-->
+<!--          <text class="unit">元</text>-->
+<!--        </view>-->
+<!--      </view>-->
 
       <!-- 服务时长 -->
       <view class="form-item" v-if="form.type === 'service'">

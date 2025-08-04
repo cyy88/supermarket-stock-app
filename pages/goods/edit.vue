@@ -316,34 +316,34 @@
         />
       </view>
 
-      <!-- 单规格商品价格 -->
-      <view v-if="form.isSingleSpec === 'Y'" class="form-item">
-        <text class="label required">商品价格</text>
-        <view class="input-group" style="width: 50%;">
-          <input
-            v-model="form.singlePrice"
-            type="digit"
-            placeholder="请输入价格"
-            class="input"
-            @input="updateStep"
-          />
-          <text class="unit">{{ form.priceType === 'weight' ? '元/千克' : '元' }}</text>
-        </view>
-      </view>
+<!--      &lt;!&ndash; 单规格商品价格 &ndash;&gt;-->
+<!--      <view v-if="form.isSingleSpec === 'Y'" class="form-item">-->
+<!--        <text class="label required">商品价格</text>-->
+<!--        <view class="input-group" style="width: 50%;">-->
+<!--          <input-->
+<!--            v-model="form.singlePrice"-->
+<!--            type="digit"-->
+<!--            placeholder="请输入价格"-->
+<!--            class="input"-->
+<!--            @input="updateStep"-->
+<!--          />-->
+<!--          <text class="unit">{{ form.priceType === 'weight' ? '元/千克' : '元' }}</text>-->
+<!--        </view>-->
+<!--      </view>-->
 
-      <!-- 单规格划线价格 -->
-      <view v-if="form.isSingleSpec === 'Y'" class="form-item">
-        <text class="label">划线价格</text>
-        <view class="input-group" style="width: 50%;">
-          <input
-            v-model="form.singleLinePrice"
-            type="digit"
-            placeholder="请输入划线价格，空则不显示"
-            class="input"
-          />
-          <text class="unit">元</text>
-        </view>
-      </view>
+<!--      &lt;!&ndash; 单规格划线价格 &ndash;&gt;-->
+<!--      <view v-if="form.isSingleSpec === 'Y'" class="form-item">-->
+<!--        <text class="label">划线价格</text>-->
+<!--        <view class="input-group" style="width: 50%;">-->
+<!--          <input-->
+<!--            v-model="form.singleLinePrice"-->
+<!--            type="digit"-->
+<!--            placeholder="请输入划线价格，空则不显示"-->
+<!--            class="input"-->
+<!--          />-->
+<!--          <text class="unit">元</text>-->
+<!--        </view>-->
+<!--      </view>-->
 
       <!-- 服务时长 -->
       <view class="form-item" v-if="form.type === 'service'">
@@ -606,11 +606,11 @@ const form = reactive({
   description: ''
 })
 
-onLoad((options) => {
+onLoad(async (options) => {
   if (options.id) {
     goodsId.value = options.id
-    loadCategoryList()
-    loadGoodsDetail()
+    await loadCategoryList()
+    await loadGoodsDetail()
   } else {
     uni.showToast({
       title: '商品ID参数缺失',
@@ -631,7 +631,13 @@ const loadGoodsDetail = async () => {
 
     if (response.code === 200 && response.data && response.data.goods) {
       goods.value = response.data.goods
-      fillForm(goods.value)
+
+      if (response.data.cateList && Array.isArray(response.data.cateList)) {
+        categoryList.value = response.data.cateList
+        goodsStore.saveCategories(categoryList.value)
+      }
+
+      fillForm(goods.value, response.data.cateList)
     } else {
       throw new Error(response.message || '获取商品详情失败')
     }
@@ -649,14 +655,26 @@ const loadGoodsDetail = async () => {
 }
 
 // 填充表单数据
-const fillForm = (goodsData) => {
+const fillForm = (goodsData, cateList = null) => {
   form.type = goodsData.type || 'goods'
   form.typeName = form.type === 'goods' ? '实物商品' : '服务商品'
   form.priceType = goodsData.priceType || 'piece'
   form.goodsNo = goodsData.goodsNo || ''
   form.name = goodsData.name || ''
   form.cateId = String(goodsData.cateId || '')
-  form.cateName = goodsData.cateName || ''
+
+  let cateName = goodsData.cateName || ''
+  if (goodsData.cateId && (cateList || categoryList.value)) {
+    const categories = cateList || categoryList.value
+    const category = categories.find(cat => String(cat.id) === String(goodsData.cateId))
+    if (category) {
+      cateName = category.name
+    } else {
+      console.warn('未找到对应分类，cateId:', goodsData.cateId)
+    }
+  }
+  form.cateName = cateName
+
   form.price = goodsData.price ? String(goodsData.price) : ''
   form.linePrice = goodsData.linePrice ? String(goodsData.linePrice) : ''
   form.stock = goodsData.stock ? String(goodsData.stock) : '0'
@@ -710,8 +728,18 @@ const fillForm = (goodsData) => {
 
   // 设置商品分类
   const categories = categoryList.value
-  const categoryIndex = categories.findIndex(item => String(item.id) === String(form.cateId))
-  selectedCategoryIndex.value = categoryIndex >= 0 ? categoryIndex : 0
+  if (categories && categories.length > 0 && form.cateId) {
+    const categoryIndex = categories.findIndex(item => String(item.id) === String(form.cateId))
+    if (categoryIndex >= 0) {
+      selectedCategoryIndex.value = categoryIndex
+      form.cateName = categories[categoryIndex].name
+    } else {
+      selectedCategoryIndex.value = 0
+      console.warn('未找到对应的分类，cateId:', form.cateId)
+    }
+  } else {
+    selectedCategoryIndex.value = 0
+  }
 
   // 设置商品类型
   selectedTypeIndex.value = form.type === 'goods' ? 0 : 1
