@@ -60,15 +60,21 @@
       </view>
 
       <!-- 入库单图片 -->
-      <view v-if="stockInfo.stockUrl" class="image-section">
-        <view class="section-title">入库单</view>
+      <view v-if="stockImageUrls.length > 0" class="image-section">
+        <view class="section-title">入库单 ({{ stockImageUrls.length }}张)</view>
         <view class="image-container">
-          <image 
-            :src="getFullImageUrl(stockInfo.stockUrl)"
-            class="stock-image"
-            mode="aspectFit"
-            @click="previewImage(stockInfo.stockUrl)"
-          />
+          <view
+            v-for="(imageUrl, index) in stockImageUrls"
+            :key="index"
+            class="stock-image-wrapper"
+          >
+            <image
+              :src="getFullImageUrl(imageUrl)"
+              class="stock-image"
+              mode="aspectFit"
+              @click="previewImage(imageUrl, index)"
+            />
+          </view>
         </view>
       </view>
 
@@ -207,6 +213,36 @@ const canEdit = computed(() => {
   return stockInfo.value.reviewStatus === '未通过'
 })
 
+const stockImageUrls = computed(() => {
+  if (!stockInfo.value.stockUrl) return []
+
+  const stockUrl = stockInfo.value.stockUrl
+
+  if (Array.isArray(stockUrl)) {
+    return stockUrl
+  }
+
+  if (typeof stockUrl === 'string') {
+    try {
+      const parsed = JSON.parse(stockUrl)
+      if (Array.isArray(parsed)) {
+        return parsed
+      }
+    } catch (error) {
+    }
+
+    if (stockUrl.startsWith('[') && stockUrl.endsWith(']')) {
+      const urlString = stockUrl.slice(1, -1)
+      const urls = urlString.split(',').map(url => url.trim())
+      const filteredUrls = urls.filter(url => url.length > 0)
+      return filteredUrls
+    }
+    return [stockUrl]
+  }
+
+  return []
+})
+
 onLoad((options) => {
   stockId.value = options.id
 
@@ -304,12 +340,16 @@ const formatTime = (timeStr) => {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
 }
 
-const previewImage = (imageUrl) => {
+const previewImage = (imageUrl, index = 0) => {
   if (!imageUrl) return
-  
+
+  const urls = stockImageUrls.value.length > 1
+    ? stockImageUrls.value.map(url => getFullImageUrl(url))
+    : [getFullImageUrl(imageUrl)]
+
   uni.previewImage({
-    urls: [imageUrl],
-    current: imageUrl
+    urls: urls,
+    current: getFullImageUrl(imageUrl)
   })
 }
 
@@ -420,13 +460,30 @@ const saveChanges = async () => {
       }
       return item
     })
-    
+
+    let stockUrlArray = []
+    if (stockInfo.value.stockUrl) {
+      if (Array.isArray(stockInfo.value.stockUrl)) {
+        stockUrlArray = stockInfo.value.stockUrl
+      } else if (typeof stockInfo.value.stockUrl === 'string') {
+        try {
+          stockUrlArray = JSON.parse(stockInfo.value.stockUrl)
+          if (!Array.isArray(stockUrlArray)) {
+            stockUrlArray = [stockInfo.value.stockUrl]
+          }
+        } catch (error) {
+          stockUrlArray = [stockInfo.value.stockUrl]
+        }
+      }
+    }
+
     const formData = {
       ...stockInfo.value,
+      stockUrl: stockUrlArray,
       goodsList: convertedGoodsList,
       reviewStatus: '待审核' // 修改后重新设为待审核
     }
-    
+
     await saveStock(formData)
     
     uni.showToast({
@@ -619,13 +676,22 @@ const saveChanges = async () => {
 }
 
 .image-container {
-  text-align: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20rpx;
+  justify-content: flex-start;
+}
+
+.stock-image-wrapper {
+  flex: 0 0 calc(50% - 10rpx);
+  max-width: calc(50% - 10rpx);
 }
 
 .stock-image {
-  max-width: 100%;
-  max-height: 250rpx;
+  width: 100%;
+  height: 200rpx;
   border-radius: 12rpx;
+  object-fit: cover;
 }
 
 .empty-goods {

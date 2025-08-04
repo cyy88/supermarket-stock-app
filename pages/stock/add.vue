@@ -21,16 +21,25 @@
       <view class="section-title">
         <text class="title-icon">📄</text>
         <text class="title-text">入库单据</text>
+        <text class="image-count">{{ stockImageUrls.length }}张</text>
       </view>
       <view class="inbound-preview">
-        <image
-          :src="fullStockUrl"
-          class="preview-image"
-          mode="aspectFill"
-          @click="previewInboundOrder"
-        />
+        <view class="image-grid">
+          <view
+            v-for="(imageUrl, index) in stockImageUrls"
+            :key="index"
+            class="preview-image-item"
+          >
+            <image
+              :src="fixMalformedUrl(imageUrl)"
+              class="preview-image"
+              mode="aspectFill"
+              @click="previewInboundOrder(index)"
+            />
+          </view>
+        </view>
         <view class="preview-status">
-          <text class="status-text">✓ 已上传</text>
+          <text class="status-text">✓ 已上传{{ stockImageUrls.length }}张图片</text>
         </view>
       </view>
     </view>
@@ -180,6 +189,7 @@ import { ref, reactive, onMounted, computed, nextTick } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
 import userStore from '@/stores/user'
 import { saveStock } from '@/api/stock'
+import { IMAGE_CONFIG, UPLOAD_CONFIG } from '@/config/index.js'
 
 import AddInboundOrderDialog from '@/components/AddInboundOrderDialog.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
@@ -224,9 +234,19 @@ const fullStockUrl = computed(() => {
   return fixMalformedUrl(form.stockUrl)
 })
 
+const stockImageUrls = computed(() => {
+  if (!form.stockUrl) return []
+
+  try {
+    const urls = JSON.parse(form.stockUrl)
+    return Array.isArray(urls) ? urls : [form.stockUrl]
+  } catch (error) {
+    return [form.stockUrl]
+  }
+})
+
 const getFullImageUrl = (imageUrl) => {
   if (!imageUrl) {
-    console.log('图片URL为空')
     return ''
   }
 
@@ -285,10 +305,7 @@ const initData = () => {
     { id: 2, name: '分店1' }
   ]
 
-  imagePath.value = 'http://msbs-fuint-ts.qingchunnianhua.com:1880/'
-  if (!imagePath.value.endsWith('/')) {
-    imagePath.value += '/'
-  }
+  imagePath.value = IMAGE_CONFIG.basePath
 }
 
 const onStoreChange = (event) => {
@@ -393,22 +410,19 @@ const closeInboundOrder = () => {
 // 处理入库单提交
 const handleInboundOrderSubmit = (images) => {
   if (images && images.length > 0) {
-    const imageData = images[0]
-
-    if (typeof imageData === 'object') {
-      // 使用完整URL
-      if (imageData.url) {
-        form.stockUrl = imageData.url
-      } else {
-        form.stockUrl = JSON.stringify(imageData)
+    const imageUrls = images.map(img => {
+      if (typeof img === 'object' && img.url) {
+        return img.url
       }
-    } else {
-      form.stockUrl = imageData
-    }
+      return img
+    })
+
+    form.stockUrl = JSON.stringify(imageUrls)
+
     nextTick(() => {})
 
     uni.showToast({
-      title: '入库单上传成功',
+      title: `入库单上传成功(${images.length}张)`,
       icon: 'success'
     })
   } else {
@@ -417,10 +431,13 @@ const handleInboundOrderSubmit = (images) => {
 }
 
 // 预览入库单
-const previewInboundOrder = () => {
+const previewInboundOrder = (index = 0) => {
+  const urls = stockImageUrls.value.map(url => fixMalformedUrl(url))
+  const currentUrl = urls[index] || urls[0]
+
   uni.previewImage({
-    urls: [fullStockUrl.value],
-    current: fullStockUrl.value
+    urls: urls,
+    current: currentUrl
   })
 }
 
@@ -440,11 +457,11 @@ const uploadLossImage = (index) => {
 // 上传图片
 const uploadImage = (filePath, index) => {
   uni.showLoading({ title: '上传中...' })
-  
+
   const token = uni.getStorageSync('token')
-  
+
   uni.uploadFile({
-    url: 'http://msbs-fuint-ts.qingchunnianhua.com:1880/backendApi/file/upload',
+    url: UPLOAD_CONFIG.uploadUrl, // 使用配置的上传URL
     filePath: filePath,
     name: 'file',
     header: {
@@ -553,11 +570,23 @@ const submitForm = async () => {
   try {
     const convertedGoodsList = convertGoodsQuantity(goodsList.value, 'toBackend')
 
-    const submitData = {
-      ...form,
-      goodsList: convertedGoodsList
+    let stockUrlArray = []
+    if (form.stockUrl) {
+      try {
+        stockUrlArray = JSON.parse(form.stockUrl)
+        if (!Array.isArray(stockUrlArray)) {
+          stockUrlArray = [form.stockUrl]
+        }
+      } catch (error) {
+        stockUrlArray = [form.stockUrl]
+      }
     }
 
+    const submitData = {
+      ...form,
+      stockUrl: stockUrlArray,
+      goodsList: convertedGoodsList
+    }
     await saveStock(submitData)
     
     uni.showToast({
@@ -673,25 +702,55 @@ const submitForm = async () => {
 
 .inbound-preview {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 24rpx;
 }
 
-.preview-image {
+.image-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+
+.preview-image-item {
   width: 120rpx;
   height: 120rpx;
   border-radius: 16rpx;
-  border: 2rpx solid #eee;
+  overflow: hidden;
+  border: 2rpx solid #e4e7ed;
+  transition: all 0.3s;
+}
+
+.preview-image-item:active {
+  transform: scale(0.95);
+  border-color: #409eff;
+}
+
+.preview-image {
+  width: 100%;
+  height: 100%;
+  border-radius: 16rpx;
 }
 
 .preview-status {
-  flex: 1;
+  background: #f0f9ff;
+  padding: 16rpx 20rpx;
+  border-radius: 12rpx;
+  border: 2rpx solid #b3e5fc;
 }
 
 .status-text {
-  font-size: 28rpx;
-  color: #52c41a;
+  font-size: 26rpx;
+  color: #1976d2;
   font-weight: bold;
+}
+
+.image-count {
+  font-size: 24rpx;
+  color: #666;
+  background: #f0f0f0;
+  padding: 8rpx 16rpx;
+  border-radius: 20rpx;
 }
 
 /* 商品列表区域 */

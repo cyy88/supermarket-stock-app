@@ -1,19 +1,31 @@
 <template>
   <view v-if="showDialog" class="dialog-overlay" @click="close">
     <view class="dialog-container" @click.stop>
+      <!-- 美化的头部 -->
       <view class="dialog-header">
-        <text class="dialog-title">添加入库单</text>
-        <text class="close-btn" @click="close">×</text>
+        <view class="header-content">
+          <text class="dialog-title">📄 添加入库单</text>
+          <text class="dialog-subtitle">上传入库单据图片</text>
+        </view>
+        <view class="close-btn" @click="close">
+          <text class="close-icon">✕</text>
+        </view>
       </view>
-      
+
+      <!-- 内容区域 -->
       <view class="content">
         <view class="upload-section">
-          <text class="section-title">入库单图片</text>
+          <view class="section-header">
+            <text class="section-title">📷 入库单图片</text>
+            <text class="image-count">{{ baseForm.images.length }}/{{ maxImages }}</text>
+          </view>
+
           <view class="upload-area">
-            <view v-if="baseForm.images.length > 0" class="image-list">
-              <view 
-                v-for="(img, index) in baseForm.images" 
-                :key="index" 
+            <!-- 已上传的图片列表 -->
+            <view v-if="baseForm.images.length > 0" class="image-grid">
+              <view
+                v-for="(img, index) in baseForm.images"
+                :key="index"
                 class="image-item"
               >
                 <image
@@ -22,35 +34,61 @@
                   mode="aspectFill"
                   @click="previewImage(img.url)"
                 />
-                <view class="delete-btn" @click="removeImage(index)">×</view>
+                <view class="delete-btn" @click="removeImage(index)">
+                  <text class="delete-icon">✕</text>
+                </view>
+                <view class="image-mask">
+                  <text class="preview-text">预览</text>
+                </view>
               </view>
             </view>
-            
-            <view 
-              v-if="baseForm.images.length < maxImages" 
-              class="upload-btn" 
+
+            <!-- 上传按钮 -->
+            <view
+              v-if="baseForm.images.length < maxImages"
+              class="upload-btn"
               @click="chooseImage"
             >
-              <text class="upload-icon">+</text>
+              <view class="upload-icon-wrapper">
+                <text class="upload-icon">📷</text>
+              </view>
               <text class="upload-text">添加图片</text>
+              <text class="upload-desc">点击上传</text>
             </view>
           </view>
-          
+
+          <!-- 上传提示 -->
           <view class="upload-tips">
-            <text class="tip-text">• 最多可上传{{ maxImages }}张图片</text>
-            <text class="tip-text">• 支持JPG、PNG格式</text>
-            <text class="tip-text">• 单张图片不超过{{ maxSize }}MB</text>
+            <view class="tip-item">
+              <text class="tip-icon">📋</text>
+              <text class="tip-text">最多可上传{{ maxImages }}张图片</text>
+            </view>
+            <view class="tip-item">
+              <text class="tip-icon">🖼️</text>
+              <text class="tip-text">支持JPG、PNG格式</text>
+            </view>
+            <view class="tip-item">
+              <text class="tip-icon">📏</text>
+              <text class="tip-text">单张图片不超过{{ maxSize }}MB</text>
+            </view>
           </view>
-          
+
+          <!-- 错误信息 -->
           <view v-if="errorMessage" class="error-message">
+            <text class="error-icon">⚠️</text>
             <text class="error-text">{{ errorMessage }}</text>
           </view>
         </view>
       </view>
 
+      <!-- 底部按钮 -->
       <view class="dialog-footer">
-        <button class="cancel-btn" @click="close">取消</button>
-        <button class="confirm-btn" @click="doSave">确定</button>
+        <button class="cancel-btn" @click="close">
+          <text class="btn-text">取消</text>
+        </button>
+        <button class="confirm-btn" @click="doSave" :disabled="baseForm.images.length === 0">
+          <text class="btn-text">确定</text>
+        </button>
       </view>
     </view>
   </view>
@@ -58,6 +96,7 @@
 
 <script setup>
 import { ref, reactive, watch } from 'vue'
+import { UPLOAD_CONFIG, BUSINESS_CONFIG } from '@/config/index.js'
 
 const props = defineProps({
   showDialog: {
@@ -72,8 +111,8 @@ const props = defineProps({
 
 const emit = defineEmits(['closeDialog', 'submit'])
 
-const maxImages = 10
-const maxSize = 3 // MB
+const maxImages = BUSINESS_CONFIG.inbound.maxImages
+const maxSize = UPLOAD_CONFIG.maxSize
 const errorMessage = ref('')
 
 const baseForm = reactive({
@@ -124,16 +163,16 @@ const uploadImage = (filePath) => {
         errorMessage.value = `图片大小不能超过${maxSize}MB`
         return
       }
-      
+
       // 开始上传
       uni.showLoading({
         title: '上传中...'
       })
-      
+
       const token = uni.getStorageSync('token')
-      
+
       uni.uploadFile({
-        url: 'http://msbs-fuint-ts.qingchunnianhua.com:1880/backendApi/file/upload',
+        url: UPLOAD_CONFIG.uploadUrl,
         filePath: filePath,
         name: 'file',
         header: {
@@ -146,14 +185,13 @@ const uploadImage = (filePath) => {
             if (response.code === 200) {
               // 始终使用完整的url字段
               let fullUrl = response.data.url
-              
+
               const fileData = {
                 url: fullUrl,
-                fileName: response.data.fileName
+                fileName: response.data.fileName || `image_${Date.now()}.jpg`
               }
               baseForm.images.push(fileData)
               errorMessage.value = ''
-              console.log('上传成功，图片数据:', fileData)
               uni.showToast({
                 title: '上传成功',
                 icon: 'success'
@@ -235,171 +273,318 @@ const doSave = () => {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4rpx);
   z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 40rpx;
 }
 
 .dialog-container {
-  width: 90%;
-  max-width: 500px;
-  max-height: 80%;
-  background-color: white;
-  border-radius: 8px;
+  width: 100%;
+  max-width: 600rpx;
+  max-height: 85vh;
+  background: #fff;
+  border-radius: 24rpx;
   display: flex;
   flex-direction: column;
+  box-shadow: 0 20rpx 60rpx rgba(0, 0, 0, 0.3);
+  overflow: hidden;
 }
 
 .dialog-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 40rpx;
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  padding: 16px;
-  border-bottom: 1px solid #eee;
+  align-items: flex-start;
+  position: relative;
+}
+
+.header-content {
+  flex: 1;
 }
 
 .dialog-title {
-  font-size: 18px;
+  font-size: 36rpx;
   font-weight: bold;
+  color: #fff;
+  margin-bottom: 8rpx;
+}
+
+.dialog-subtitle {
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .close-btn {
-  font-size: 24px;
-  color: #999;
-  cursor: pointer;
+  width: 60rpx;
+  height: 60rpx;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+}
+
+.close-btn:active {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(0.9);
+}
+
+.close-icon {
+  font-size: 32rpx;
+  color: #fff;
+  font-weight: bold;
 }
 
 .content {
   flex: 1;
   overflow-y: auto;
-  padding: 16px;
+  padding: 40rpx;
+  background: #f8f9fa;
 }
 
 .upload-section {
-  margin-bottom: 20px;
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 32rpx;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32rpx;
 }
 
 .section-title {
-  font-size: 16px;
+  font-size: 32rpx;
   font-weight: bold;
-  margin-bottom: 12px;
-  display: block;
+  color: #303133;
+}
+
+.image-count {
+  font-size: 24rpx;
+  color: #909399;
+  background: #f0f0f0;
+  padding: 8rpx 16rpx;
+  border-radius: 20rpx;
 }
 
 .upload-area {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
+  margin-bottom: 32rpx;
 }
 
-.image-list {
+.image-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 20rpx;
+  margin-bottom: 20rpx;
 }
 
 .image-item {
   position: relative;
-  width: 80px;
-  height: 80px;
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 16rpx;
+  overflow: hidden;
 }
 
 .uploaded-image {
   width: 100%;
   height: 100%;
-  border-radius: 4px;
-  border: 1px solid #ddd;
+  border-radius: 16rpx;
+  border: 2rpx solid #e4e7ed;
 }
 
 .delete-btn {
   position: absolute;
-  top: -8px;
-  right: -8px;
-  width: 20px;
-  height: 20px;
-  background-color: #ff4757;
-  color: white;
+  top: -10rpx;
+  right: -10rpx;
+  width: 40rpx;
+  height: 40rpx;
+  background: #f56c6c;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
-  cursor: pointer;
+  box-shadow: 0 4rpx 12rpx rgba(245, 108, 108, 0.3);
+  z-index: 10;
+}
+
+.delete-icon {
+  font-size: 24rpx;
+  color: #fff;
+  font-weight: bold;
+}
+
+.image-mask {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.6));
+  padding: 8rpx;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.image-item:active .image-mask {
+  opacity: 1;
+}
+
+.preview-text {
+  font-size: 20rpx;
+  color: #fff;
 }
 
 .upload-btn {
-  width: 80px;
-  height: 80px;
-  border: 2px dashed #ddd;
-  border-radius: 4px;
+  width: 120rpx;
+  height: 120rpx;
+  border: 2rpx dashed #dcdfe6;
+  border-radius: 16rpx;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
+  background: #fafbfc;
+  transition: all 0.3s;
 }
 
-.upload-btn:hover {
-  border-color: #007aff;
+.upload-btn:active {
+  border-color: #409eff;
+  background: #f0f8ff;
+  transform: scale(0.95);
+}
+
+.upload-icon-wrapper {
+  margin-bottom: 8rpx;
 }
 
 .upload-icon {
-  font-size: 24px;
-  color: #999;
-  margin-bottom: 4px;
+  font-size: 32rpx;
+  color: #c0c4cc;
 }
 
 .upload-text {
-  font-size: 12px;
-  color: #999;
+  font-size: 24rpx;
+  color: #606266;
+  font-weight: 500;
+  margin-bottom: 4rpx;
+}
+
+.upload-desc {
+  font-size: 20rpx;
+  color: #909399;
 }
 
 .upload-tips {
-  margin-top: 12px;
+  background: #f8f9fa;
+  border-radius: 12rpx;
+  padding: 24rpx;
+  margin-bottom: 24rpx;
+}
+
+.tip-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16rpx;
+}
+
+.tip-item:last-child {
+  margin-bottom: 0;
+}
+
+.tip-icon {
+  font-size: 24rpx;
+  margin-right: 12rpx;
+  width: 32rpx;
 }
 
 .tip-text {
-  display: block;
-  font-size: 12px;
-  color: #666;
-  margin-bottom: 4px;
+  font-size: 24rpx;
+  color: #606266;
+  line-height: 1.4;
 }
 
 .error-message {
-  margin-top: 12px;
-  padding: 8px;
-  background-color: #fff2f0;
-  border: 1px solid #ffccc7;
-  border-radius: 4px;
+  background: #fef0f0;
+  border: 2rpx solid #fbc4c4;
+  border-radius: 12rpx;
+  padding: 20rpx;
+  display: flex;
+  align-items: center;
+}
+
+.error-icon {
+  font-size: 28rpx;
+  margin-right: 12rpx;
 }
 
 .error-text {
-  font-size: 14px;
-  color: #ff4d4f;
+  font-size: 26rpx;
+  color: #f56c6c;
+  flex: 1;
 }
 
 .dialog-footer {
   display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  padding: 16px;
-  border-top: 1px solid #eee;
+  gap: 24rpx;
+  padding: 32rpx 40rpx;
+  background: #fff;
+  border-top: 2rpx solid #f0f0f0;
 }
 
 .cancel-btn {
-  padding: 8px 24px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background-color: white;
+  flex: 1;
+  height: 88rpx;
+  background: #f5f7fa;
+  border: 2rpx solid #dcdfe6;
+  border-radius: 20rpx;
+  font-size: 28rpx;
+  color: #606266;
+  transition: all 0.3s;
+}
+
+.cancel-btn:active {
+  background: #e9ecef;
+  transform: scale(0.98);
 }
 
 .confirm-btn {
-  padding: 8px 24px;
-  background-color: #007aff;
-  color: white;
+  flex: 1;
+  height: 88rpx;
+  background: linear-gradient(135deg, #409eff 0%, #1890ff 100%);
   border: none;
-  border-radius: 4px;
+  border-radius: 20rpx;
+  font-size: 28rpx;
+  color: #fff;
+  font-weight: bold;
+  box-shadow: 0 8rpx 24rpx rgba(64, 158, 255, 0.3);
+  transition: all 0.3s;
+}
+
+.confirm-btn:active {
+  transform: scale(0.98);
+  box-shadow: 0 4rpx 12rpx rgba(64, 158, 255, 0.4);
+}
+
+.confirm-btn:disabled {
+  background: #c0c4cc;
+  box-shadow: none;
+  color: #fff;
+}
+
+.btn-text {
+  font-size: 28rpx;
+  font-weight: bold;
 }
 </style>
