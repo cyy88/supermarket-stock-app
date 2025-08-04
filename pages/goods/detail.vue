@@ -91,55 +91,37 @@
             :key="index"
             class="sku-card"
           >
-            <!-- 卡片头部：规格标签 -->
-            <view class="sku-card-header">
-              <view class="sku-number">规格 {{ index + 1 }}</view>
-              <view class="sku-specs">
-                <view
-                  v-for="spec in sku.specList"
-                  :key="spec.id"
-                  class="spec-tag"
-                >
-                  <text class="spec-tag-text">{{ spec.value }}</text>
-                </view>
-              </view>
-            </view>
-
-            <!-- 卡片内容：详细信息 -->
-            <view class="sku-card-content">
-              <!-- SKU编码 -->
-              <view class="sku-detail-item">
-                <view class="detail-icon">🏷️</view>
-                <view class="detail-content">
-                  <text class="detail-label">SKU编码</text>
-                  <text class="detail-value">{{ sku.skuNo || '未设置' }}</text>
+            <!-- 规格信息 -->
+            <view class="sku-card-simple">
+              <view class="sku-header-simple">
+                <view class="sku-number-simple">规格 {{ index + 1 }}</view>
+                <view class="sku-specs-simple">
+                  <view
+                    v-for="spec in sku.specList"
+                    :key="spec.id"
+                    class="spec-item-simple"
+                  >
+                    <text class="spec-name-simple">{{ getSpecName(spec) }}:</text>
+                    <text class="spec-value-simple">{{ spec.value }}</text>
+                  </view>
                 </view>
               </view>
 
               <!-- 价格信息 -->
-              <view class="sku-detail-item">
-                <view class="detail-icon">💰</view>
-                <view class="detail-content">
-                  <text class="detail-label">{{ goods.priceType === 'weight' ? '单价(元/千克)' : '销售价格(元)' }}</text>
-                  <text class="detail-value price">¥{{ sku.price || '0.00' }}</text>
-                </view>
-              </view>
-
-              <!-- 划线价格 -->
-              <view v-if="sku.linePrice" class="sku-detail-item">
-                <view class="detail-icon">🏷️</view>
-                <view class="detail-content">
-                  <text class="detail-label">划线价格</text>
-                  <text class="detail-value line-price">¥{{ sku.linePrice }}</text>
-                </view>
-              </view>
-
-              <!-- 重量信息 -->
-              <view v-if="sku.weight" class="sku-detail-item">
-                <view class="detail-icon">⚖️</view>
-                <view class="detail-content">
-                  <text class="detail-label">重量(千克)</text>
-                  <text class="detail-value">{{ sku.weight }}</text>
+              <view class="sku-content-simple">
+                <view class="price-info-simple">
+                  <view class="price-item-simple">
+                    <text class="price-label-simple">{{ goods.priceType === 'weight' ? '单价(元/千克)' : '销售价格(元)' }}</text>
+                    <text class="price-value-simple">¥{{ sku.price || '0.00' }}</text>
+                  </view>
+                  <view v-if="sku.linePrice" class="price-item-simple">
+                    <text class="price-label-simple">划线价格</text>
+                    <text class="price-value-simple line-price-simple">¥{{ sku.linePrice }}</text>
+                  </view>
+                  <view v-if="sku.weight" class="price-item-simple">
+                    <text class="price-label-simple">重量(千克)</text>
+                    <text class="price-value-simple">{{ sku.weight }}</text>
+                  </view>
                 </view>
               </view>
             </view>
@@ -471,6 +453,17 @@ const getSkuPriceRange = (item) => {
   }
 }
 
+const getSpecName = (spec) => {
+  if (!spec) return '规格'
+  if (goods.value && goods.value.specData && Array.isArray(goods.value.specData)) {
+    const specData = goods.value.specData.find(s => s.id === spec.specId || s.id === spec.attrId)
+    if (specData && specData.name) {
+      return specData.name
+    }
+  }
+  return spec.name || spec.attrName || '规格'
+}
+
 const editGoods = () => {
   uni.navigateTo({
     url: `/pages/goods/edit?id=${goodsId.value}`
@@ -676,114 +669,87 @@ const cancelDelete = () => {
 
   .sku-cards {
     .sku-card {
-      background: #fff;
-      border-radius: 20rpx;
-      margin-bottom: 32rpx;
-      box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.1);
-      overflow: hidden;
-      border: 2rpx solid #f0f0f0;
+      margin-bottom: 24rpx;
 
       &:last-child {
         margin-bottom: 0;
       }
 
-      .sku-card-header {
-        padding: 32rpx;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: #fff;
-        position: relative;
+      .sku-card-simple {
+        background: #fff;
+        border-radius: 12rpx;
+        border: 1rpx solid #e4e7ed;
+        overflow: hidden;
 
-        &::after {
-          content: '';
-          position: absolute;
-          bottom: 0;
-          left: 0;
-          right: 0;
-          height: 6rpx;
-          background: linear-gradient(90deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.1) 100%);
-        }
+        .sku-header-simple {
+          padding: 24rpx;
+          background: #f8f9fa;
+          border-bottom: 1rpx solid #e4e7ed;
 
-        .sku-number {
-          font-size: 32rpx;
-          font-weight: 700;
-          color: #fff;
-          margin-bottom: 20rpx;
-          text-shadow: 0 2rpx 4rpx rgba(0,0,0,0.2);
-        }
-
-        .sku-specs {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 16rpx;
-
-          .spec-tag {
-            .spec-tag-text {
-              background: rgba(255, 255, 255, 0.25);
-              color: #fff;
-              padding: 16rpx 24rpx;
-              border-radius: 50rpx;
-              font-size: 26rpx;
-              font-weight: 600;
-              backdrop-filter: blur(10rpx);
-              border: 2rpx solid rgba(255, 255, 255, 0.4);
-              box-shadow: 0 4rpx 12rpx rgba(0,0,0,0.1);
-            }
-          }
-        }
-      }
-
-      .sku-card-content {
-        padding: 32rpx;
-
-        .sku-detail-item {
-          display: flex;
-          align-items: center;
-          padding: 24rpx 0;
-          border-bottom: 2rpx solid #f8f9fa;
-
-          &:last-child {
-            border-bottom: none;
-            padding-bottom: 0;
+          .sku-number-simple {
+            font-size: 28rpx;
+            font-weight: 600;
+            color: #303133;
+            margin-bottom: 16rpx;
           }
 
-          .detail-icon {
-            width: 80rpx;
-            height: 80rpx;
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            border-radius: 50%;
+          .sku-specs-simple {
             display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 32rpx;
-            margin-right: 24rpx;
-            box-shadow: 0 4rpx 16rpx rgba(240, 147, 251, 0.3);
-          }
+            flex-wrap: wrap;
+            gap: 12rpx;
 
-          .detail-content {
-            flex: 1;
+            .spec-item-simple {
+              display: flex;
+              align-items: center;
+              background: #fff;
+              padding: 8rpx 16rpx;
+              border-radius: 16rpx;
+              border: 1rpx solid #dcdfe6;
 
-            .detail-label {
-              display: block;
-              font-size: 28rpx;
-              color: #666;
-              margin-bottom: 8rpx;
-              font-weight: 500;
-            }
-
-            .detail-value {
-              font-size: 32rpx;
-              color: #333;
-              font-weight: 700;
-
-              &.price {
-                color: #f56c6c;
-                font-size: 36rpx;
+              .spec-name-simple {
+                color: #909399;
+                font-size: 24rpx;
+                font-weight: 400;
+                margin-right: 4rpx;
               }
 
-              &.line-price {
-                color: #999;
-                text-decoration: line-through;
+              .spec-value-simple {
+                color: #303133;
+                font-size: 24rpx;
+                font-weight: 500;
+              }
+            }
+          }
+        }
+
+        .sku-content-simple {
+          padding: 24rpx;
+
+          .price-info-simple {
+            display: flex;
+            flex-direction: column;
+            gap: 16rpx;
+
+            .price-item-simple {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+
+              .price-label-simple {
+                font-size: 26rpx;
+                color: #606266;
+              }
+
+              .price-value-simple {
                 font-size: 28rpx;
+                color: #f56c6c;
+                font-weight: 600;
+
+                &.line-price-simple {
+                  color: #909399;
+                  text-decoration: line-through;
+                  font-size: 24rpx;
+                }
               }
             }
           }
