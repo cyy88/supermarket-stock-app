@@ -42,16 +42,15 @@
             <view class="spec-values-container">
               <view class="spec-values-list">
                 <view
-                  v-for="(value, valueIndex) in spec.child || []"
+                  v-for="(value, valueIndex) in getValidSpecValues(spec.child)"
                   :key="valueIndex"
                   class="spec-value-item"
-                  v-if="value && value.name"
                 >
-                  <text class="value-text">{{ value.name }}</text>
+                  <text class="value-text">{{ value.name || value.value }}</text>
                   <text
                     v-if="!disabled"
                     class="value-delete"
-                    @click="removeSpecValue(specIndex, valueIndex)"
+                    @click="removeSpecValue(specIndex, getOriginalValueIndex(spec.child, valueIndex))"
                   >×</text>
                 </view>
               </view>
@@ -296,6 +295,18 @@ const generateSafeId = () => {
   return currentMaxId++;
 }
 
+const getValidSpecValues = (childArray) => {
+  if (!Array.isArray(childArray)) return [];
+  return childArray.filter(value => value && (value.name || value.value));
+}
+
+const getOriginalValueIndex = (childArray, filteredIndex) => {
+  if (!Array.isArray(childArray)) return filteredIndex;
+  const validValues = getValidSpecValues(childArray);
+  const targetValue = validValues[filteredIndex];
+  return childArray.findIndex(value => value === targetValue);
+}
+
 // 初始化本地数据时同时更新最大ID
 const updateMaxId = () => {
   // 从attrList中找最大ID
@@ -347,9 +358,15 @@ const initLocalData = () => {
     localSkuData.initSkuList = Array.isArray(safeSkuData.initSkuList) ?
       JSON.parse(JSON.stringify(safeSkuData.initSkuList)) : [];
 
+    localSkuData.attrList.forEach((attr, index) => {
+      if (attr.child && attr.child.length > 0) {
+        attr.child.forEach((child, childIndex) => {
+        });
+      }
+    });
+
     updateMaxId();
   } catch (error) {
-    console.error('初始化SKU数据失败:', error);
     localSkuData.attrList = [];
     localSkuData.skuList = [];
     localSkuData.initSkuList = [];
@@ -936,16 +953,17 @@ onMounted(() => {
         background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
         border: none;
         color: #fff;
-        border-radius: 30rpx;
-        padding: 16rpx 32rpx;
-        font-size: 26rpx;
+        border-radius: 24rpx;
+        padding: 12rpx 24rpx;
+        font-size: 24rpx;
         font-weight: 500;
-        box-shadow: 0 4rpx 12rpx rgba(240, 147, 251, 0.3);
+        box-shadow: 0 2rpx 8rpx rgba(240, 147, 251, 0.25);
         transition: all 0.3s ease;
+        margin-top: 16rpx;
 
         &:active {
           transform: scale(0.95);
-          box-shadow: 0 2rpx 8rpx rgba(240, 147, 251, 0.4);
+          box-shadow: 0 1rpx 4rpx rgba(240, 147, 251, 0.3);
         }
       }
     }

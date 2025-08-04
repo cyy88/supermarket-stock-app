@@ -778,16 +778,18 @@ const handleSkuData = (goodsData) => {
           const existingSpec = result.find(item => item.name === spec.name);
 
           if (existingSpec) {
-            // 添加到现有规格的child数组
-            existingSpec.child.push({
-              id: spec.id,
-              name: spec.value,
-              value: spec.value
-            });
+            const existingValue = existingSpec.child.find(child => child.value === spec.value);
+            if (!existingValue) {
+              existingSpec.child.push({
+                id: spec.id,
+                name: spec.value,
+                value: spec.value
+              });
+            }
           } else {
-            // 创建新的规格类型
+            const specId = Date.now() + Math.random();
             result.push({
-              id: spec.id,
+              id: specId,
               name: spec.name,
               child: [{
                 id: spec.id,
@@ -819,8 +821,8 @@ const handleSkuData = (goodsData) => {
     // 深拷贝创建初始SKU列表
     const initSkuList = JSON.parse(JSON.stringify(skuList));
 
-    console.log("转换后的规格数据:", attrList);
-    console.log("转换后的SKU数据:", skuList);
+    attrList.forEach((attr, index) => {
+    });
 
     return {
       attrList,
@@ -828,7 +830,6 @@ const handleSkuData = (goodsData) => {
       initSkuList
     };
   } catch (error) {
-    console.error('处理SKU数据失败:', error);
     return {
       attrList: [],
       skuList: [],
