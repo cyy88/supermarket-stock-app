@@ -571,6 +571,12 @@ const skuData = ref({
   initSkuList: []
 })
 
+const skuDataBackup = ref({
+  attrList: [],
+  skuList: [],
+  initSkuList: []
+})
+
 const form = reactive({
   type: 'goods',
   typeName: '实物商品',
@@ -750,6 +756,13 @@ const fillForm = (goodsData, cateList = null) => {
   console.log("填充后的skuData:", skuData.value);
   form.isSingleSpec = goodsData.isSingleSpec || 'Y'
 
+  if (form.isSingleSpec === 'N' && skuData.value) {
+    skuDataBackup.value = {
+      attrList: [...(skuData.value.attrList || [])],
+      skuList: [...(skuData.value.skuList || [])],
+      initSkuList: [...(skuData.value.initSkuList || [])]
+    }
+  }
 
   // 更新步骤
   updateStep()
@@ -937,21 +950,38 @@ const onMemberDiscountChange = (e) => {
 
 // 规格类型改变事件
 const onSingleSpecChange = (e) => {
-  form.isSingleSpec = e.detail.value
+  const newValue = e.detail.value
+  const oldValue = form.isSingleSpec
 
-  // 切换到多规格时，清空单规格价格
-  if (form.isSingleSpec === 'N') {
-    form.singlePrice = ''
-    form.singleLinePrice = ''
-  }
-  // 切换到单规格时，清空多规格数据
-  if (form.isSingleSpec === 'Y') {
+  if (oldValue === 'N' && newValue === 'Y') {
+    skuDataBackup.value = {
+      attrList: [...(skuData.value.attrList || [])],
+      skuList: [...(skuData.value.skuList || [])],
+      initSkuList: [...(skuData.value.initSkuList || [])]
+    }
+
     skuData.value = {
       attrList: [],
       skuList: [],
       initSkuList: []
     }
+
   }
+
+  if (oldValue === 'Y' && newValue === 'N') {
+    form.singlePrice = ''
+    form.singleLinePrice = ''
+
+    if (skuDataBackup.value.attrList.length > 0 || skuDataBackup.value.skuList.length > 0) {
+      skuData.value = {
+        attrList: [...skuDataBackup.value.attrList],
+        skuList: [...skuDataBackup.value.skuList],
+        initSkuList: [...skuDataBackup.value.initSkuList]
+      }
+    }
+  }
+
+  form.isSingleSpec = newValue
   updateStep()
 }
 
@@ -965,6 +995,14 @@ const onSkuChange = (newSkuData) => {
     attrList: newSkuData.attrList || [],
     skuList: newSkuData.skuList || [],
     initSkuList: newSkuData.initSkuList || []
+  }
+
+  if (form.isSingleSpec === 'N') {
+    skuDataBackup.value = {
+      attrList: [...(newSkuData.attrList || [])],
+      skuList: [...(newSkuData.skuList || [])],
+      initSkuList: [...(newSkuData.initSkuList || [])]
+    }
   }
 
   updateStep()
