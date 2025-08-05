@@ -542,7 +542,7 @@ import goodsStore from '@/stores/goods'
 import userStore from '@/stores/user'
 import { saveGoods as saveGoodsApi, getGoodsCateList } from '@/api/goods'
 import { recognizeProductImage } from '@/api/ai'
-import { uploadImage, uploadImages, getFullImageUrl } from '@/utils/image.js'
+import { uploadImage } from '@/utils/image.js'
 import SkuManager from '@/components/SkuManager.vue'
 
 const saving = ref(false)
@@ -826,7 +826,7 @@ const saveBasicInfo = async () => {
 
     const userInfo = userStore.getUserInfo()
 
-    const imageUrls = await uploadImages()
+    const imageUrls = await getUploadedImageUrls()
 
     const basicData = {
       name: form.name.trim(),
@@ -935,8 +935,7 @@ const uploadImagesFromPaths = async (filePaths) => {
   }
 }
 
-// 上传图片并返回URL数组（用于保存商品时）
-const uploadImages = async () => {
+const getUploadedImageUrls = async () => {
   const imageUrls = []
   for (const image of imageList.value) {
     if (image.url) {

@@ -69,10 +69,10 @@
             class="stock-image-wrapper"
           >
             <image
-              :src="getFullImageUrl(imageUrl)"
+              :src="getFixedImageUrl(imageUrl)"
               class="stock-image"
               mode="aspectFit"
-              @click="previewImage(imageUrl, index)"
+              @click="previewStockImage(imageUrl, index)"
             />
           </view>
         </view>
@@ -92,7 +92,7 @@
           >
             <view class="goods-header">
               <image
-                :src="getFullImageUrl(item.logo)"
+                :src="getFixedImageUrl(item.logo)"
                 class="goods-image"
                 mode="aspectFill"
                 @error="handleImageError"
@@ -139,7 +139,7 @@
                       <view class="loss-upload" @click="canEdit ? uploadLossImage(index) : previewLossImage(item.lossUrl)">
                         <image
                           v-if="item.lossUrl"
-                          :src="getFullImageUrl(item.lossUrl)"
+                          :src="getFixedImageUrl(item.lossUrl)"
                           class="loss-image"
                           mode="aspectFill"
                         />
@@ -188,7 +188,7 @@ import { onLoad } from '@dcloudio/uni-app'
 import { getStockInfo, saveStock } from '@/api/stock'
 import userStore from '@/stores/user'
 import { UPLOAD_CONFIG } from '@/config/index.js'
-import { getFullImageUrl, parseImageUrls, previewImage } from '@/utils/image.js'
+import { getFullImageUrl, parseImageUrls } from '@/utils/image.js'
 
 const fixMalformedUrl = (url) => {
   if (!url || typeof url !== 'string') return url
@@ -283,7 +283,7 @@ const loadStockDetail = async () => {
   }
 }
 
-const getFullImageUrl = (imageUrl) => {
+const getFixedImageUrl = (imageUrl) => {
   if (!imageUrl) return ''
 
   return fixMalformedUrl(imageUrl)
@@ -316,7 +316,7 @@ const formatTime = (timeStr) => {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
 }
 
-const previewImage = (imageUrl, index = 0) => {
+const previewStockImage = (imageUrl, index = 0) => {
   if (!imageUrl) return
 
   const urls = stockImageUrls.value.length > 1
@@ -331,7 +331,7 @@ const previewImage = (imageUrl, index = 0) => {
 
 const previewLossImage = (imageUrl) => {
   if (imageUrl) {
-    previewImage(imageUrl)
+    previewStockImage(imageUrl)
   }
 }
 

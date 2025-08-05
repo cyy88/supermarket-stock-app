@@ -429,7 +429,7 @@ import { onLoad } from '@dcloudio/uni-app'
 import goodsStore from '@/stores/goods'
 import userStore from '@/stores/user'
 import { saveGoods as saveGoodsApi } from '@/api/goods'
-import { uploadImage, uploadImages, getFullImageUrl } from '@/utils/image.js'
+import { uploadImage } from '@/utils/image.js'
 import { recognizeProductImage } from '@/api/ai'
 
 const saving = ref(false)
@@ -578,12 +578,12 @@ const chooseImage = () => {
     sizeType: ['compressed'],
     sourceType: ['camera', 'album'],
     success: (res) => {
-      uploadImages(res.tempFilePaths)
+      uploadConsumableImages(res.tempFilePaths)
     }
   })
 }
 
-const uploadImages = async (filePaths) => {
+const uploadConsumableImages = async (filePaths) => {
   uni.showLoading({
     title: '上传中...'
   })
