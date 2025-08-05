@@ -199,40 +199,61 @@
       <view class="fab-ripple"></view>
     </view>
 
-    <!-- 分类筛选弹窗 -->
     <view v-if="showCategoryFilter" class="category-overlay" @click="showCategoryFilter = false">
       <view class="category-panel" @click.stop>
-        <view class="category-header">
-          <text class="category-title">选择分类</text>
-          <text class="category-close" @click="showCategoryFilter = false">✕</text>
+        <view class="panel-decoration">
+          <view class="decoration-circle decoration-1"></view>
+          <view class="decoration-circle decoration-2"></view>
+          <view class="decoration-circle decoration-3"></view>
         </view>
+
+        <view class="category-header">
+          <view class="header-content">
+            <text class="category-icon">📂</text>
+            <text class="category-title">选择分类</text>
+          </view>
+          <view class="category-close" @click="showCategoryFilter = false">
+            <text class="close-icon">✕</text>
+          </view>
+        </view>
+
         <view class="category-content">
-          <view class="category-list">
+          <scroll-view class="category-list" scroll-y>
             <view
               class="category-item"
               :class="{ active: selectedCategory === null }"
               @click="selectCategory(null)"
             >
-              <view class="category-info">
-                <text class="category-name">全部分类</text>
-                <text class="category-count">({{ getTotalCount() }})</text>
+              <view class="category-item-content">
+                <view class="category-info">
+                  <text class="category-name">全部分类</text>
+                  <text class="category-count">{{ getTotalCount() }} 件商品</text>
+                </view>
               </view>
-              <text v-if="selectedCategory === null" class="category-check">✓</text>
+              <view v-if="selectedCategory === null" class="category-check">
+                <text class="check-icon">✓</text>
+              </view>
             </view>
+
             <view
-              v-for="category in categories"
+              v-for="(category, index) in categories"
               :key="category.id"
               class="category-item"
               :class="{ active: selectedCategory === category.id }"
               @click="selectCategory(category.id)"
+              :style="{ animationDelay: (index * 0.05) + 's' }"
             >
-              <view class="category-info">
-                <text class="category-name">{{ category.name }}</text>
-                <text class="category-count">({{ getCategoryCount(category.id) }})</text>
+              <view class="category-item-content">
+                <view class="category-info">
+                  <text class="category-name">{{ category.name }}</text>
+                  <text class="category-count">{{ getCategoryCount(category.id) }} 件商品</text>
+                </view>
               </view>
-              <text v-if="selectedCategory === category.id" class="category-check">✓</text>
+              <view v-if="selectedCategory === category.id" class="category-check">
+                <text class="check-icon">✓</text>
+              </view>
             </view>
-          </view>
+          </scroll-view>
         </view>
       </view>
     </view>
@@ -582,11 +603,11 @@ const getCategoryCount = (categoryId) => {
   ).length
 }
 
-// 获取总商品数量
 const getTotalCount = () => {
-  // 只统计普通商品，排除消耗品
   return goodsList.value.filter(item => !item.isItaconsumableitem || item.isItaconsumableitem === 0).length
 }
+
+
 
 // 页面显示时刷新数据
 // onShow(() => {
@@ -1251,23 +1272,41 @@ const getTotalCount = () => {
   position: fixed;
   left: 40rpx;
   bottom: 40rpx;
-  width: 100rpx;
-  height: 100rpx;
-  background: linear-gradient(135deg, #ff9900 0%, #ffad33 100%);
+  width: 120rpx;
+  height: 120rpx;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 8rpx 20rpx rgba(255, 153, 0, 0.3);
+  box-shadow: 0 12rpx 30rpx rgba(102, 126, 234, 0.4);
+  backdrop-filter: blur(10rpx);
+  border: 2rpx solid rgba(255, 255, 255, 0.3);
   z-index: 100;
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 
   .category-fab-icon {
     font-size: 48rpx;
     color: #fff;
+    text-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.2);
+    filter: drop-shadow(0 2rpx 4rpx rgba(0, 0, 0, 0.1));
   }
 
   &:active {
     transform: scale(0.9);
+    box-shadow: 0 8rpx 20rpx rgba(102, 126, 234, 0.5);
+  }
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    animation: ripple 2s infinite;
   }
 }
 
@@ -1342,120 +1381,263 @@ const getTotalCount = () => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(10rpx);
   z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: flex-start;
+  animation: fadeIn 0.3s ease-out;
 }
 
 .category-panel {
-  width: 650rpx;
+  position: relative;
+  width: 680rpx;
   height: 100vh;
-  background: #fff;
-  animation: slideInLeft 0.3s ease-out;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%);
+  backdrop-filter: blur(20rpx);
+  border: 1rpx solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 20rpx 60rpx rgba(0, 0, 0, 0.15);
+  animation: slideInLeft 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+}
+
+.panel-decoration {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.decoration-circle {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.1;
+}
+
+.decoration-1 {
+  top: -100rpx;
+  right: -100rpx;
+  width: 300rpx;
+  height: 300rpx;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  animation: float 8s ease-in-out infinite;
+}
+
+.decoration-2 {
+  top: 40%;
+  left: -150rpx;
+  width: 200rpx;
+  height: 200rpx;
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  animation: float 10s ease-in-out infinite reverse;
+}
+
+.decoration-3 {
+  bottom: -80rpx;
+  right: -80rpx;
+  width: 160rpx;
+  height: 160rpx;
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  animation: float 6s ease-in-out infinite;
 }
 
 @keyframes slideInLeft {
   from {
     transform: translateX(-100%);
+    opacity: 0;
   }
   to {
     transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 
 .category-header {
+  position: relative;
+  z-index: 2;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 50rpx 30rpx 30rpx;
-  background: linear-gradient(135deg, #3c9cff 0%, #1890ff 100%);
-  box-shadow: 0 4rpx 12rpx rgba(60, 156, 255, 0.2);
+  padding: calc(50rpx + var(--status-bar-height)) 40rpx 40rpx;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  box-shadow: 0 8rpx 30rpx rgba(102, 126, 234, 0.3);
 
-  .category-title {
-    font-size: 36rpx;
-    font-weight: bold;
-    color: #fff;
+  .header-content {
+    display: flex;
+    align-items: center;
+    gap: 20rpx;
+
+    .category-icon {
+      font-size: 40rpx;
+      filter: drop-shadow(0 2rpx 4rpx rgba(0, 0, 0, 0.2));
+    }
+
+    .category-title {
+      font-size: 36rpx;
+      font-weight: bold;
+      color: #fff;
+      text-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.2);
+    }
   }
 
   .category-close {
-    font-size: 40rpx;
-    color: #fff;
-    cursor: pointer;
-    width: 60rpx;
-    height: 60rpx;
+    width: 70rpx;
+    height: 70rpx;
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: 50%;
     background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10rpx);
+    border: 1rpx solid rgba(255, 255, 255, 0.3);
+    transition: all 0.3s ease;
+
+    .close-icon {
+      font-size: 32rpx;
+      color: #fff;
+      font-weight: bold;
+    }
+
+    &:active {
+      transform: scale(0.9);
+      background: rgba(255, 255, 255, 0.3);
+    }
   }
 }
 
 .category-content {
+  position: relative;
+  z-index: 2;
   flex: 1;
   overflow: hidden;
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .category-list {
   height: 100%;
   overflow-y: auto;
-  padding: 20rpx 0;
+  padding: 30rpx 0 40rpx;
+  -webkit-overflow-scrolling: touch;
 }
 
 .category-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 25rpx 30rpx;
-  border-bottom: 1rpx solid #f5f5f5;
-  transition: all 0.3s;
   position: relative;
+  margin: 0 20rpx 20rpx;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 20rpx;
+  backdrop-filter: blur(10rpx);
+  border: 1rpx solid rgba(255, 255, 255, 0.3);
+  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  animation: slideInUp 0.6s ease-out forwards;
+  opacity: 0;
+  transform: translateY(30rpx);
+  overflow: hidden;
 
   &:active {
-    background: #f8f9fa;
+    transform: translateY(-4rpx) scale(0.98);
+    box-shadow: 0 15rpx 40rpx rgba(0, 0, 0, 0.15);
   }
 
   &.active {
-    background: linear-gradient(90deg, #e6f7ff 0%, #f0f9ff 100%);
-    border-left: 6rpx solid #3c9cff;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+    border: 2rpx solid rgba(102, 126, 234, 0.3);
+    transform: translateY(-2rpx);
+    box-shadow: 0 10rpx 30rpx rgba(102, 126, 234, 0.2);
 
     .category-name {
-      color: #3c9cff;
+      color: #667eea;
       font-weight: bold;
     }
 
     .category-count {
-      color: #3c9cff;
+      color: #667eea;
     }
   }
 
-  .category-info {
+  .category-item-content {
     display: flex;
-    align-items: baseline;
-    gap: 15rpx;
+    align-items: center;
+    padding: 30rpx 40rpx;
     flex: 1;
+  }
+
+  .category-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8rpx;
+    justify-content: center;
 
     .category-name {
-      font-size: 30rpx;
+      font-size: 32rpx;
       color: #303133;
+      font-weight: 600;
       transition: all 0.3s;
+      line-height: 1.3;
     }
 
     .category-count {
       font-size: 24rpx;
       color: #909399;
       transition: all 0.3s;
+      line-height: 1.2;
     }
   }
 
   .category-check {
-    font-size: 32rpx;
-    color: #3c9cff;
-    font-weight: bold;
+    position: absolute;
+    top: 50%;
+    right: 30rpx;
+    transform: translateY(-50%);
+    width: 50rpx;
+    height: 50rpx;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4rpx 12rpx rgba(102, 126, 234, 0.3);
+    animation: checkBounce 0.4s ease-out;
+
+    .check-icon {
+      font-size: 24rpx;
+      color: #fff;
+      font-weight: bold;
+    }
+  }
+}
+
+@keyframes slideInUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes checkBounce {
+  0% {
+    transform: translateY(-50%) scale(0);
+  }
+  50% {
+    transform: translateY(-50%) scale(1.2);
+  }
+  100% {
+    transform: translateY(-50%) scale(1);
   }
 }
 </style>
