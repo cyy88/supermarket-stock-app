@@ -992,14 +992,17 @@ const submitForm = async () => {
 
 .suggestion-input {
   width: 100%;
+  height: 60rpx;
   min-height: 60rpx;
+  max-height: 60rpx;
   padding: 16rpx;
   border: 2rpx solid #e9ecef;
   border-radius: 12rpx;
   font-size: 24rpx;
   background: white;
-  line-height: 1.5;
+  line-height: 1.2;
   box-sizing: border-box;
+  resize: none;
 }
 
 /* 备注区域 */
@@ -1013,7 +1016,7 @@ const submitForm = async () => {
 }
 
 .remark-input {
-  width: 100%;
+  width: calc(100% - 4rpx);
   min-height: 120rpx;
   padding: 24rpx;
   border: 2rpx solid #e9ecef;
@@ -1022,6 +1025,7 @@ const submitForm = async () => {
   background: white;
   line-height: 1.5;
   margin-bottom: 16rpx;
+  box-sizing: border-box;
 }
 
 .char-count {
