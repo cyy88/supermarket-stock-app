@@ -86,7 +86,12 @@
           <text class="empty-icon">📦</text>
           <view class="empty-circle"></view>
         </view>
-        <text class="empty-title">暂无入库记录</text>
+        <text class="empty-title">
+          {{ 
+            typeFilter === 'increase' ? '暂无入库记录' : 
+            typeFilter === 'reduce' ? '暂无出库记录' : '暂无库存记录' 
+          }}
+        </text>
         <text class="empty-subtitle">点击右下角按钮添加新记录</text>
       </view>
 
@@ -140,7 +145,7 @@
             <view class="info-row">
               <view class="info-item">
                 <text class="info-icon">🕒</text>
-                <text class="info-label">入库时间</text>
+                <text class="info-label">{{ item.type === 'increase' ? '入库时间' : '出库时间' }}</text>
                 <text class="info-value">{{ formatTime(item.updateTime || item.createTime) }}</text>
               </view>
             </view>
@@ -179,6 +184,56 @@
       <text class="fab-icon">+</text>
       <view class="fab-ripple"></view>
     </view>
+    
+    <!-- 库存分类统计悬浮窗 -->
+    <view 
+      :class="['stock-stats-float', { 'dragging': isDragging }]" 
+      v-if="showStatsFloat"
+      :style="{ left: floatPosition.left + 'px', bottom: floatPosition.bottom + 'px', right: 'auto' }"
+      @touchstart="onFloatTouchStart"
+      @touchmove="onFloatTouchMove"
+      @touchend="onFloatTouchEnd"
+    >
+      <view class="stats-card">
+        <view class="stats-header">
+          <text class="stats-title">库存统计</text>
+          <view class="stats-close" @click="toggleStatsFloat">×</view>
+        </view>
+        <view class="stats-content">
+          <view class="stats-item" @click="setTypeFilter('all')" :class="{'stats-item-active': typeFilter === 'all'}">
+            <view class="stats-icon" style="background:linear-gradient(135deg,#1890ff 0%,#70cfff 100%);color:#fff;">📋</view>
+            <view class="stats-info">
+              <text class="stats-label">全部</text>
+              <text class="stats-value">{{ inStockCount + outStockCount }}</text>
+            </view>
+          </view>
+          <view class="stats-item" @click="setTypeFilter('increase')" :class="{'stats-item-active': typeFilter === 'increase'}">
+            <view class="stats-icon stats-in">📈</view>
+            <view class="stats-info">
+              <text class="stats-label">入库记录</text>
+              <text class="stats-value">{{ inStockCount }}</text>
+            </view>
+          </view>
+          <view class="stats-item" @click="setTypeFilter('reduce')" :class="{'stats-item-active': typeFilter === 'reduce'}">
+            <view class="stats-icon stats-out">📉</view>
+            <view class="stats-info">
+              <text class="stats-label">出库记录</text>
+              <text class="stats-value">{{ outStockCount }}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+    
+    <!-- 悬浮窗开关按钮 -->
+    <view 
+      class="stats-toggle" 
+      v-if="!showStatsFloat" 
+      @click="toggleStatsFloat"
+      :style="{ left: floatPosition.left + 'px', bottom: floatPosition.bottom + 'px', right: 'auto' }"
+    >
+      <text class="stats-toggle-icon">📊</text>
+    </view>
   </view>
 </template>
 
@@ -191,6 +246,7 @@ const loading = ref(false)
 const refreshing = ref(false)
 const stockList = ref([])
 const statusFilter = ref('all')
+const typeFilter = ref('all') // 新增类型筛选变量：all, increase, reduce
 const storeOptions = ref([])
 const imagePath = ref('')
 const isScrolling = ref(false)
@@ -198,6 +254,15 @@ const scrollTop = ref(null)
 const scrollTimer = ref(null)
 const lastScrollTop = ref(0)
 const scrollViewId = ref('stockScrollView')
+const showStatsFloat = ref(true) // 控制悬浮窗显示/隐藏
+const floatPosition = reactive({
+  left: 40, // 初始左侧位置
+  bottom: 80 // 初始底部位置
+})
+const touchStartX = ref(0)
+const touchStartY = ref(0)
+const isDragging = ref(false)
+const windowWidth = ref(0)
 
 const pagination = reactive({
   page: 1,
@@ -212,17 +277,34 @@ const hasMore = computed(() => {
 const filteredList = computed(() => {
   let list = stockList.value
 
+  // 按审核状态筛选
   if (statusFilter.value !== 'all') {
     list = list.filter(item => item.reviewStatus === statusFilter.value)
   }
-
-
+  
+  // 按类型筛选（入库/出库）
+  if (typeFilter.value !== 'all') {
+    list = list.filter(item => item.type === typeFilter.value)
+  }
 
   return list
 })
 
+// 入库记录数量
+const inStockCount = computed(() => {
+  return stockList.value.filter(item => item.type === 'increase').length
+})
+
+// 出库记录数量
+const outStockCount = computed(() => {
+  return stockList.value.filter(item => item.type === 'reduce').length
+})
+
 onMounted(() => {
   loadStockListWithCache()
+  // 获取窗口宽度
+  const info = uni.getSystemInfoSync()
+  windowWidth.value = info.windowWidth
 })
 
 const onScroll = (e) => {
@@ -315,8 +397,8 @@ const loadStockList = async (isLoadMore = false, shouldCache = false) => {
   try {
     const params = {
       page: isLoadMore ? pagination.page + 1 : 1,
-      pageSize: pagination.pageSize,
-      type: 'increase'
+      pageSize: pagination.pageSize
+      // 移除type限制，显示所有记录
     }
 
     if (statusFilter.value !== 'all') {
@@ -399,6 +481,66 @@ const setStatusFilter = (status) => {
   pagination.page = 1
 
   loadStockListWithCache()
+}
+
+// 设置类型筛选（入库/出库）
+const setTypeFilter = (type) => {
+  if (typeFilter.value === type) {
+    // 如果点击当前选中的类型，则取消筛选
+    typeFilter.value = 'all'
+  } else {
+    typeFilter.value = type
+  }
+  pagination.page = 1
+}
+
+// 切换悬浮窗显示/隐藏
+const toggleStatsFloat = () => {
+  showStatsFloat.value = !showStatsFloat.value
+}
+
+// 悬浮窗拖动相关方法
+const onFloatTouchStart = (e) => {
+  const touch = e.touches[0]
+  touchStartX.value = touch.clientX
+  touchStartY.value = touch.clientY
+  isDragging.value = true
+}
+
+const onFloatTouchMove = (e) => {
+  if (!isDragging.value) return
+  
+  const touch = e.touches[0]
+  const deltaX = touch.clientX - touchStartX.value
+  const deltaY = touch.clientY - touchStartY.value
+  
+  // 计算新位置
+  let newLeft = floatPosition.left + deltaX
+  const newBottom = Math.max(20, floatPosition.bottom - deltaY) // 限制底部最小距离
+  
+  // 更新触摸起始点
+  touchStartX.value = touch.clientX
+  touchStartY.value = touch.clientY
+  
+  // 更新位置
+  floatPosition.left = newLeft
+  floatPosition.bottom = newBottom
+}
+
+const onFloatTouchEnd = () => {
+  isDragging.value = false
+  
+  // 计算窗口中点
+  const middlePoint = windowWidth.value / 2
+  
+  // 根据当前位置决定是放在左边还是右边
+  if (floatPosition.left + 150 < middlePoint) { // 150是悬浮窗宽度的一半
+    // 放在左边
+    floatPosition.left = 40
+  } else {
+    // 放在右边
+    floatPosition.left = windowWidth.value - 340 // 300(宽度) + 40(右边距)
+  }
 }
 
 const onRefresh = async () => {
@@ -1131,5 +1273,174 @@ const goToAddStock = () => {
 
 .fab:hover .fab-bg {
   box-shadow: 0 12rpx 40rpx rgba(255, 107, 107, 0.6);
+}
+
+/* 库存统计悬浮窗 */
+.stock-stats-float {
+  position: fixed;
+  z-index: 999;
+  width: 300rpx;
+  transform: translateZ(0);
+  will-change: transform, left;
+  transition: transform 0.3s ease;
+  touch-action: none; /* 防止触摸事件被系统处理 */
+}
+
+.stats-card {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 20rpx;
+  box-shadow: 0 8rpx 30rpx rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+  border: 1rpx solid rgba(255, 255, 255, 0.3);
+}
+
+.stats-header {
+  padding: 20rpx;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.stats-title {
+  color: #fff;
+  font-size: 28rpx;
+  font-weight: bold;
+  text-align: center;
+  display: block;
+}
+
+.stats-close {
+  position: absolute;
+  right: 20rpx;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40rpx;
+  height: 40rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 32rpx;
+  font-weight: bold;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.stats-close:active {
+  background: rgba(0, 0, 0, 0.2);
+  transform: translateY(-50%) scale(0.9);
+}
+
+.stats-content {
+  padding: 20rpx;
+}
+
+.stats-item {
+  display: flex;
+  align-items: center;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+  position: relative;
+  cursor: pointer;
+}
+
+.stats-item:last-child {
+  border-bottom: none;
+}
+
+.stats-item:active {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.stats-item-active {
+  background: rgba(102, 126, 234, 0.1);
+}
+
+.stats-item-active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4rpx;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.stats-icon {
+  width: 60rpx;
+  height: 60rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 20rpx;
+  font-size: 24rpx;
+}
+
+.stats-icon.stats-in {
+  background: linear-gradient(135deg, #52c41a 0%, #73d13d 100%);
+  color: #fff;
+}
+
+.stats-icon.stats-out {
+  background: linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%);
+  color: #fff;
+}
+
+.stats-info {
+  flex: 1;
+}
+
+.stats-label {
+  font-size: 24rpx;
+  color: #666;
+  display: block;
+  margin-bottom: 6rpx;
+}
+
+.stats-value {
+  font-size: 32rpx;
+  color: #333;
+  font-weight: bold;
+  display: block;
+}
+
+.stock-stats-float:active {
+  transform: scale(0.95);
+}
+
+.stock-stats-float.dragging {
+  opacity: 0.8;
+  transition: none; /* 拖动时禁用过渡效果，使移动更流畅 */
+}
+
+/* 悬浮窗开关按钮 */
+.stats-toggle {
+  position: fixed;
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8rpx 30rpx rgba(102, 126, 234, 0.4);
+  z-index: 999;
+  transition: all 0.3s ease;
+  touch-action: none; /* 防止触摸事件被系统处理 */
+}
+
+.stats-toggle:active {
+  transform: scale(0.9);
+}
+
+.stats-toggle-icon {
+  font-size: 32rpx;
+  color: #fff;
 }
 </style>
