@@ -608,9 +608,9 @@ const form = reactive({
   brand: '',
   supplier: '',
 
-  // 单规格商品价格
-  singlePrice: '',
-  singleLinePrice: '',
+  // 单规格商品价格 - 已移除，使用基本信息中的价格
+  // singlePrice: '',
+  // singleLinePrice: '',
 
   description: ''
 })
@@ -702,8 +702,6 @@ const fillForm = (goodsData, cateList = null) => {
   form.brand = goodsData.brand || ''
   form.supplier = goodsData.supplier || ''
 
-  form.singlePrice = form.price
-  form.singleLinePrice = form.linePrice
 
   form.description = goodsData.description || ''
 
@@ -845,7 +843,7 @@ const updateStep = () => {
   // 步骤1：基本信息必填项
   let hasPrice = false
   if (form.isSingleSpec === 'Y') {
-    hasPrice = form.singlePrice && parseFloat(form.singlePrice) > 0
+    hasPrice = form.price && parseFloat(form.price) > 0
   } else {
     hasPrice = skuData.value.skuList && skuData.value.skuList.length > 0
   }
@@ -968,9 +966,6 @@ const onSingleSpecChange = (e) => {
   }
 
   if (oldValue === 'Y' && newValue === 'N') {
-    form.singlePrice = ''
-    form.singleLinePrice = ''
-
     if (skuDataBackup.value.attrList.length > 0 || skuDataBackup.value.skuList.length > 0) {
       skuData.value = {
         attrList: [...skuDataBackup.value.attrList],
@@ -1109,9 +1104,8 @@ const validateForm = () => {
     return false
   }
 
-  // 单规格商品价格验证
   if (form.isSingleSpec === 'Y') {
-    if (!form.singlePrice || parseFloat(form.singlePrice) <= 0) {
+    if (!form.price || parseFloat(form.price) <= 0) {
       uni.showToast({
         title: '请输入正确的商品价格',
         icon: 'none'
@@ -1213,8 +1207,8 @@ const handleSaveGoods = async () => {
       type: form.type,
       priceType: form.priceType,
       status: form.status,
-      price: form.isSingleSpec === 'Y' ? parseFloat(form.singlePrice) : mainPrice,
-      linePrice: form.isSingleSpec === 'Y' && form.singleLinePrice ? parseFloat(form.singleLinePrice) : mainLinePrice,
+      price: form.isSingleSpec === 'Y' ? parseFloat(form.price) : mainPrice,
+      linePrice: form.isSingleSpec === 'Y' && form.linePrice ? parseFloat(form.linePrice) : mainLinePrice,
       stock: parseInt(form.stock) || 0,
       safetyStock: parseInt(form.safetyStock),
       weight: form.weight ? parseFloat(form.weight) : 0,
