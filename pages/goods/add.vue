@@ -599,9 +599,8 @@ const form = reactive({
   brand: '',
   supplier: '',
 
-  // 单规格商品价格
-  singlePrice: '',
-  singleLinePrice: '',
+  // singlePrice: '',
+  // singleLinePrice: '',
 
   description: ''
 })
@@ -635,7 +634,7 @@ const updateStep = () => {
   // 步骤1：基本信息必填项
   let hasPrice = false
   if (form.isSingleSpec === 'Y') {
-    hasPrice = form.singlePrice && parseFloat(form.singlePrice) > 0
+    hasPrice = form.price && parseFloat(form.price) > 0
   } else {
     hasPrice = skuData.value.skuList && skuData.value.skuList.length > 0
   }
@@ -757,8 +756,8 @@ const onSingleSpecChange = (e) => {
   form.isSingleSpec = e.detail.value
 
   if (form.isSingleSpec === 'N') {
-    form.singlePrice = ''
-    form.singleLinePrice = ''
+    // form.singlePrice = ''
+    // form.singleLinePrice = ''
     initializeSkuData()
   }
   if (form.isSingleSpec === 'Y') {
@@ -824,7 +823,20 @@ const saveBasicInfo = async () => {
     saving.value = true
     uni.showLoading({ title: '保存中...' })
 
-    const userInfo = userStore.getUserInfo()
+    let userInfo = userStore.userInfo
+    if (!userInfo || !userInfo.storeId || !userInfo.merchantId) {
+      try {
+        await userStore.getUserInfo()
+        userInfo = userStore.userInfo
+      } catch (error) {
+        console.error('获取用户信息失败:', error)
+        uni.showToast({
+          title: '获取用户信息失败，请重新登录',
+          icon: 'none'
+        })
+        return
+      }
+    }
 
     const imageUrls = await getUploadedImageUrls()
 
@@ -840,6 +852,10 @@ const saveBasicInfo = async () => {
       weight: form.weight ? parseFloat(form.weight) : null,
       salePoint: form.salePoint.trim(),
       sort: parseInt(form.sort) || 0,
+
+      // 价格信息
+      price: form.price ? parseFloat(form.price) : 0,
+      linePrice: form.linePrice ? parseFloat(form.linePrice) : null,
 
       // 店铺和商户信息
       storeId: userInfo.storeId,
@@ -994,9 +1010,8 @@ const validateForm = () => {
     return false
   }
 
-  // 单规格商品价格验证
   if (form.isSingleSpec === 'Y') {
-    if (!form.singlePrice || parseFloat(form.singlePrice) <= 0) {
+    if (!form.price || parseFloat(form.price) <= 0) {
       uni.showToast({
         title: '请输入正确的商品价格',
         icon: 'none'
@@ -1257,8 +1272,8 @@ const handleSaveGoods = async () => {
       serviceTime: form.type === 'service' ? parseInt(form.serviceTime) || 0 : 0,
 
       // 价格信息
-      price: form.isSingleSpec === 'Y' ? parseFloat(form.singlePrice) : mainPrice,
-      linePrice: form.isSingleSpec === 'Y' && form.singleLinePrice ? parseFloat(form.singleLinePrice) : mainLinePrice,
+      price: form.isSingleSpec === 'Y' ? parseFloat(form.price) : mainPrice,
+      linePrice: form.isSingleSpec === 'Y' && form.linePrice ? parseFloat(form.linePrice) : mainLinePrice,
       stock: parseInt(form.stock) || 0,
 
       // 多规格数据
