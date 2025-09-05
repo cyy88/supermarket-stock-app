@@ -12,7 +12,7 @@
     <!-- 规格列表 -->
     <view class="spec-list">
       <view
-        v-for="(spec, specIndex) in localSkuData.attrList || []"
+          v-for="(spec, specIndex) in localSkuData.attrList || []"
         :key="specIndex"
         class="spec-item"
       >
@@ -406,7 +406,7 @@ watch(() => localSkuData, () => {
 const addSpecRow = () => {
   uni.showModal({
     title: '添加规格',
-    content: '请输入规格名称',
+    content: '',
     editable: true,
     placeholderText: '例如：颜色、尺寸',
     success: async (res) => {
@@ -464,20 +464,92 @@ const addSpecRow = () => {
 }
 
 // 删除规格行
-const removeSpecRow = (index) => {
+const removeSpecRow = async (index) => {
   uni.showModal({
     title: '确认删除',
     content: '确定要删除这个规格吗？',
-    success: (res) => {
+    success: async (res) => {
       if (res.confirm) {
         if (!Array.isArray(localSkuData.attrList)) {
           localSkuData.attrList = [];
           return;
         }
-        localSkuData.attrList.splice(index, 1);
-        nextTick(() => {
-          updateSkuList();
-        });
+
+        // 获取要删除的规格
+        const deletedSpec = localSkuData.attrList[index];
+        if (!deletedSpec || !deletedSpec.name) {
+          // 如果没有规格名，说明是新添加的规格，直接删除
+          localSkuData.attrList.splice(index, 1);
+          nextTick(() => {
+            updateSkuList();
+          });
+          return;
+        }
+
+        try {
+          // 调用后端接口删除规格
+          uni.showLoading({
+            title: '删除中...'
+          });
+
+          const response = await deleteSpec({
+            goodsId: props.goodsId,
+            specName: deletedSpec.name
+          });
+
+          if (response.code === 200) {
+            // 获取要删除的规格的所有规格值ID
+            const deletedValueIds = [];
+            if (Array.isArray(deletedSpec.child)) {
+              deletedSpec.child.forEach(child => {
+                if (child && child.id) {
+                  deletedValueIds.push(Number(child.id));
+                }
+              });
+            }
+
+            // 删除规格行
+            localSkuData.attrList.splice(index, 1);
+
+            // 清理包含已删除规格值的SKU数据
+            if (deletedValueIds.length > 0) {
+              if (Array.isArray(localSkuData.skuList)) {
+                localSkuData.skuList = localSkuData.skuList.filter(sku => {
+                  if (!sku.specIds) return true;
+                  const specIdArray = sku.specIds.split('-').map(id => Number(id));
+                  return !deletedValueIds.some(deletedId => specIdArray.includes(deletedId));
+                });
+              }
+
+              if (Array.isArray(localSkuData.initSkuList)) {
+                localSkuData.initSkuList = localSkuData.initSkuList.filter(sku => {
+                  if (!sku.specIds) return true;
+                  const specIdArray = sku.specIds.split('-').map(id => Number(id));
+                  return !deletedValueIds.some(deletedId => specIdArray.includes(deletedId));
+                });
+              }
+            }
+
+            nextTick(() => {
+              updateSkuList();
+            });
+
+            uni.showToast({
+              title: '删除成功',
+              icon: 'success'
+            });
+          } else {
+            throw new Error(response.message || '删除失败');
+          }
+        } catch (error) {
+          console.error('删除规格失败:', error);
+          uni.showToast({
+            title: error.message || '删除失败',
+            icon: 'none'
+          });
+        } finally {
+          uni.hideLoading();
+        }
       }
     }
   });
@@ -554,11 +626,11 @@ const addSpecValue = (specIndex) => {
 }
 
 // 删除规格值
-const removeSpecValue = (specIndex, valueIndex) => {
+const removeSpecValue = async (specIndex, valueIndex) => {
   uni.showModal({
     title: '确认删除',
     content: '确定要删除这个规格值吗？',
-    success: (res) => {
+    success: async (res) => {
       if (res.confirm) {
         if (!Array.isArray(localSkuData.attrList) ||
             !localSkuData.attrList[specIndex] ||
@@ -566,10 +638,69 @@ const removeSpecValue = (specIndex, valueIndex) => {
           return;
         }
 
-        localSkuData.attrList[specIndex].child.splice(valueIndex, 1);
-        nextTick(() => {
-          updateSkuList();
-        });
+        // 获取要删除的规格值ID
+        const deletedValue = localSkuData.attrList[specIndex].child[valueIndex];
+        const deletedValueId = deletedValue?.id;
+
+        if (!deletedValueId) {
+          // 如果没有ID，说明是新添加的规格值，直接删除
+          localSkuData.attrList[specIndex].child.splice(valueIndex, 1);
+          nextTick(() => {
+            updateSkuList();
+          });
+          return;
+        }
+
+        try {
+          // 调用后端接口删除规格值
+          uni.showLoading({
+            title: '删除中...'
+          });
+
+          const response = await deleteSpecValue({ id: deletedValueId });
+
+          if (response.code === 200) {
+            // 删除规格值
+            localSkuData.attrList[specIndex].child.splice(valueIndex, 1);
+
+            // 清理包含已删除规格值的SKU数据
+            if (Array.isArray(localSkuData.skuList)) {
+              localSkuData.skuList = localSkuData.skuList.filter(sku => {
+                if (!sku.specIds) return true;
+                const specIdArray = sku.specIds.split('-').map(id => Number(id));
+                return !specIdArray.includes(Number(deletedValueId));
+              });
+            }
+
+            // 同样清理initSkuList中的相关数据
+            if (Array.isArray(localSkuData.initSkuList)) {
+              localSkuData.initSkuList = localSkuData.initSkuList.filter(sku => {
+                if (!sku.specIds) return true;
+                const specIdArray = sku.specIds.split('-').map(id => Number(id));
+                return !specIdArray.includes(Number(deletedValueId));
+              });
+            }
+
+            nextTick(() => {
+              updateSkuList();
+            });
+
+            uni.showToast({
+              title: '删除成功',
+              icon: 'success'
+            });
+          } else {
+            throw new Error(response.message || '删除失败');
+          }
+        } catch (error) {
+          console.error('删除规格值失败:', error);
+          uni.showToast({
+            title: error.message || '删除失败',
+            icon: 'none'
+          });
+        } finally {
+          uni.hideLoading();
+        }
       }
     }
   });
@@ -597,9 +728,19 @@ const generateSkuList = () => {
       return [];
     }
 
+    // 过滤掉无效的规格值（name为空或undefined）
     tmpSkuData.forEach((item) => {
-      attrValueAry.push(item.child);
+      const validChildren = (item.child || []).filter(child =>
+        child && (child.name || child.value) && child.id
+      );
+      if (validChildren.length > 0) {
+        attrValueAry.push(validChildren);
+      }
     });
+
+    if (attrValueAry.length === 0) {
+      return [];
+    }
 
     function func(skuArr = [], i) {
       for (let j = 0; j < attrValueAry[i].length; j++) {
@@ -622,12 +763,29 @@ const generateSkuList = () => {
       item.forEach((d) => {
         const numericId = Number(d.id);
         specIds += specIds ? `-${numericId}` : `${numericId}`;
-        specList.push({ id: numericId, name: d.name, value: d.name });
+        specList.push({
+          id: numericId,
+          name: d.name || d.value,
+          value: d.name || d.value
+        });
       });
 
+      // 更精确的匹配逻辑：完全匹配specIds而不是包含关系
       findItem = (Array.isArray(localSkuData.initSkuList) ? localSkuData.initSkuList : []).find((item) => {
-        return specIds.includes(item.specIds);
-      }) || {};
+        return item.specIds === specIds;
+      });
+
+      // 如果没有找到完全匹配的，尝试找到部分匹配的（用于兼容删除规格值的情况）
+      if (!findItem) {
+        const currentSpecIdArray = specIds.split('-').map(id => Number(id));
+        findItem = (Array.isArray(localSkuData.initSkuList) ? localSkuData.initSkuList : []).find((item) => {
+          if (!item.specIds) return false;
+          const itemSpecIdArray = item.specIds.split('-').map(id => Number(id));
+          // 检查当前SKU的所有规格ID是否都包含在原有SKU中
+          return currentSpecIdArray.every(id => itemSpecIdArray.includes(id)) &&
+                 currentSpecIdArray.length <= itemSpecIdArray.length;
+        });
+      }
 
       tableItem = Object.assign(
         {
@@ -639,7 +797,7 @@ const generateSkuList = () => {
           weight: '0',
           specList: specList
         },
-        findItem,
+        findItem || {},
         {
           specIds,
         }
@@ -650,6 +808,7 @@ const generateSkuList = () => {
 
     return table;
   } catch (error) {
+    console.error('生成SKU列表失败:', error);
     return [];
   }
 }

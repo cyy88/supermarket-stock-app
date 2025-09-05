@@ -3,7 +3,7 @@
  */
 
 // API基础URL配置
-export const BASE_URL = 'http://shop-manage-service.qingchunnianhua.com:1880'
+export const BASE_URL = 'http://msbs-fuint-ts.qingchunnianhua.com:1880'
 
 // 文件上传配置
 export const UPLOAD_CONFIG = {

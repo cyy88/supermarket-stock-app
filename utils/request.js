@@ -1,6 +1,9 @@
-// 网络请求工具
-const BASE_URL = 'http://msbs-fuint-ts.qingchunnianhua.com:1880'
+// // 网络请求工具
+// const BASE_URL = 'http://msbs-fuint-ts.qingchunnianhua.com:1880'
+//
+// //const BASE_URL = 'http://shop-manage-service.qingchunnianhua.com:1880'
 
+import { BASE_URL } from '../config/index.js'
 // 请求拦截器
 const request = (options) => {
   return new Promise((resolve, reject) => {
